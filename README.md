@@ -1,0 +1,49 @@
+# RoboCup
+
+这里是我们的RoboCup比赛的Git仓库，我们将通过Github精诚合作至比赛结束，重要通知会同步更新于此
+
+## 团队成员
+- AT 蔡冠宇、阳雅珣、高益基
+- FB 葛雨晴、陈冉飞、陈续兴
+- PF 丁佳香、越铂淳、熊璟
+
+## 相关网站
+- 2020世界赛 <https://rescuesim.robocup.org/robocup-2020/>
+- 往届世界赛 <https://rescuesim.robocup.org/events/past-events/>
+
+## 项目结构
+- CSU/ 是学长学姐参赛的代码，我们将在这之上进行开发
+- MRL/ 是2019年冠军队伍，目前此代码在默认地图运行报错，其他地图内存爆炸
+- AIT/ 是2019年亚军队伍，此代码可以直接运行
+- rcrs-adf-sample/ 是2019年的sample代码
+- rcrs-server/ 是2019年server代码，也是目前我们使用的server，rcrs-server/scripts/ 已经替换成上届主办方提供的脚本，实现了许多测试等功能，可以加速我们的开发
+- maps/ 是2019年国赛比赛地图
+
+## 团队协作
+在这期间，尤其是不进行Teamwork的时候，我们要每天在这里的日志下面记录下点东西（主要是为了保证团队活跃，减少摸鱼划水）比如今天为了这个项目做了哪些工作。
+
+唔，哪怕你什么都没做，写日记也行
+
+**注意** ：
+
+- 使用Git pull命令将文件夹存到本地，在本地checkout新分支，在此分支上开发，开发完毕后必须经过测试代码无bug后merge到master分支，然后push到github仓库
+
+## 时间节点
+**截至2020年1月24日，当前的任务是：**
+
+- 熟悉项目，各小组分配任务，准备开发。
+
+**世界赛**
+
+- Pre-Registration……………………………….: February 22, 2020 (23:55 GMT)
+- Team Description Paper (TDP) submission.: February 29, 2020 (23:55 GMT)
+- Qualified teams announcement…………..…: March 10, 2020
+- Camera-ready TDP submission………….….: May 31, 2020 (23:55 GMT)
+- Tournament dates………………………..……: June 25-28, 2020
+
+**中国赛**
+
+waiting...
+
+##日记
+
