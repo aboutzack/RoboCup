@@ -52,3 +52,7 @@ waiting...
 
 CGY：新建了Git仓库，整理项目结构，编写README，确定团队协作要求<br>
 GYJ：划水<br>
+
+2020年1月24日
+
+CGY：划水<br>
