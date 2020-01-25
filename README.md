@@ -18,6 +18,7 @@
 - rcrs-adf-sample/ 是2019年的sample代码
 - rcrs-server/ 是2019年server代码，也是目前我们使用的server，rcrs-server/scripts/ 已经替换成上届主办方提供的脚本，实现了许多测试等功能，可以加速我们的开发
 - maps/ 是2019年国赛比赛地图
+- rcrs-manual.pdf 是2019年的参赛手册，包括了启动项目的步骤和项目简述等
 
 ## 团队协作
 在这期间，尤其是不进行Teamwork的时候，我们要每天在这里的日志下面记录下点东西（主要是为了保证团队活跃，减少摸鱼划水）比如今天为了这个项目做了哪些工作。
@@ -27,6 +28,7 @@
 
 **注意** ：
 
+- 项目拉取后记得先按照rcrs-manual.pdf里的步骤编译项目
 - 使用Git pull命令将文件夹存到本地，在本地checkout新分支，在此分支上开发，开发完毕后必须经过测试代码无bug后merge到master分支，然后push到github仓库
 
 ## 时间节点
