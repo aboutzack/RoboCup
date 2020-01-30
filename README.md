@@ -78,4 +78,7 @@ CGY：查看server脚本文件，学习框架<br>
 YBC：查看阅读server框架<br>
 CGY：阅读server和client的脚本文件，学习框架<br>
 GYJ：熟悉代码<br>
-2020年1月29日
+
+2020年1月30日
+
+YBC：熟悉代码<br>
