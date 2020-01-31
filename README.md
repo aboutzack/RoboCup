@@ -83,3 +83,8 @@ GYJ：熟悉代码<br>
 
 YBC：熟悉代码<br>
 CGY：阅读脚本文件、代码、rule和manual<br>
+
+2020年1月31日
+
+GYJ：继续熟悉代码，尝试在mac系统上跑图，成功<br>
+CGY：阅读server和client的脚本文件，学习框架<br>
