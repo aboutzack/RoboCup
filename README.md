@@ -91,4 +91,5 @@ CGY：阅读server和client的脚本文件，学习框架<br>
 
 2020年2月1日
 
-DJX：在家里的台式机上安装了Ubuntu18.04，安装了RCRS服务器，获取编译ADF
+DJX：在家里的台式机上安装了Ubuntu18.04，安装了RCRS服务器，获取编译ADF<br>
+CGY：看CSU代码<br>
