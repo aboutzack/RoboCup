@@ -93,3 +93,4 @@ CGY：阅读server和client的脚本文件，学习框架<br>
 
 DJX：在家里的台式机上安装了Ubuntu18.04，安装了RCRS服务器，获取编译ADF<br>
 CGY：看CSU代码<br>
+YBC：阅读rules，结合框架理解算法代码和实体的联系
