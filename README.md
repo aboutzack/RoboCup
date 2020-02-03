@@ -101,6 +101,7 @@ CRF：复习计算几何，复现凸包算法C++代码。<br>
 GYQ：阅读代码<br>
 CGY：将sample，CSU，框架结合起来看<br>
 YBC：结合框架理解算法代码和实体的联系<br>
+GYJ：复习Kmeans算法，学习canopy算法<br>
 
 2020年2月3日
 
