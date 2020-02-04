@@ -26,6 +26,7 @@ import java.util.Objects;
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> {
+    //各种动作对应的int值
     private static final int ACTION_UNKNOWN = -1;
     private static final int ACTION_REST = CommandAmbulance.ACTION_REST;
     private static final int ACTION_MOVE = CommandAmbulance.ACTION_MOVE;
@@ -39,13 +40,17 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
     private ExtAction actionTransport;
     private ExtAction actionExtMove;
 
+    //执行的动作对应的int值
     private int type;
+    //根据type不同,target含义不同
     private EntityID target;
+    //command发送者id
     private EntityID commanderID;
 
     public CommandExecutorAmbulance(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
         this.type = ACTION_UNKNOWN;
+        //moduleManager是专门通过反射加载module的类
         switch  (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("CommandExecutorAmbulance.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
@@ -67,7 +72,9 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
 
     @Override
     public CommandExecutor setCommand(CommandAmbulance command) {
+        //接收命令的agent的id
         EntityID agentID = this.agentInfo.getID();
+        //如果command有定义且此command的toid和agentid相同
         if(command.isToIDDefined() && Objects.requireNonNull(command.getToID()).getValue() == agentID.getValue()) {
             this.type = command.getAction();
             this.target = command.getTargetID();
@@ -78,16 +85,20 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
 
     @Override
     public CommandExecutor updateInfo(MessageManager messageManager){
+        //更新这个time的updateinfo的count
         super.updateInfo(messageManager);
+        //如果count>=2,说明之前已经执行了下面的操作,直接返回
         if(this.getCountUpdateInfo() >= 2) {
             return this;
         }
+        //更新信息,默认只进行了count++操作
         this.pathPlanning.updateInfo(messageManager);
         this.actionTransport.updateInfo(messageManager);
         this.actionExtMove.updateInfo(messageManager);
 
         if(this.isCommandCompleted()) {
             if(this.type != ACTION_UNKNOWN) {
+                //告诉命令发送者命令完成
                 messageManager.addMessage(new MessageReport(true, true, false, this.commanderID));
                 if(this.type == ACTION_LOAD) {
                     this.type = ACTION_UNLOAD;
@@ -153,8 +164,10 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
                         this.pathPlanning.setDestination(refuges);
                         List<EntityID> path = this.pathPlanning.calc().getResult();
                         if (path != null && path.size() > 0) {
+                            //到某个refuge
                             this.result = new ActionMove(path);
                         } else {
+                            //原地不动
                             this.result = new ActionRest();
                         }
                     }
@@ -163,6 +176,7 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
                 if (position.getValue() != this.target.getValue()) {
                     List<EntityID> path = this.pathPlanning.getResult(position, this.target);
                     if (path != null && path.size() > 0) {
+                        //去target
                         this.result = new ActionMove(path);
                         return this;
                     }
@@ -214,8 +228,10 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
                 if(this.target == null) {
                     return (agent.getDamage() == 0);
                 }
+                //到了refuge
                 if (Objects.requireNonNull(this.worldInfo.getEntity(this.target)).getStandardURN() == REFUGE) {
                     if (agent.getPosition().getValue() == this.target.getValue()) {
+                        //damage(每个cycle减少的hp)
                         return (agent.getDamage() == 0);
                     }
                 }
@@ -227,12 +243,14 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
                     return true;
                 }
                 Human human = (Human) Objects.requireNonNull(this.worldInfo.getEntity(this.target));
+                //救援对象没被埋或者死了
                 return human.isBuriednessDefined() && human.getBuriedness() == 0 || (human.isHPDefined() && human.getHP() == 0);
             case ACTION_LOAD:
                 if(this.target == null) {
                     return true;
                 }
                 Human human1 = (Human) Objects.requireNonNull(this.worldInfo.getEntity(this.target));
+                //救援对象死了
                 if((human1.isHPDefined() && human1.getHP() == 0)) {
                     return true;
                 }
@@ -242,9 +260,10 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> 
                 }
                 if (human1.isPositionDefined()) {
                     EntityID position = human1.getPosition();
+                    //救援对象已被load
                     if (this.worldInfo.getEntityIDsOfType(AMBULANCE_TEAM).contains(position)) {
                         return true;
-                    } else if (this.worldInfo.getEntity(position).getStandardURN() == REFUGE) {
+                    } else if (this.worldInfo.getEntity(position).getStandardURN() == REFUGE) {//到了refuge
                         return true;
                     }
                 }

@@ -148,6 +148,7 @@ public class ActionTransport extends ExtAction
         AmbulanceTeam agent = (AmbulanceTeam) this.agentInfo.me();
         Human transportHuman = this.agentInfo.someoneOnBoard();
 
+        //load人了
         if (transportHuman != null)
         {
             this.result = this.calcUnload(agent, this.pathPlanning, transportHuman, this.target);
@@ -243,6 +244,7 @@ public class ActionTransport extends ExtAction
         {
             return null;
         }
+        //人死了,直接unload
         if (transportHuman.isHPDefined() && transportHuman.getHP() == 0)
         {
             return new ActionUnload();
@@ -301,6 +303,7 @@ public class ActionTransport extends ExtAction
             Human human = (Human) targetEntity;
             if (human.isPositionDefined())
             {
+                //直接unload
                 return calcRefugeAction(agent, pathPlanning, Lists.newArrayList(human.getPosition()), true);
             }
             pathPlanning.setFrom(agentPosition);
@@ -337,6 +340,7 @@ public class ActionTransport extends ExtAction
         return damage >= this.thresholdRest || (activeTime + this.agentInfo.getTime()) < this.kernelTime;
     }
 
+    //获取target实际的position
     private EntityID convertArea(EntityID targetID)
     {
         StandardEntity entity = this.worldInfo.getEntity(targetID);
@@ -371,6 +375,7 @@ public class ActionTransport extends ExtAction
         return null;
     }
 
+    //如果在refuge里,直接unload.如果不在refuge且无target,直接找一条去refuge的路.如果不在refuge且有target,找到一条position-refuge-target的路
     private Action calcRefugeAction(Human human, PathPlanning pathPlanning, Collection<EntityID> targets, boolean isUnload)
     {
         EntityID position = human.getPosition();

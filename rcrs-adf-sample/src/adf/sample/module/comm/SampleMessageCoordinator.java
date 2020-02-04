@@ -89,6 +89,7 @@ public class SampleMessageCoordinator extends MessageCoordinator {
 
         if (scenarioInfo.getCommsChannelsCount() > 1) {
             // send radio messages if there are more than one communication channel
+            //每个channel中未发送message的大小
             int[] channelSize = new int[scenarioInfo.getCommsChannelsCount() - 1];
 
             setSendMessages(scenarioInfo, StandardEntityURN.POLICE_FORCE, agentInfo, worldInfo, policeMessages,
@@ -103,6 +104,7 @@ public class SampleMessageCoordinator extends MessageCoordinator {
         ArrayList<StandardMessage> voiceMessageNormalList = new ArrayList<>();
         ArrayList<StandardMessage> voiceMessageHighList = new ArrayList<>();
 
+        //添加voiceMessage到对应priority的list
         for (CommunicationMessage msg : voiceMessages) {
             if (msg instanceof StandardMessage) {
                 StandardMessage m = (StandardMessage) msg;
@@ -120,12 +122,13 @@ public class SampleMessageCoordinator extends MessageCoordinator {
             }
         }
 
-        // set the voice channel messages
+        // set the voice channel messages,优先级高的在前
         channelSendMessageList.get(0).addAll(voiceMessageHighList);
         channelSendMessageList.get(0).addAll(voiceMessageNormalList);
         channelSendMessageList.get(0).addAll(voiceMessageLowList);
     }
 
+    //调用SampleChannelSubscriber.getChannelNumber,获取指定agentType的channels
     protected int[] getChannelsByAgentType(StandardEntityURN agentType, AgentInfo agentInfo,
                                         WorldInfo worldInfo, ScenarioInfo scenarioInfo, int channelIndex) {
         int numChannels = scenarioInfo.getCommsChannelsCount()-1; // 0th channel is the voice channel
@@ -159,6 +162,7 @@ public class SampleMessageCoordinator extends MessageCoordinator {
         return agentType;
     }
 
+    //为每条message分配channel,将message添加到channelSendMessageList中
     protected void setSendMessages(ScenarioInfo scenarioInfo, StandardEntityURN agentType, AgentInfo agentInfo,
                                    WorldInfo worldInfo, List<CommunicationMessage> messages,
                                    List<List<CommunicationMessage>> channelSendMessageList,
@@ -172,6 +176,7 @@ public class SampleMessageCoordinator extends MessageCoordinator {
             for (CommunicationMessage msg : messages) {
                 StandardMessage smsg = (StandardMessage) msg;
                 if (smsg.getSendingPriority() == StandardMessagePriority.values()[i]) {
+                    //修改channel内未发送内容大小
                     channelSize[channel-1] += smsg.getByteArraySize();
                     if (channelSize[channel-1] > channelCapacity) {
                         channelSize[channel-1] -= smsg.getByteArraySize();

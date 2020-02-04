@@ -19,10 +19,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+//从allocationdata获取信息并make命令保存在message中
 public class CommandPickerAmbulance extends CommandPicker {
+    //侦查距离
     private int scoutDistance;
-
+    //存储所有即将发布的命令
     private Collection<CommunicationMessage> messages;
+    //agent-target
     private Map<EntityID, EntityID> allocationData;
 
     public CommandPickerAmbulance(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
@@ -45,9 +48,13 @@ public class CommandPickerAmbulance extends CommandPicker {
             return this;
         }
         for(EntityID agentID : this.allocationData.keySet()) {
+            //从entityid获取agent
             StandardEntity agent = this.worldInfo.getEntity(agentID);
+            //如果是at
             if(agent != null && agent.getStandardURN() == StandardEntityURN.AMBULANCE_TEAM) {
+                //获取目标entity
                 StandardEntity target = this.worldInfo.getEntity(this.allocationData.get(agentID));
+                //分配agent自动行动
                 if(target != null) {
                     if(target instanceof Human) {
                         CommandAmbulance command = new CommandAmbulance(
@@ -56,8 +63,10 @@ public class CommandPickerAmbulance extends CommandPicker {
                                 target.getID(),
                                 CommandAmbulance.ACTION_AUTONOMY
                         );
+                        //将命令添加进message
                         this.messages.add(command);
                     } else if(target instanceof Area) {
+                        //侦查命令
                         CommandScout command = new CommandScout(
                                 true,
                                 agentID,

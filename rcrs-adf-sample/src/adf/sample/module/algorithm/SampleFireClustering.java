@@ -56,6 +56,7 @@ public class SampleFireClustering extends DynamicClustering
                             {
                                 if (worldInfo.getDistance(entity, changedBuilding) <= groupingDistance)
                                 {
+                                    //每一个cluster中第一个距离cE<=groupingDistance的entity
                                     hostClusterPropertyEntityIDs.add(entity.getID());
                                     break;
                                 }

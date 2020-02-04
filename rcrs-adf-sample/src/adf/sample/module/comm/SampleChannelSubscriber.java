@@ -7,6 +7,7 @@ import adf.agent.info.WorldInfo;
 import adf.component.communication.ChannelSubscriber;
 import rescuecore2.standard.entities.StandardEntityURN;
 
+//为fb,pf,at分配channel
 public class SampleChannelSubscriber extends ChannelSubscriber {
 
 
@@ -20,8 +21,10 @@ public class SampleChannelSubscriber extends ChannelSubscriber {
             int maxChannelCount = 0;
             boolean isPlatoon = isPlatoonAgent(agentInfo, worldInfo);
             if (isPlatoon) {
+                //fb,pf,at的maxChannelCount
                 maxChannelCount = scenarioInfo.getCommsChannelsMaxPlatoon();
             } else {
+                //central agent的maxChannelCount
                 maxChannelCount = scenarioInfo.getCommsChannelsMaxOffice();
             }
 
@@ -35,6 +38,7 @@ public class SampleChannelSubscriber extends ChannelSubscriber {
         }
     }
 
+    //判断是否是fb,pf,at之一
     protected boolean isPlatoonAgent(AgentInfo agentInfo, WorldInfo worldInfo) {
         StandardEntityURN agentType = getAgentType(agentInfo, worldInfo);
         if (agentType == StandardEntityURN.FIRE_BRIGADE ||
@@ -50,6 +54,7 @@ public class SampleChannelSubscriber extends ChannelSubscriber {
         return agentType;
     }
 
+    //channelIndex-此agentType的第几个channel,numChannels-所有agent的channels数量之和,channel从1开始分配,按照fb-pf-at顺序
     public static int getChannelNumber(StandardEntityURN agentType, int channelIndex, int numChannels) {
         int agentIndex = 0;
         if (agentType == StandardEntityURN.FIRE_BRIGADE || agentType == StandardEntityURN.FIRE_STATION) {

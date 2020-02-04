@@ -22,6 +22,7 @@ public class SampleSearch extends Search
     private PathPlanning pathPlanning;
     private Clustering clustering;
 
+    //搜索的building的id
     private EntityID result;
     private Collection<EntityID> unsearchedBuildingIDs;
 
@@ -92,6 +93,7 @@ public class SampleSearch extends Search
     }
 
 
+    //更新未搜索的buildings
     @Override
     public Search updateInfo(MessageManager messageManager)
     {
@@ -136,6 +138,7 @@ public class SampleSearch extends Search
             clusterEntities = this.clustering.getClusterEntities(clusterIndex);
 
         }
+        //如果agent在某个cluster中,添加此cluster中除refuge的所有building
         if (clusterEntities != null && clusterEntities.size() > 0)
         {
             for (StandardEntity entity : clusterEntities)
@@ -146,6 +149,7 @@ public class SampleSearch extends Search
                 }
             }
         }
+        //添加worldInfo中除refuge的所有building
         else
         {
             this.unsearchedBuildingIDs.addAll(this.worldInfo.getEntityIDsOfType(

@@ -24,9 +24,11 @@ public class ActionExtMove extends ExtAction
 {
     private PathPlanning pathPlanning;
 
+    //休息阈值(damage>thresholdRest时必须休息)
     private int thresholdRest;
     private int kernelTime;
 
+    //blockade,human or area
     private EntityID target;
 
     public ActionExtMove(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData)
@@ -172,14 +174,17 @@ public class ActionExtMove extends ExtAction
         return this;
     }
 
+    //是否需要去refuge
     private boolean needRest(Human agent)
     {
         int hp = agent.getHP();
+        //每秒损失的hp
         int damage = agent.getDamage();
         if (hp == 0 || damage == 0)
         {
             return false;
         }
+        //不去refuge情况下hp能坚持的时间
         int activeTime = (hp / damage) + ((hp % damage) != 0 ? 1 : 0);
         if (this.kernelTime == -1)
         {
@@ -205,6 +210,7 @@ public class ActionExtMove extends ExtAction
             return new ActionRest();
         }
         List<EntityID> firstResult = null;
+        //worldInfo中有refuge
         while (refuges.size() > 0)
         {
             pathPlanning.setFrom(position);
@@ -215,19 +221,23 @@ public class ActionExtMove extends ExtAction
                 if (firstResult == null)
                 {
                     firstResult = new ArrayList<>(path);
+                    //如果当前没有target并且找到了refuge
                     if (target == null)
                     {
                         break;
                     }
                 }
+                //当前有target
                 EntityID refugeID = path.get(path.size() - 1);
                 pathPlanning.setFrom(refugeID);
                 pathPlanning.setDestination(target);
                 List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();
+                //如果从position到refuge到target的path找到的话
                 if (fromRefugeToTarget != null && fromRefugeToTarget.size() > 0)
                 {
                     return new ActionMove(path);
                 }
+                //如果没找到,不去这个refuge了,换一个
                 refuges.remove(refugeID);
                 //remove failed
                 if (currentSize == refuges.size())
@@ -236,6 +246,7 @@ public class ActionExtMove extends ExtAction
                 }
                 currentSize = refuges.size();
             }
+            //找不到refuge了,等死吧
             else
             {
                 break;
