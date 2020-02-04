@@ -115,3 +115,4 @@ CGY：看sample+框架+写注释<br>
 CRF：学习计算几何中二维平面基本的点、线、面运算以及代码实现。<br>
 GYQ：复习Kmeans算法,并学习其改进版<br>
 GYJ：学习shell语言，读sample<br>
+CGY：学习sample和框架，写注释。发现sample一个bug并修复<br>
