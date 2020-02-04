@@ -255,7 +255,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
     private List<StandardEntity> getActionAgents(Map<EntityID, AmbulanceTeamInfo> map)
     {
         List<StandardEntity> result = new ArrayList<>();
-        for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE))
+        for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.AMBULANCE_TEAM))
         {
             AmbulanceTeamInfo info = map.get(entity.getID());
             if (info != null && info.canNewAction && ((AmbulanceTeam) entity).isPositionDefined())
@@ -401,6 +401,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         }
     }
 
+    //距离比较器(排序用)
     private class DistanceSorter implements Comparator<StandardEntity>
     {
         private StandardEntity reference;
