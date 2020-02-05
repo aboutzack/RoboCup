@@ -120,3 +120,4 @@ CGY：学习sample和框架，写注释。发现sample一个bug并修复<br>
 2020年2月5日
 
 YBC：将sample与CSU结合对比学习，写注释
+GYQ：浏览赛事官网和阅读rules<br>
