@@ -26,8 +26,10 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
 {
     private Collection<EntityID> priorityHumans;
+    //worldInfo中所有at发现的所有需要救援的humans
     private Collection<EntityID> targetHumans;
 
+    //worldInfo中的所有at-atInfo
     private Map<EntityID, AmbulanceTeamInfo> ambulanceTeamInfoMap;
 
     public SampleAmbulanceTargetAllocator(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
@@ -130,6 +132,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return this;
     }
 
+    //message是按照优先级来的,优先级高的在前
     @Override
     public AmbulanceTargetAllocator updateInfo(MessageManager messageManager)
     {
@@ -142,14 +145,17 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         for (CommunicationMessage message : messageManager.getReceivedMessageList())
         {
             Class<? extends CommunicationMessage> messageClass = message.getClass();
+            //市民的消息
             if (messageClass == MessageCivilian.class)
             {
                 MessageCivilian mc = (MessageCivilian) message;
                 MessageUtil.reflectMessage(this.worldInfo, mc);
+                //被埋了
                 if (mc.isBuriednessDefined() && mc.getBuriedness() > 0)
                 {
                     this.targetHumans.add(mc.getAgentID());
                 }
+                //没被埋
                 else
                 {
                     this.priorityHumans.remove(mc.getAgentID());
@@ -185,6 +191,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
                 }
             }
         }
+        //at发送的消息
         for (CommunicationMessage message : messageManager.getReceivedMessageList(MessageAmbulanceTeam.class))
         {
             MessageAmbulanceTeam mat = (MessageAmbulanceTeam) message;
@@ -203,6 +210,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
             {
                 info = new AmbulanceTeamInfo(mat.getAgentID());
             }
+            //发送消息的at没有更新
             if (currentTime >= info.commandTime + 2)
             {
                 this.ambulanceTeamInfoMap.put(mat.getAgentID(), this.update(info, mat));
@@ -211,11 +219,13 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         for (CommunicationMessage message : messageManager.getReceivedMessageList(CommandAmbulance.class))
         {
             CommandAmbulance command = (CommandAmbulance) message;
+            //广播挖人
             if (command.getAction() == CommandAmbulance.ACTION_RESCUE && command.isBroadcast())
             {
                 this.priorityHumans.add(command.getTargetID());
                 this.targetHumans.add(command.getTargetID());
             }
+            //广播救人
             else if (command.getAction() == CommandAmbulance.ACTION_LOAD && command.isBroadcast())
             {
                 this.priorityHumans.add(command.getTargetID());
@@ -226,6 +236,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         {
             MessageReport report = (MessageReport) message;
             AmbulanceTeamInfo info = this.ambulanceTeamInfoMap.get(report.getSenderID());
+            //报告自己救完认了
             if (info != null && report.isDone())
             {
                 info.canNewAction = true;
@@ -238,8 +249,10 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return this;
     }
 
+    //返回所有at的at-target
     private Map<EntityID, EntityID> convert(Map<EntityID, AmbulanceTeamInfo> map)
     {
+        //key:at value:target
         Map<EntityID, EntityID> result = new HashMap<>();
         for (EntityID id : map.keySet())
         {
@@ -252,6 +265,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return result;
     }
 
+    //返回所有可以活动的at
     private List<StandardEntity> getActionAgents(Map<EntityID, AmbulanceTeamInfo> map)
     {
         List<StandardEntity> result = new ArrayList<>();
@@ -266,8 +280,10 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return result;
     }
 
+    //更新所有at的信息和等待救援的human
     private AmbulanceTeamInfo update(AmbulanceTeamInfo info, MessageAmbulanceTeam message)
     {
+        //被埋了
         if (message.isBuriednessDefined() && message.getBuriedness() > 0)
         {
             info.canNewAction = false;
@@ -291,6 +307,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         {
             if (message.getTargetID() != null)
             {
+                //发送者
                 StandardEntity entity = this.worldInfo.getEntity(message.getTargetID());
                 if (entity != null)
                 {
@@ -316,6 +333,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
                                     return info;
                                 }
                             }
+                            //接收到的target和当前target相同
                             if (targetEntity.getID().getValue() == entity.getID().getValue())
                             {
                                 info.canNewAction = false;
@@ -354,6 +372,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
                     }
                 }
             }
+            //message里没有target
             info.canNewAction = true;
             if (info.target != null)
             {
@@ -389,6 +408,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
     {
         EntityID agentID;
         EntityID target;
+        //是否可以更换当前action
         boolean canNewAction;
         int commandTime;
 

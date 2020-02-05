@@ -20,6 +20,7 @@ public class SampleHumanDetector extends HumanDetector
 {
     private Clustering clustering;
 
+    //该救的人里优先级最高的
     private EntityID result;
 
     public SampleHumanDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
@@ -69,10 +70,12 @@ public class SampleHumanDetector extends HumanDetector
             Human target = (Human) this.worldInfo.getEntity(this.result);
             if (target != null)
             {
+                //target死了
                 if (!target.isHPDefined() || target.getHP() == 0)
                 {
                     this.result = null;
                 }
+                //target位置有问题
                 else if (!target.isPositionDefined())
                 {
                     this.result = null;
@@ -83,6 +86,7 @@ public class SampleHumanDetector extends HumanDetector
                     if (position != null)
                     {
                         StandardEntityURN positionURN = position.getStandardURN();
+                        //如果在target在refuge或者target是at
                         if (positionURN == REFUGE || positionURN == AMBULANCE_TEAM)
                         {
                             this.result = null;
@@ -110,6 +114,7 @@ public class SampleHumanDetector extends HumanDetector
     private EntityID calcTargetInCluster(Clustering clustering)
     {
         int clusterIndex = clustering.getClusterIndex(this.agentInfo.getID());
+        //类中所有entity
         Collection<StandardEntity> elements = clustering.getClusterEntities(clusterIndex);
         if (elements == null || elements.isEmpty())
         {
@@ -118,8 +123,10 @@ public class SampleHumanDetector extends HumanDetector
 
         List<Human> rescueTargets = new ArrayList<>();
         List<Human> loadTargets = new ArrayList<>();
+        //优先救agent
         for (StandardEntity next : this.worldInfo.getEntitiesOfType(AMBULANCE_TEAM, FIRE_BRIGADE, POLICE_FORCE))
         {
+            //worldInfo中的agent
             Human h = (Human) next;
             if (this.agentInfo.getID().getValue() == h.getID().getValue())
             {
@@ -128,12 +135,14 @@ public class SampleHumanDetector extends HumanDetector
             StandardEntity positionEntity = this.worldInfo.getPosition(h);
             if (positionEntity != null && elements.contains(positionEntity) || elements.contains(h))
             {
+                //还没死,被埋了
                 if (h.isHPDefined() && h.isBuriednessDefined() && h.getHP() > 0 && h.getBuriedness() > 0)
                 {
                     rescueTargets.add(h);
                 }
             }
         }
+        //后救市民
         for (StandardEntity next : this.worldInfo.getEntitiesOfType(CIVILIAN))
         {
             Human h = (Human) next;
@@ -144,12 +153,14 @@ public class SampleHumanDetector extends HumanDetector
                 {
                     if (h.isHPDefined() && h.getHP() > 0)
                     {
+                        //被埋了
                         if (h.isBuriednessDefined() && h.getBuriedness() > 0)
                         {
                             rescueTargets.add(h);
                         }
                         else
                         {
+                            //没被埋,不在refuge
                             if (h.isDamageDefined() && h.getDamage() > 0 && positionEntity.getStandardURN() != REFUGE)
                             {
                                 loadTargets.add(h);
@@ -159,14 +170,18 @@ public class SampleHumanDetector extends HumanDetector
                 }
             }
         }
+        //优先救被埋的
         if (rescueTargets.size() > 0)
         {
             rescueTargets.sort(new DistanceSorter(this.worldInfo, this.agentInfo.me()));
+            //返回距离最近的
             return rescueTargets.get(0).getID();
         }
+        //后救没被埋的
         if (loadTargets.size() > 0)
         {
             loadTargets.sort(new DistanceSorter(this.worldInfo, this.agentInfo.me()));
+            //返回距离最近的
             return loadTargets.get(0).getID();
         }
         return null;
@@ -176,6 +191,7 @@ public class SampleHumanDetector extends HumanDetector
     {
         List<Human> rescueTargets = new ArrayList<>();
         List<Human> loadTargets = new ArrayList<>();
+        //先救agents,没被埋的话不用救
         for (StandardEntity next : this.worldInfo.getEntitiesOfType(AMBULANCE_TEAM, FIRE_BRIGADE, POLICE_FORCE))
         {
             Human h = (Human) next;
@@ -191,6 +207,7 @@ public class SampleHumanDetector extends HumanDetector
                 }
             }
         }
+        //后救市民
         for (StandardEntity next : this.worldInfo.getEntitiesOfType(CIVILIAN))
         {
             Human h = (Human) next;
@@ -265,6 +282,7 @@ public class SampleHumanDetector extends HumanDetector
         return this;
     }
 
+    //比较直线距离
     private class DistanceSorter implements Comparator<StandardEntity>
     {
         private StandardEntity reference;

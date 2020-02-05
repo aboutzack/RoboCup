@@ -22,7 +22,7 @@ public class SampleSearch extends Search
     private PathPlanning pathPlanning;
     private Clustering clustering;
 
-    //搜索的building的id
+    //搜索到的building的id
     private EntityID result;
     private Collection<EntityID> unsearchedBuildingIDs;
 

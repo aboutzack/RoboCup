@@ -27,20 +27,28 @@ public class SampleKMeans extends StaticClustering {
     private static final String KEY_CLUSTER_ENTITY = "sample.clustering.entities.";
     private static final String KEY_ASSIGN_AGENT = "sample.clustering.assign";
 
+    //重复次数
     private int repeatPrecompute;
     private int repeatPreparate;
 
+    //worldInfo中的所有Area的子类
     private Collection<StandardEntity> entities;
 
+    //聚类中心
     private List<StandardEntity> centerList;
+    //聚类中心id
     private List<EntityID> centerIDs;
+    //聚类
     private Map<Integer, List<StandardEntity>> clusterEntitiesList;
+    //聚类id
     private List<List<EntityID>> clusterEntityIDsList;
 
+    //K-means的K值
     private int clusterSize;
 
     private boolean assignAgentsFlag;
 
+    //保存entity的所有neighbours
     private Map<EntityID, Set<EntityID>> shortestPathGraph;
 
     public SampleKMeans(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
@@ -85,6 +93,7 @@ public class SampleKMeans extends StaticClustering {
         return this;
     }
 
+    //预计算
     @Override
     public Clustering precompute(PrecomputeData precomputeData) {
         super.precompute(precomputeData);
@@ -93,7 +102,7 @@ public class SampleKMeans extends StaticClustering {
         }
         this.calcPathBased(this.repeatPrecompute);
         this.entities = null;
-        // write
+        // write,写入PrecomputeData.data
         precomputeData.setInteger(KEY_CLUSTER_SIZE, this.clusterSize);
         precomputeData.setEntityIDList(KEY_CLUSTER_CENTER, this.centerIDs);
         for(int i = 0; i < this.clusterSize; i++) {
@@ -103,6 +112,7 @@ public class SampleKMeans extends StaticClustering {
         return this;
     }
 
+    //读取预计算数据
     @Override
     public Clustering resume(PrecomputeData precomputeData) {
         super.resume(precomputeData);
@@ -177,17 +187,22 @@ public class SampleKMeans extends StaticClustering {
         return this;
     }
 
+    //使用两点之间的直线距离聚类
     private void calcStandard(int repeat) {
         this.initShortestPath(this.worldInfo);
         Random random = new Random();
 
+        //worldInfo中所有Area的子类
         List<StandardEntity> entityList = new ArrayList<>(this.entities);
+        //每个类的center
         this.centerList = new ArrayList<>(this.clusterSize);
+        //类序号-类内entity
         this.clusterEntitiesList = new HashMap<>(this.clusterSize);
 
         //init list
         for (int index = 0; index < this.clusterSize; index++) {
             this.clusterEntitiesList.put(index, new ArrayList<>());
+            //初始化centerList
             this.centerList.add(index, entityList.get(0));
         }
         System.out.println("[" + this.getClass().getSimpleName() + "] Cluster : " + this.clusterSize);
@@ -195,8 +210,10 @@ public class SampleKMeans extends StaticClustering {
         for (int index = 0; index < this.clusterSize; index++) {
             StandardEntity centerEntity;
             do {
+                //取第一个不在centerList中的entity
                 centerEntity = entityList.get(Math.abs(random.nextInt()) % entityList.size());
             } while (this.centerList.contains(centerEntity));
+            //随机初始化centerList
             this.centerList.set(index, centerEntity);
         }
         //calc center
@@ -270,31 +287,41 @@ public class SampleKMeans extends StaticClustering {
         }
     }
 
+    //使用路径的距离聚类
     private void calcPathBased(int repeat) {
         this.initShortestPath(this.worldInfo);
         Random random = new Random();
+        //worldInfo中所有Area的子类
         List<StandardEntity> entityList = new ArrayList<>(this.entities);
+        //每个类的center
         this.centerList = new ArrayList<>(this.clusterSize);
+        //类序号-类内entity
         this.clusterEntitiesList = new HashMap<>(this.clusterSize);
 
         for (int index = 0; index < this.clusterSize; index++) {
             this.clusterEntitiesList.put(index, new ArrayList<>());
+            //初始化centerList
             this.centerList.add(index, entityList.get(0));
         }
         for (int index = 0; index < this.clusterSize; index++) {
             StandardEntity centerEntity;
             do {
+                //取第一个不在centerList中的entity
                 centerEntity = entityList.get(Math.abs(random.nextInt()) % entityList.size());
             } while (this.centerList.contains(centerEntity));
+            //随机初始化centerList
             this.centerList.set(index, centerEntity);
         }
+        //重复repeat次聚类
         for (int i = 0; i < repeat; i++) {
             this.clusterEntitiesList.clear();
             for (int index = 0; index < this.clusterSize; index++) {
                 this.clusterEntitiesList.put(index, new ArrayList<>());
             }
             for (StandardEntity entity : entityList) {
+                //tmp为聚类中心中距离entity最近的一个entity
                 StandardEntity tmp = this.getNearEntity(this.worldInfo, this.centerList, entity);
+                //将entity加进这个类中
                 this.clusterEntitiesList.get(this.centerList.indexOf(tmp)).add(entity);
             }
             for (int index = 0; index < this.clusterSize; index++) {
@@ -308,7 +335,9 @@ public class SampleKMeans extends StaticClustering {
                 int centerY = sumY / clusterEntitiesList.get(index).size();
 
                 //this.centerList.set(index, getNearEntity(this.worldInfo, this.clusterEntitiesList.get(index), centerX, centerY));
+                //找到类中距离类的中心点最近的一个entity
                 StandardEntity center = this.getNearEntity(this.worldInfo, this.clusterEntitiesList.get(index), centerX, centerY);
+                //重新设置center
                 if (center instanceof Area) {
                     this.centerList.set(index, center);
                 } else if (center instanceof Human) {
@@ -322,6 +351,7 @@ public class SampleKMeans extends StaticClustering {
 
         if  (scenarioInfo.isDebugMode()) { System.out.println(); }
 
+        //最后再进行一次聚类,这次center不重新计算,只进行归类
         this.clusterEntitiesList.clear();
         for (int index = 0; index < this.clusterSize; index++) {
             this.clusterEntitiesList.put(index, new ArrayList<>());
@@ -354,10 +384,12 @@ public class SampleKMeans extends StaticClustering {
         }
     }
 
+    //在数量上将agentList尽可能平均分配到每个类中,采用的方法似乎存在问题,可能所有agent都距离某个类中心很远,但是每次仍分配一个agent给这个类
     private void assignAgents(WorldInfo world, List<StandardEntity> agentList) {
         int clusterIndex = 0;
         while (agentList.size() > 0) {
             StandardEntity center = this.centerList.get(clusterIndex);
+            //距离center最近的agent
             StandardEntity agent = this.getNearAgent(world, agentList, center);
             this.clusterEntitiesList.get(clusterIndex).add(agent);
             agentList.remove(agent);
@@ -368,6 +400,7 @@ public class SampleKMeans extends StaticClustering {
         }
     }
 
+    //返回直线最近
     private StandardEntity getNearEntityByLine(WorldInfo world, List<StandardEntity> srcEntityList, StandardEntity targetEntity) {
         Pair<Integer, Integer> location = world.getLocation(targetEntity);
         return this.getNearEntityByLine(world, srcEntityList, location.first(), location.second());
@@ -381,6 +414,7 @@ public class SampleKMeans extends StaticClustering {
         return result;
     }
 
+    //返回路径最近
     private StandardEntity getNearAgent(WorldInfo worldInfo, List<StandardEntity> srcAgentList, StandardEntity targetEntity) {
         StandardEntity result = null;
         for (StandardEntity agent : srcAgentList) {
@@ -405,6 +439,7 @@ public class SampleKMeans extends StaticClustering {
         return result;
     }
 
+    //获取edge中点
     private Point2D getEdgePoint(Edge edge) {
         Point2D start = edge.getStart();
         Point2D end = edge.getEnd();
@@ -418,6 +453,7 @@ public class SampleKMeans extends StaticClustering {
         return Math.hypot(dx, dy);
     }
 
+    //返回两点之间的直线长度
     private double getDistance(Pair<Integer, Integer> from, Point2D to) {
         return getDistance(from.first(), from.second(), to.getX(), to.getY());
     }
@@ -434,6 +470,7 @@ public class SampleKMeans extends StaticClustering {
         return getDistance(getEdgePoint(from), getEdgePoint(to));
     }
 
+    //比较直线距离
     private StandardEntity compareLineDistance(WorldInfo worldInfo, int targetX, int targetY, StandardEntity first, StandardEntity second) {
         Pair<Integer, Integer> firstLocation = worldInfo.getLocation(first);
         Pair<Integer, Integer> secondLocation = worldInfo.getLocation(second);
@@ -442,6 +479,7 @@ public class SampleKMeans extends StaticClustering {
         return (firstDistance < secondDistance ? first : second);
     }
 
+    //返回srcEntity中距离target最近的一个
     private StandardEntity getNearEntity(WorldInfo worldInfo, List<StandardEntity> srcEntityList, StandardEntity targetEntity) {
         StandardEntity result = null;
         for (StandardEntity entity : srcEntityList) {
@@ -450,12 +488,14 @@ public class SampleKMeans extends StaticClustering {
         return result;
     }
 
+    //比较path(可能非直线)的距离
     private StandardEntity comparePathDistance(WorldInfo worldInfo, StandardEntity target, StandardEntity first, StandardEntity second) {
         double firstDistance = getPathDistance(worldInfo, shortestPath(target.getID(), first.getID()));
         double secondDistance = getPathDistance(worldInfo, shortestPath(target.getID(), second.getID()));
         return (firstDistance < secondDistance ? first : second);
     }
 
+    //返回path的长度
     private double getPathDistance(WorldInfo worldInfo, List<EntityID> path) {
         if (path == null) return Double.MAX_VALUE;
         if (path.size() <= 1) return 0.0D;
@@ -488,6 +528,7 @@ public class SampleKMeans extends StaticClustering {
                 neighbours.get(next.getID()).addAll(areaNeighbours);
             }
         }
+        //确保neighbour关系是相互的
         for (Map.Entry<EntityID, Set<EntityID>> graph : neighbours.entrySet()) {// fix graph
             for (EntityID entityID : graph.getValue()) {
                 neighbours.get(entityID).add(graph.getKey());
@@ -500,6 +541,7 @@ public class SampleKMeans extends StaticClustering {
         return shortestPath(start, Arrays.asList(goals));
     }
 
+    //返回到第一个能到的goal的最短路径
     private List<EntityID> shortestPath(EntityID start, Collection<EntityID> goals) {
         List<EntityID> open = new LinkedList<>();
         Map<EntityID, EntityID> ancestors = new HashMap<>();
