@@ -116,3 +116,7 @@ CRF：学习计算几何中二维平面基本的点、线、面运算以及代�
 GYQ：复习Kmeans算法,并学习其改进版<br>
 GYJ：学习shell语言，读sample<br>
 CGY：学习sample和框架，写注释。发现sample一个bug并修复<br>
+
+2020年2月5日
+
+YBC：将sample与CSU结合对比学习，写注释
