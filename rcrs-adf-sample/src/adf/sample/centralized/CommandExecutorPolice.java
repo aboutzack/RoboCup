@@ -162,7 +162,7 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
                 return this;
             case ACTION_MOVE:
                 if(this.target != null) {
-                    this.result = this.actionExtMove.setTarget(this.target).calc().getAction();
+                    this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                 }
                 return this;
             case ACTION_CLEAR:
