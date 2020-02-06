@@ -122,4 +122,8 @@ CGY：学习sample和框架，写注释。发现sample一个bug并修复<br>
 YBC：将sample与CSU结合对比学习，写注释，修复一个bug<br>
 GYQ：浏览赛事官网和阅读rules<br>
 CGY：阅读完sample代码，对项目结构有了更清晰的了解，粗略写了AT和部分通用代码的注释<br>CRF：结合项目中的程式学习K-means算法。<br>
-CXX：复习凸包算法及k-means聚类算法。
+CXX：复习凸包算法及k-means聚类算法。<br>
+
+2020年2月6日
+
+CRF：理解程式中K-means算法的思想以及应用场景。<br>
