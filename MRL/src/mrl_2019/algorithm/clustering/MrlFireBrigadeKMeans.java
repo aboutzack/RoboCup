@@ -68,7 +68,7 @@ public class MrlFireBrigadeKMeans extends StaticClustering {
         List<StandardEntity> allAgents = new ArrayList<>(worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
 
         int numberOfAgentsPerCluster = 5;
-        this.clusterSize = allAgents.size() / numberOfAgentsPerCluster;
+        this.clusterSize = allAgents.size() / numberOfAgentsPerCluster + 1;
 
         Double[][] data = new Double[entities.size()][2];
         Map<Double[], StandardEntity> entityMap = new HashMap<Double[], StandardEntity>();
