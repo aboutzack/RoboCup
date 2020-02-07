@@ -1,5 +1,5 @@
 package adf.sample.centralized;
-
+//搜索侦查，目标为building和road
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.communication.MessageManager;
@@ -34,17 +34,19 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
     private PathPlanning pathPlanning;
 
     private ExtAction actionExtClear;
+    //执行动作对于int值
+    private int commandType;	
+    //侦查目标的ID
+    private Collection<EntityID> scoutTargets;	
+    //发指令者的ID
+    private EntityID commanderID;	
 
-    private int commandType;
-    private Collection<EntityID> scoutTargets;
-    private EntityID commanderID;
-
-    public CommandExecutorScoutPolice(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
+    public CommandExecutorScoutPolice(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {    //构造函数
         super(ai, wi, si, moduleManager, developData);
         this.commandType = ACTION_UNKNOWN;
         this.scoutTargets = new HashSet<>();
         this.commanderID = null;
-
+      //反射加载SamplePathPlanning
         switch  (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("CommandExecutorScoutPolice.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
@@ -61,18 +63,23 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         }
     }
 
-    @Override
+    @Override  //下令搜索侦查
     public CommandExecutor<CommandScout> setCommand(CommandScout command) {
-        EntityID agentID = this.agentInfo.getID();
+    	//警察ID
+        EntityID agentID = this.agentInfo.getID();	
         if(command.isToIDDefined() && (Objects.requireNonNull(command.getToID()).getValue() == agentID.getValue())) {
-            EntityID target = command.getTargetID();
+        	//command有定义且不是broadcast且command的ToId与agentID相同时获取target
+            EntityID target = command.getTargetID();	
             if(target == null) {
                 target = this.agentInfo.getPosition();
             }
-            this.commandType = ACTION_SCOUT;
-            this.commanderID = command.getSenderID();
+            //搜索命令
+            this.commandType = ACTION_SCOUT;	
+            //commanderID
+            this.commanderID = command.getSenderID();	
             this.scoutTargets = new HashSet<>();
-            this.scoutTargets.addAll(
+            //agent所在entity为圆心,range半径的圆内所有road和building（refuge除外）为侦查物
+            this.scoutTargets.addAll(	
                     worldInfo.getObjectsInRange(target, command.getRange())
                             .stream()
                             .filter(e -> e instanceof Area && e.getStandardURN() != REFUGE)
@@ -82,8 +89,8 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         }
         return this;
     }
-
-    public CommandExecutor precompute(PrecomputeData precomputeData) {
+    //数据预处理
+    public CommandExecutor precompute(PrecomputeData precomputeData) {    
         super.precompute(precomputeData);
         if(this.getCountPrecompute() >= 2) {
             return this;
@@ -92,8 +99,8 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         this.actionExtClear.precompute(precomputeData);
         return this;
     }
-
-    public CommandExecutor resume(PrecomputeData precomputeData) {
+    //重新开始
+    public CommandExecutor resume(PrecomputeData precomputeData) {   
         super.resume(precomputeData);
         if(this.getCountResume() >= 2) {
             return this;
@@ -102,8 +109,8 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         this.actionExtClear.resume(precomputeData);
         return this;
     }
-
-    public CommandExecutor preparate() {
+    //预备
+    public CommandExecutor preparate() {   
         super.preparate();
         if(this.getCountPreparate() >= 2) {
             return this;
@@ -112,16 +119,16 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         this.actionExtClear.preparate();
         return this;
     }
-
-    public CommandExecutor updateInfo(MessageManager messageManager){
+    //更新这个time的内容
+    public CommandExecutor updateInfo(MessageManager messageManager){  
         super.updateInfo(messageManager);
         if(this.getCountUpdateInfo() >= 2) {
             return this;
         }
         this.pathPlanning.updateInfo(messageManager);
         this.actionExtClear.updateInfo(messageManager);
-
-        if(this.isCommandCompleted()) {
+        //command完成
+        if(this.isCommandCompleted()) {   
             if(this.commandType != ACTION_UNKNOWN) {
                 messageManager.addMessage(new MessageReport(true, true, false, this.commanderID));
                 this.commandType = ACTION_UNKNOWN;
@@ -132,32 +139,39 @@ public class CommandExecutorScoutPolice extends CommandExecutor<CommandScout> {
         return this;
     }
 
-    @Override
-    public CommandExecutor calc() {
+    @Override  
+    //侦查算法
+    public CommandExecutor calc() {   
         this.result = null;
         EntityID position = this.agentInfo.getPosition();
         if(this.commandType == ACTION_SCOUT) {
-            if (this.scoutTargets == null || this.scoutTargets.isEmpty()) {
+        	 //搜索目标空
+            if (this.scoutTargets == null || this.scoutTargets.isEmpty()) {   
                 return this;
             }
-            this.pathPlanning.setFrom(position);
+            //设定初始position与scoutTarget
+            this.pathPlanning.setFrom(position);    
             this.pathPlanning.setDestination(this.scoutTargets);
-            List<EntityID> path = this.pathPlanning.calc().getResult();
+            //路径
+            List<EntityID> path = this.pathPlanning.calc().getResult();		
             if (path != null) {
                 EntityID target = path.size() > 0 ? path.get(path.size() - 1) : position;
-                Action action = this.actionExtClear.setTarget(target).calc().getAction();
+                //根据路上是否需要清障选择动作
+                Action action = this.actionExtClear.setTarget(target).calc().getAction();  
                 if (action == null) {
                     action = new ActionMove(path);
                 }
-                this.result = action;
+              //找到的路
+                this.result = action;	
             }
         }
         return this;
     }
-
-    private boolean isCommandCompleted() {
+    //指令完成
+    private boolean isCommandCompleted() {    
         if(this.commandType == ACTION_SCOUT) {
-            if(this.scoutTargets != null) {
+        	//所有target都侦察过
+            if(this.scoutTargets != null) {		
                 this.scoutTargets.removeAll(this.worldInfo.getChanged().getChangedEntities());
             }
             return (this.scoutTargets == null || this.scoutTargets.isEmpty());
