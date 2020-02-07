@@ -24,10 +24,10 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
 {
 
-    private Collection<EntityID> priorityAreas;
-    private Collection<EntityID> targetAreas;
+    private Collection<EntityID> priorityAreas;		//worldinfo中警察优先要去的地区
+    private Collection<EntityID> targetAreas;		//worldinfo中警察需要去清理的地区
 
-    private Map<EntityID, PoliceForceInfo> agentInfoMap;
+    private Map<EntityID, PoliceForceInfo> agentInfoMap;	//worldinfo中所有的pf
 
     public SamplePoliceTargetAllocator(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
     {
@@ -177,7 +177,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
     }
 
     @Override
-    public PoliceTargetAllocator updateInfo(MessageManager messageManager)
+    public PoliceTargetAllocator updateInfo(MessageManager messageManager)		    //message是按照优先级来的,优先级高的在前
     {
         super.updateInfo(messageManager);
         if (this.getCountUpdateInfo() >= 2)
@@ -190,7 +190,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
             MessageRoad mpf = (MessageRoad) message;
             MessageUtil.reflectMessage(this.worldInfo, mpf);
         }
-        for (CommunicationMessage message : messageManager.getReceivedMessageList(MessagePoliceForce.class))
+        for (CommunicationMessage message : messageManager.getReceivedMessageList(MessagePoliceForce.class))	//pf发送消息
         {
             MessagePoliceForce mpf = (MessagePoliceForce) message;
             MessageUtil.reflectMessage(this.worldInfo, mpf);
@@ -199,7 +199,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
             {
                 info = new PoliceForceInfo(mpf.getAgentID());
             }
-            if (currentTime >= info.commandTime + 2)
+            if (currentTime >= info.commandTime + 2)	//发送消息的at没有更新
             {
                 this.agentInfoMap.put(mpf.getAgentID(), this.update(info, mpf));
             }
@@ -207,7 +207,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
         for (CommunicationMessage message : messageManager.getReceivedMessageList(CommandPolice.class))
         {
             CommandPolice command = (CommandPolice) message;
-            if (command.getAction() == CommandPolice.ACTION_CLEAR && command.isBroadcast())
+            if (command.getAction() == CommandPolice.ACTION_CLEAR && command.isBroadcast())		//被广播去清障
             {
                 this.priorityAreas.add(command.getTargetID());
                 this.targetAreas.add(command.getTargetID());
@@ -217,7 +217,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
         {
             MessageReport report = (MessageReport) message;
             PoliceForceInfo info = this.agentInfoMap.get(report.getSenderID());
-            if (info != null && report.isDone())
+            if (info != null && report.isDone())		//清障任务完成
             {
                 info.canNewAction = true;
                 this.priorityAreas.remove(info.target);
@@ -228,10 +228,10 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
         }
         return this;
     }
-
+    //更新pf的信息以及还没清的路障
     private PoliceForceInfo update(PoliceForceInfo info, MessagePoliceForce message)
     {
-        if (message.isBuriednessDefined() && message.getBuriedness() > 0)
+        if (message.isBuriednessDefined() && message.getBuriedness() > 0)	//救被埋了的人
         {
             info.canNewAction = false;
             if (info.target != null)
@@ -241,7 +241,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
             }
             return info;
         }
-        if (message.getAction() == MessagePoliceForce.ACTION_REST)
+        if (message.getAction() == MessagePoliceForce.ACTION_REST)		//休息
         {
             info.canNewAction = true;
             if (info.target != null)
@@ -250,7 +250,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
                 info.target = null;
             }
         }
-        else if (message.getAction() == MessagePoliceForce.ACTION_MOVE)
+        else if (message.getAction() == MessagePoliceForce.ACTION_MOVE)		//move
         {
             if (message.getTargetID() != null)
             {
@@ -262,7 +262,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
                         StandardEntity targetEntity = this.worldInfo.getEntity(info.target);
                         if (targetEntity != null && targetEntity instanceof Area)
                         {
-                            if (message.getTargetID().getValue() == info.target.getValue())
+                            if (message.getTargetID().getValue() == info.target.getValue())		//接收到的target和当前target相同
                             {
                                 info.canNewAction = false;
                             }
@@ -294,7 +294,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
                     }
                 }
             }
-            else
+            else	//message里没有target
             {
                 info.canNewAction = true;
                 if (info.target != null)
@@ -304,14 +304,14 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
                 }
             }
         }
-        else if (message.getAction() == MessagePoliceForce.ACTION_CLEAR)
+        else if (message.getAction() == MessagePoliceForce.ACTION_CLEAR)		//清障
         {
             info.canNewAction = false;
         }
         return info;
     }
 
-    private List<StandardEntity> getActionAgents(Map<EntityID, PoliceForceInfo> infoMap)
+    private List<StandardEntity> getActionAgents(Map<EntityID, PoliceForceInfo> infoMap)	//返回所有可以活动的pf
     {
         List<StandardEntity> result = new ArrayList<>();
         for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE))
@@ -325,7 +325,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
         return result;
     }
 
-    private Map<EntityID, EntityID> convert(Map<EntityID, PoliceForceInfo> infoMap)
+    private Map<EntityID, EntityID> convert(Map<EntityID, PoliceForceInfo> infoMap)		//返回所有pf的pf-target
     {
         Map<EntityID, EntityID> result = new HashMap<>();
         for (EntityID id : infoMap.keySet())
@@ -343,8 +343,8 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
     {
         EntityID agentID;
         EntityID target;
-        boolean canNewAction;
-        int commandTime;
+        boolean canNewAction;	//是否可以进行新的action
+        int commandTime;		//消息时差
 
         PoliceForceInfo(EntityID id)
         {
@@ -355,7 +355,7 @@ public class SamplePoliceTargetAllocator extends PoliceTargetAllocator
         }
     }
 
-    private class DistanceSorter implements Comparator<StandardEntity>
+    private class DistanceSorter implements Comparator<StandardEntity>		//距离比较器
     {
         private StandardEntity reference;
         private WorldInfo worldInfo;
