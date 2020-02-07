@@ -132,3 +132,7 @@ GYQ: 继续阅读框架代码<br>
 YBC：熟悉Kmeans和PathPlanning,通过sample里的ActionExtClean理解PF是如何进行道路清障<br>
 YYX：阅读rules,熟悉框架结构<br>
 CGY：修复MRL的一个bug，给台式机安装环境<br>
+
+2020年2月7日
+
+CRF：熟悉框架，理解K-means代码。<br>
