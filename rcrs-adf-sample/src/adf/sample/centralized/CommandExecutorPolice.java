@@ -1,5 +1,5 @@
 package adf.sample.centralized;
-
+//警察局指令中心
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
@@ -25,25 +25,29 @@ import static rescuecore2.standard.entities.StandardEntityURN.BLOCKADE;
 import static rescuecore2.standard.entities.StandardEntityURN.REFUGE;
 
 public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
+	//各种动作对应的int值
     private static final int ACTION_UNKNOWN = -1;
     private static final int ACTION_REST = CommandPolice.ACTION_REST;
     private static final int ACTION_MOVE = CommandPolice.ACTION_MOVE;
     private static final int ACTION_CLEAR = CommandPolice.ACTION_CLEAR;
     private static final int ACTION_AUTONOMY = CommandPolice.ACTION_AUTONOMY;
-
-    private int commandType;
-    private EntityID target;
-    private EntityID commanderID;
-
-    private PathPlanning pathPlanning;
-
+    //每种对应int值
+    private int commandType;	
+    //每种命令对应目标不同
+    private EntityID target;	
+    //下指令者ID
+    private EntityID commanderID;	
+    //路线规划
+    private PathPlanning pathPlanning;	
+	//清路动作
     private ExtAction actionExtClear;
+	//移动
     private ExtAction actionExtMove;
 
-    public CommandExecutorPolice(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
+    public CommandExecutorPolice(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {    //构造函数
         super(ai, wi, si, moduleManager, developData);
         this.commandType = ACTION_UNKNOWN;
-
+      //反射加载SamplePathPlanning
         switch  (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("CommandExecutorPolice.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
@@ -64,18 +68,23 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
     }
 
     @Override
+    //警察局下令
     public CommandExecutor setCommand(CommandPolice command) {
+    	//警察ID
         EntityID agentID = this.agentInfo.getID();
         if(command.isToIDDefined() && Objects.requireNonNull(command.getToID()).getValue() == agentID.getValue()) {
+        	//command有定义且command的ToId与agentID相同时获取command
             this.commandType = command.getAction();
             this.target = command.getTargetID();
             this.commanderID = command.getSenderID();
         }
         return this;
     }
-
+    //数据预计算
     public CommandExecutor precompute(PrecomputeData precomputeData) {
+    	//获取这个time的precompute的count
         super.precompute(precomputeData);
+        //如果count>=2,说明之前已经执行了下面的操作,直接返回
         if(this.getCountPrecompute() >= 2) {
             return this;
         }
@@ -84,9 +93,11 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
         this.actionExtMove.precompute(precomputeData);
         return this;
     }
-
-    public CommandExecutor resume(PrecomputeData precomputeData) {
+    //重新开始
+    public CommandExecutor resume(PrecomputeData precomputeData) { 
+    	//获取这个time的resume的count
         super.resume(precomputeData);
+    	//如果count>=2,说明之前已经执行了下面的操作,直接返回
         if(this.getCountResume() >= 2) {
             return this;
         }
@@ -95,9 +106,11 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
         this.actionExtMove.resume(precomputeData);
         return this;
     }
-
+    //预备
     public CommandExecutor preparate() {
+    	//获取这个time的prepare的count
         super.preparate();
+		//如果count>=2,说明之前已经执行了下面的操作,直接返回
         if(this.getCountPreparate() >= 2) {
             return this;
         }
@@ -107,16 +120,19 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
         return this;
     }
 
-    public CommandExecutor updateInfo(MessageManager messageManager){
-        super.updateInfo(messageManager);
+    public CommandExecutor updateInfo(MessageManager messageManager){   
+    	//更新这个time的updateinfo的count
+        super.updateInfo(messageManager);	
+   	    //如果count>=2,说明之前已经执行了下面的操作,直接返回
         if(this.getCountUpdateInfo() >= 2) {
             return this;
         }
+        //更新
         this.pathPlanning.updateInfo(messageManager);
         this.actionExtClear.updateInfo(messageManager);
         this.actionExtMove.updateInfo(messageManager);
-
-        if(this.isCommandCompleted()) {
+        //指令完成
+        if(this.isCommandCompleted()) { 
             if(this.commandType != ACTION_UNKNOWN) {
                 messageManager.addMessage(new MessageReport(true, true, false, this.commanderID));
                 this.commandType = ACTION_UNKNOWN;
@@ -127,13 +143,16 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
         return this;
     }
 
-    @Override
+    @Override   //对于每种ACTION的对应算法
     public CommandExecutor calc() {
         this.result = null;
         EntityID position = this.agentInfo.getPosition();
         switch (this.commandType) {
+        	//休息
             case ACTION_REST:
+            	//如果此时没有目标地点
                 if(this.target == null) {
+                	//去refuge
                     if(worldInfo.getEntity(position).getStandardURN() != REFUGE) {
                         this.pathPlanning.setFrom(position);
                         this.pathPlanning.setDestination(this.worldInfo.getEntityIDsOfType(REFUGE));
@@ -147,6 +166,7 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
                             return this;
                         }
                     }
+            		//此时有target就去target
                 } else if (position.getValue() != this.target.getValue()) {
                     List<EntityID> path = this.pathPlanning.getResult(position, this.target);
                     if(path != null && path.size() > 0) {
@@ -157,27 +177,33 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
                         this.result = action;
                         return this;
                     }
-                }
-                this.result = new ActionRest();
+                }	
+        		//休息
+                this.result = new ActionRest();		
                 return this;
-            case ACTION_MOVE:
+                //移动
+            case ACTION_MOVE:      
                 if(this.target != null) {
                     this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                 }
                 return this;
-            case ACTION_CLEAR:
+                //清除路障
+            case ACTION_CLEAR:     
                 if(this.target != null) {
                     this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                 }
                 return this;
-            case ACTION_AUTONOMY:
+                //自主选择
+            case ACTION_AUTONOMY:    
                 if(this.target == null) {
                     return this;
                 }
                 StandardEntity targetEntity = this.worldInfo.getEntity(this.target);
+            	//去refuge
                 if(targetEntity.getStandardURN() == REFUGE) {
                     PoliceForce agent = (PoliceForce) this.agentInfo.me();
-                    if(agent.getDamage() > 0) {
+                	//到目的地去rest
+                    if(agent.getDamage() > 0) {	
                         if (position.getValue() != this.target.getValue()) {
                             List<EntityID> path = this.pathPlanning.getResult(position, this.target);
                             if(path != null && path.size() > 0) {
@@ -193,19 +219,24 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
                     } else {
                         this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                     }
+            		//空地？
                 } else if (targetEntity instanceof Area) {
                     this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                     return this;
-                }else if (targetEntity instanceof Human) {
+                	//有平民的地方
+                }else if (targetEntity instanceof Human) {	
                     Human h = (Human) targetEntity;
-                    if((h.isHPDefined() && h.getHP() == 0)) {
+                	//平民挂了就不过去了
+                    if((h.isHPDefined() && h.getHP() == 0)) {	
                         return this;
                     }
-                    if(h.isPositionDefined() && this.worldInfo.getPosition(h) instanceof Area) {
+                	//去平民的所在地
+                    if(h.isPositionDefined() && this.worldInfo.getPosition(h) instanceof Area) {	
                         this.target = h.getPosition();
                         this.result = this.actionExtClear.setTarget(this.target).calc().getAction();
                     }
-                } else if(targetEntity.getStandardURN() == BLOCKADE) {
+                	//障碍
+                } else if(targetEntity.getStandardURN() == BLOCKADE) {	
                     Blockade blockade = (Blockade)targetEntity;
                     if(blockade.isPositionDefined()) {
                         this.target = blockade.getPosition();
@@ -215,11 +246,12 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
         }
         return this;
     }
-
-    private boolean isCommandCompleted() {
+    //指令是否完成判断action
+    private boolean isCommandCompleted() {    
         PoliceForce agent = (PoliceForce) this.agentInfo.me();
         switch (this.commandType) {
-            case ACTION_REST:
+    	//根据damage判断是否完成了rest    
+        	case ACTION_REST:
                 if(this.target == null) {
                     return (agent.getDamage() == 0);
                 }
@@ -229,9 +261,11 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
                     }
                 }
                 return false;
+            	//没有target或者agent位置与target位置相同
             case ACTION_MOVE:
                 return this.target == null || (this.agentInfo.getPosition().getValue() == this.target.getValue());
-            case ACTION_CLEAR:
+              //blockades是否empty或者是否到达target
+            case ACTION_CLEAR:	
                 if(this.target == null) {
                     return true;
                 }
@@ -249,23 +283,27 @@ public class CommandExecutorPolice extends CommandExecutor<CommandPolice> {
             case ACTION_AUTONOMY:
                 if(this.target != null) {
                     StandardEntity targetEntity = this.worldInfo.getEntity(this.target);
-                    if(targetEntity.getStandardURN() == REFUGE) {
-                        this.commandType = agent.getDamage() > 0 ? ACTION_REST : ACTION_CLEAR;
+                    if(targetEntity.getStandardURN() == REFUGE) {	
+                    	//根据damage选择action
+                        this.commandType = agent.getDamage() > 0 ? ACTION_REST : ACTION_CLEAR;	
                         return this.isCommandCompleted();
                     } else if (targetEntity instanceof Area) {
                         this.commandType = ACTION_CLEAR;
                         return this.isCommandCompleted();
                     }else if (targetEntity instanceof Human) {
                         Human h = (Human) targetEntity;
-                        if((h.isHPDefined() && h.getHP() == 0)) {
+                      //平民挂了自动完成
+                        if((h.isHPDefined() && h.getHP() == 0)) {	
                             return true;
                         }
+                    	//清路障去平民所在地
                         if(h.isPositionDefined() && this.worldInfo.getPosition(h) instanceof Area) {
                             this.target = h.getPosition();
                             this.commandType = ACTION_CLEAR;
                             return this.isCommandCompleted();
                         }
-                    } else if(targetEntity.getStandardURN() == BLOCKADE) {
+                    	//清路障
+                    } else if(targetEntity.getStandardURN() == BLOCKADE) {	
                         Blockade blockade = (Blockade)targetEntity;
                         if(blockade.isPositionDefined()) {
                             this.target = blockade.getPosition();
