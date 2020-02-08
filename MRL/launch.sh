@@ -8,7 +8,7 @@ PWD=`pwd`
 CP=`find $PWD/library/ -name '*.jar' ! -name '*-sources.jar' | awk -F '\n' -v ORS=':' '{print}'`
 
 if [ ! -z "$1" ]; then
-  java -Xmx80g -classpath "${CP}./build" adf.Main ${LOADER} $*
+  java -classpath "${CP}./build" adf.Main ${LOADER} $*
 else
   echo "Options:"
   echo "-t [FB],[FS],[PF],[PO],[AT],[AC] number of agents"
