@@ -139,3 +139,8 @@ CRF：熟悉框架，理解K-means代码。<br>
 GYQ: 继续阅读框架代码<br>
 YBC：按照自己理解粗略写了sample的PF的注释，理解CSU的PF是如何进行清障<br>
 CGY：看源码，联机测试，跑MRL和CSU代码<br>
+
+2020年2月8日
+
+CRF：看sample代码，理解思想。<br>
+
