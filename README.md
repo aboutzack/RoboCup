@@ -153,9 +153,11 @@ GYQ: 继续阅读框架代码<br>
 GYQ: 因为笔记本内存跑不动部分地图，研究了一下如何加装内存条<br>
 CRF：理解sample的框架结构，理解代码。<br>
 XJ:重装了一遍双系统，新建了仓库，阅读了rules，熟悉了下框架结构，运行了下服务器。<br>
+GYJ：重学git，看sampled<br>
 
 2020年2月10日
 
 CRF：查看sample框架中的各个部分的大致功能，理清框架结构。<br>
 GYQ: 看CSU代码<br>
-YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClear具体内涵
+YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClear具体内涵<br>
+GYJ：sample和csu的代码对比着看<br>
