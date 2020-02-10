@@ -162,3 +162,4 @@ GYQ: 看CSU代码<br>
 YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClear具体内涵<br>
 GYJ：sample和csu的代码对比着看<br>
 XJ：将rules和manul阅读完<br>
+CGY：看CSU的kmeans和pathplanning算法<br>
