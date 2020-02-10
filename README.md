@@ -161,3 +161,4 @@ CRF：查看sample框架中的各个部分的大致功能，理清框架结构�
 GYQ: 看CSU代码<br>
 YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClear具体内涵<br>
 GYJ：sample和csu的代码对比着看<br>
+XJ：将rules和manul阅读完<br>
