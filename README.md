@@ -130,7 +130,7 @@ GYJ：跑MRL观察员别人的智能体策，学习sample<br>
 
 CRF：理解程式中K-means算法的思想以及应用场景。<br>
 GYQ: 继续阅读框架代码<br>
-YBC：熟悉Kmeans和PathPlanning,通过sample里的ActionExtClean理解PF是如何进行道路清障<br>
+YBC：熟悉Kmeans和PathPlanning,通过sample里的ActionExtClear理解PF是如何进行道路清障<br>
 YYX：阅读rules,熟悉框架结构<br>
 CGY：修复MRL的一个bug，给台式机安装环境<br>
 
@@ -158,4 +158,4 @@ XJ:重装了一遍双系统，新建了仓库，阅读了rules，熟悉了下框
 
 CRF：查看sample框架中的各个部分的大致功能，理清框架结构。<br>
 GYQ: 看CSU代码<br>
-YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClean具体内涵
+YBC：阅读CSU的寻路和聚类算法，理解PF_ActionExtClear具体内涵
