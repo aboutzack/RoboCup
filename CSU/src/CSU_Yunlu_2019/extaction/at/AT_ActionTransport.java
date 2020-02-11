@@ -28,6 +28,9 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 import CSU_Yunlu_2019.module.algorithm.DebugLog;
 
+/**
+ * 修改calc calcRescue calcUnload策略
+ */
 public class AT_ActionTransport extends ExtAction {
 
 	private PathPlanning pathPlanning;

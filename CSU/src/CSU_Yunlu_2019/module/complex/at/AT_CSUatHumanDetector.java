@@ -25,6 +25,9 @@ import rescuecore2.worldmodel.EntityID;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 较sample改了策略
+ */
 public class AT_CSUatHumanDetector extends HumanDetector {
 
     private EntityID result;

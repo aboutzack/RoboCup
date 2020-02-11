@@ -23,6 +23,9 @@ import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
+/**
+ * 较sample改了一个if
+ */
 public class AT_TestAmbulanceTargetAllocator  extends AmbulanceTargetAllocator {
 	
 

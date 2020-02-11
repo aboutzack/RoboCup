@@ -21,6 +21,9 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+/**
+ * 在sample的基础上加了随意走动和判断是否stuck
+ */
 public class AT_ActionExtMove extends ExtAction {
 
 	private PathPlanning pathPlanning;
