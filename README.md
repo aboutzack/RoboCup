@@ -170,3 +170,4 @@ CXX：继续阅读sample代码熟悉架构
 GYQ：阅读CSU代码。<br>
 CRF：理解sample中智能体移动、清障等基本操作的代码。<br>
 CXX：熟悉CSU代码的架构。
+YBC：理解PF_ActionExtClear
