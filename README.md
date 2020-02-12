@@ -178,4 +178,5 @@ GYJ：尝试调整config.sh以运行autoRun.sh自动测试脚本未成功<br>
 2020年2月12日
 
 CRF：理解sample中智能体决策的代码以及思想。<br>
-YBC：整理CSU的清障思想，调参数跑图。
+YBC：整理CSU的清障思想，调参数跑图。<br>
+XJ:继续阅读框架代码。<br>

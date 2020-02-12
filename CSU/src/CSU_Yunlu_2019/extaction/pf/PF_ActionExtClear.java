@@ -84,11 +84,15 @@ public class PF_ActionExtClear extends ExtAction {
 
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
-
+        //清理点
 	private int oldClearX = 0, oldClearY = 0;
+        //清理距离
 	private int clearDistance;
+        //被迫的行动
 	private int forcedMove;
+        //需要休息时的阈值
 	private int thresholdRest;
+        //时间
 	private int kernelTime;
 	private Action mayRepeat = null;
 	private boolean needCheckForRepeat = false;
@@ -99,7 +103,7 @@ public class PF_ActionExtClear extends ExtAction {
 
 	private POVRouter router;
 	private Random random;
-
+        //目标
 	private EntityID target;
 	private Map<EntityID, Set<Point2D>> movePointCache;
 
