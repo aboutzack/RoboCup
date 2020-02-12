@@ -174,3 +174,7 @@ YBC：理解PF_ActionExtClear<br>
 XJ：阅读PF代码并理解<br>
 CGY：看CSU策略，阅读MRL和CSU的TDP，删除没用的文件<br>
 GYJ：尝试调整config.sh以运行autoRun.sh自动测试脚本未成功<br>
+
+2020年2月12日
+
+CRF：理解sample中智能体决策的代码以及思想。<br>
