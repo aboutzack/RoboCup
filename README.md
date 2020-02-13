@@ -186,3 +186,4 @@ GYJ：mac自带的bash版本很低，升级了bash。看CSU代码<br>
 
 CRF：根据配置文档梳理框架整体结构。<br>
 XJ：阅读其他队伍的代码<br>
+CXX：继续阅读CSU代码
