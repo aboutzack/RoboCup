@@ -103,12 +103,14 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         registerModule(this.commandExecutorScout);
     }
 
+    //pre_compute phase
     @Override
     public void precompute(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, PrecomputeData precomputeData, DevelopData developData)
     {
         modulesPrecompute(precomputeData);
     }
 
+    //pre_compute
     @Override
     public void resume(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, PrecomputeData precomputeData, DevelopData developData)
     {
@@ -120,6 +122,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         }
     }
 
+    //non_pre_compute
     @Override
     public void preparate(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData)
     {
@@ -131,6 +134,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         }
     }
 
+    //思考，产生action，然后sendActionMessage
     @Override
     public Action think(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
@@ -204,6 +208,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         return new ActionRest();
     }
 
+    //发送action到kernel
     private void sendActionMessage(MessageManager messageManager, AmbulanceTeam ambulance, Action action)
     {
         Class<? extends Action> actionClass = action.getClass();
