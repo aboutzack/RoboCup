@@ -274,7 +274,7 @@ public class ActionExtClear extends ExtAction
         {
             return null;
         }
-      //道路畅通
+      //道路障碍
         Collection<Blockade> blockades = this.worldInfo.getBlockades(road)		
                 .stream()
                 .filter(Blockade::isApexesDefined)
