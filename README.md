@@ -181,10 +181,11 @@ CRF：理解sample中智能体决策的代码以及思想。<br>
 YBC：整理CSU的清障思想，调参数跑图。<br>
 XJ:继续阅读框架代码。<br>
 GYJ：mac自带的bash版本很低，升级了bash。看CSU代码<br>
-CGY：跑全年决赛地图，移植MRL的代码查看效果，确定开发方向<br>
+CGY：跑去年决赛地图，移植MRL的代码查看效果，确定开发方向<br>
 
 2020年2月13日
 
 CRF：根据配置文档梳理框架整体结构。<br>
 XJ：阅读其他队伍的代码<br>
-CXX：继续阅读CSU代码
+CXX：继续阅读CSU代码<br>
+CGY：测试，发现FB_ActionExtMove存在在一条路上反复来回走动的问题，已找到解决办法<br>
