@@ -16,6 +16,7 @@ import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
+//搜索要救的人
 public class SampleHumanDetector extends HumanDetector
 {
     private Clustering clustering;

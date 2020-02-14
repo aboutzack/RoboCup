@@ -57,6 +57,7 @@ public class SampleTacticsAmbulanceCentre extends TacticsAmbulanceCentre
     @Override
     public void think(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData debugData)
     {
+        System.out.println("center");
         modulesUpdateInfo(messageManager);
 
         if (isVisualDebug)

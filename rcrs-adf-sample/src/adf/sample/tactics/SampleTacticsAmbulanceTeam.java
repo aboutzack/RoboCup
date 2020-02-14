@@ -134,10 +134,11 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         }
     }
 
-    //思考，产生action，然后sendActionMessage
+    //从messageManager获取message产生action，然后sendActionMessage
     @Override
     public Action think(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
+        System.out.println("team");
         this.messageTool.reflectMessage(agentInfo, worldInfo, scenarioInfo, messageManager);
         this.messageTool.sendRequestMessages(agentInfo, worldInfo, scenarioInfo, messageManager);
         this.messageTool.sendInformationMessages(agentInfo, worldInfo, scenarioInfo, messageManager);
@@ -165,6 +166,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
             CommandAmbulance command = (CommandAmbulance) message;
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID()).getValue() == agentID.getValue())
             {
+                //CommandAmbulance优先级高于CommandScout
                 this.recentCommand = command;
                 this.commandExecutorAmbulance.setCommand(command);
             }
@@ -186,7 +188,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
                 return action;
             }
         }
-        // autonomous
+        // autonomous,没有收到执行scout或者ambulance的message
         EntityID target = this.humanDetector.calc().getTarget();
         Action action = this.actionTransport.setTarget(target).calc().getAction();
         if (action != null)
@@ -208,7 +210,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         return new ActionRest();
     }
 
-    //发送action到kernel
+    //发送action给相应的智能体
     private void sendActionMessage(MessageManager messageManager, AmbulanceTeam ambulance, Action action)
     {
         Class<? extends Action> actionClass = action.getClass();

@@ -43,6 +43,7 @@ public class TestHumanDetector extends HumanDetector {
 		return this;
 	}
 
+	//如果someoneOnBoard返回这个人,否则找个最近的
 	@Override
 	public HumanDetector calc() {
 		Human transportHuman = this.agentInfo.someoneOnBoard();
@@ -64,6 +65,7 @@ public class TestHumanDetector extends HumanDetector {
 		return this;
 	}
 
+	//找最近的市民
 	private EntityID calcTarget() {
 		List<Human> rescueTargets = filterRescueTargets(this.worldInfo.getEntitiesOfType(CIVILIAN));
 		List<Human> rescueTargetsInCluster = filterInCluster(rescueTargets);
