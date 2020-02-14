@@ -13,6 +13,7 @@ import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.worldmodel.EntityID;
 
+//未作任何处理,result直接处理未null,SampleTacticsAmbulanceTeam会直接调用humanDetector
 public class MrlCommandExecutorAmbulance extends CommandExecutor<CommandAmbulance> {
     private static final int ACTION_UNKNOWN = -1;
     private static final int ACTION_REST = CommandAmbulance.ACTION_REST;

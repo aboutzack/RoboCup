@@ -1,4 +1,4 @@
-package adf.sample.extaction;
+package adf.sample.extaction;ex
 
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;

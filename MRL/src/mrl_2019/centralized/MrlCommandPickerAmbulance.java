@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+//未处理messages
 public class MrlCommandPickerAmbulance extends CommandPicker {
     private int scoutDistance;
 

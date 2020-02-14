@@ -72,6 +72,7 @@ public class SampleVictimSelector extends HumanDetector {
     @Override
     public HumanDetector calc() {
 //        Clustering clustering = this.moduleManager.getModule(SampleModuleKey.AMBULANCE_MODULE_CLUSTERING);
+        //worldInfo中寻找最近的一个Human
         if (clustering == null) {
             this.result = this.failedClusteringCalc();
             return this;
