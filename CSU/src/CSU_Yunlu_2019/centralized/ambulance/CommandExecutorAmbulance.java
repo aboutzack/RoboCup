@@ -148,10 +148,10 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance>{
 	    @Override
 	    public CommandExecutor calc() {
 			this.result = null;
-			final boolean DEBUGV = true;
+			final boolean DEBUG = true;
 	        switch (this.type) {
 	            case ACTION_REST:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_REST");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_REST");
 	                EntityID position = this.agentInfo.getPosition();
 	                if(this.target == null) {
 	                    Collection<EntityID> refuges = this.worldInfo.getEntityIDsOfType(REFUGE);
@@ -179,31 +179,31 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance>{
 	                this.result = new ActionRest();
 	                return this;
 	            case ACTION_MOVE:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_MOVE");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_MOVE");
 	                if(this.target != null) {
 	                    this.result = this.actionExtMove.setTarget(this.target).calc().getAction();
 	                }
 	                return this;
 	            case ACTION_RESCUE:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_RESCUE");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_RESCUE");
 	                if(this.target != null) {
 	                    this.result = this.actionTransport.setTarget(this.target).calc().getAction();
 	                }
 	                return this;
 	            case ACTION_LOAD:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_LOAD");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_LOAD");
 	                if(this.target != null) {
 	                    this.result = this.actionTransport.setTarget(this.target).calc().getAction();
 	                }
 	                return this;
 	            case ACTION_UNLOAD:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_UNLOAD");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_UNLOAD");
 	                if(this.target != null) {
 	                    this.result = this.actionTransport.setTarget(this.target).calc().getAction();
 	                }
 	                return this;
 	            case ACTION_AUTONOMY:
-					if (DEBUGV) System.out.println(this.agentInfo.getID() + ": ACTION_AUTONOMY");
+					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_AUTONOMY");
 	                if (this.target != null) {
 	                    return this;
 	                }
