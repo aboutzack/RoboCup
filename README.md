@@ -205,3 +205,4 @@ GYQ：阅读sample代码并与CSU比对。<br>
 YBC：理解MRL警察的寻路算法和清理算法，试改进CSU的警察<br>
 CRF：按照框架分块阅读CSU代码。<br>
 GYJ：用CSU把所有图测试了一遍，与代码结合理解策略，充分感受到pf侦查算法的低效<br>
+CGY：修改at的ActionExtMove，学习aur的策略<br>
