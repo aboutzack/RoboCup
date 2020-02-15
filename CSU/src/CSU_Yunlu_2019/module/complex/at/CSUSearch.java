@@ -20,15 +20,15 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 /**
  * 同sample的Search
  */
-public class CSUSearchForFire extends Search {
+public class CSUSearch extends Search {
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
 
 	private EntityID result;
 	private Collection<EntityID> unsearchedBuildingIDs;
 
-	public CSUSearchForFire(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
-							DevelopData developData) {
+	public CSUSearch(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
+					 DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
 
 		this.unsearchedBuildingIDs = new HashSet<>();
