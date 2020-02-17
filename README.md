@@ -216,4 +216,4 @@ GYJ：阅读理解了autoRun.sh，尝试修改config.sh以运行自动测试。<
 
 2020年2月15日
 
-GYQ：运行CSU代码分析智能体行为，对应策略代码。<br>CRF：分析CSUSearchForFire中寻找火源的策略以及BuildingDetector中建筑物体检测的相关程式。<br>
+GYQ：运行CSU代码分析智能体行为，对应策略代码。<br>CRF：分析CSUSearchForFire中寻找火源的策略以及CSUBuildingDetector中建筑物体检测的相关程式。<br>
