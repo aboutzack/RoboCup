@@ -1,8 +1,6 @@
 package CSU_Yunlu_2019.centralized.ambulance;
 
 
-import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
-import adf.agent.communication.standard.bundle.centralized.CommandScout;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -10,10 +8,6 @@ import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.component.centralized.CommandPicker;
 import adf.component.communication.CommunicationMessage;
-import rescuecore2.standard.entities.Area;
-import rescuecore2.standard.entities.Human;
-import rescuecore2.standard.entities.StandardEntity;
-import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.ArrayList;
@@ -46,35 +40,35 @@ public class CommandPickerAmbulance extends CommandPicker{
 
 	    @Override
 	    public CommandPicker calc() {
-	        this.messages.clear();
-	        if(this.allocationData == null) {
-	            return this;
-	        }
-	        for(EntityID agentID : this.allocationData.keySet()) {
-	            StandardEntity agent = this.worldInfo.getEntity(agentID);
-	            if(agent != null && agent.getStandardURN() == StandardEntityURN.AMBULANCE_TEAM) {
-	                StandardEntity target = this.worldInfo.getEntity(this.allocationData.get(agentID));
-	                if(target != null) {
-	                    if(target instanceof Human) {
-	                        CommandAmbulance command = new CommandAmbulance(
-	                                true,
-	                                agentID,
-	                                target.getID(),
-	                                CommandAmbulance.ACTION_AUTONOMY
-	                        );
-	                        this.messages.add(command);
-	                    } else if(target instanceof Area) {
-	                        CommandScout command = new CommandScout(
-	                                true,
-	                                agentID,
-	                                target.getID(),
-	                                this.scoutDistance
-	                        );
-	                        this.messages.add(command);
-	                    }
-	                }
-	            }
-	        }
+//	        this.messages.clear();
+//	        if(this.allocationData == null) {
+//	            return this;
+//	        }
+//	        for(EntityID agentID : this.allocationData.keySet()) {
+//	            StandardEntity agent = this.worldInfo.getEntity(agentID);
+//	            if(agent != null && agent.getStandardURN() == StandardEntityURN.AMBULANCE_TEAM) {
+//	                StandardEntity target = this.worldInfo.getEntity(this.allocationData.get(agentID));
+//	                if(target != null) {
+//	                    if(target instanceof Human) {
+//	                        CommandAmbulance command = new CommandAmbulance(
+//	                                true,
+//	                                agentID,
+//	                                target.getID(),avoed
+//	                                CommandAmbulance.ACTION_AUTONOMY
+//	                        );
+//	                        this.messages.add(command);
+//	                    } else if(target instanceof Area) {
+//	                        CommandScout command = new CommandScout(
+//	                                true,
+//	                                agentID,
+//	                                target.getID(),
+//	                                this.scoutDistance
+//	                        );
+//	                        this.messages.add(command);
+//	                    }
+//	                }
+//	            }
+//	        }
 	        return this;
 	    }
 
