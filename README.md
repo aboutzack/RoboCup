@@ -213,3 +213,7 @@ CRF：根据CSU运行结果分析优缺点，对应相应的代码进行理解�
 GYQ：阅读CSU代码。<br>
 YBC：试修改警察的RoadDtector,成果待验<br>
 GYJ：阅读理解了autoRun.sh，尝试修改config.sh以运行自动测试。<br>
+
+2020年2月15日
+
+GYQ：运行CSU代码分析智能体行为，对应策略代码。<br>
