@@ -19,7 +19,7 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class AStarPathPlanning  extends PathPlanning {
 
-    private final boolean DEBUGLOG = true;
+    private final boolean DEBUGLOG = false;
     private final boolean LESS = false;
 
     private Map<EntityID, Set<EntityID>> graph;
@@ -215,7 +215,7 @@ public class AStarPathPlanning  extends PathPlanning {
                 if (!cDetector.isStucked() && agentInfo.me().getStandardURN() != POLICE_FORCE) {
                     Collection<Blockade>  blocks = worldInfo.getBlockades(nid);
                     if (!blocks.isEmpty()) {
-                        System.out.println(this.agentInfo.getID() + " " + nid + " BLOCKADE AVOIDED !!!!!!");
+//                        System.out.println(this.agentInfo.getID() + " " + nid + " BLOCKADE AVOIDED !!!!!!");
                         continue;
                     }
                 }

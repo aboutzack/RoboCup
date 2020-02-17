@@ -1,6 +1,9 @@
 
 package CSU_Yunlu_2019.extaction.fb;
 
+import CSU_Yunlu_2019.module.algorithm.DebugLog;
+import CSU_Yunlu_2019.module.algorithm.StuckDetector;
+import CSU_Yunlu_2019.standard.EntranceHelper;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
@@ -18,10 +21,6 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
-
-import CSU_Yunlu_2019.module.algorithm.DebugLog;
-import CSU_Yunlu_2019.module.algorithm.StuckDetector;
-import CSU_Yunlu_2019.standard.EntranceHelper;
 
 public class ActionExtMove extends ExtAction {
 
@@ -203,15 +202,15 @@ public class ActionExtMove extends ExtAction {
 
 					List<EntityID> path = this.pathPlanning.calc().getResult();
 					if (path != null && path.size() > 0) {
-						logger.log("[AvoidStuck]: neighbors: " + array.length);
-						logger.log("[AvoidStuck] Succeed");
+//						logger.log("[AvoidStuck]: neighbors: " + array.length);
+//						logger.log("[AvoidStuck] Succeed");
 						return new ActionMove(path);
 					}
 				}
 			}
 
-			logger.log("[AvoidStuck]: neighbors: " + array.length);
-			logger.log("[AvoidStuck] Failed.");
+//			logger.log("[AvoidStuck]: neighbors: " + array.length);
+//			logger.log("[AvoidStuck] Failed.");
 			return null;
 		}
 
