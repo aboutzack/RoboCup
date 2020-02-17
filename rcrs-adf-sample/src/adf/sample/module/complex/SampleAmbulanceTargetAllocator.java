@@ -77,6 +77,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return this.convert(this.ambulanceTeamInfoMap);
     }
 
+    //给可活动的agents分配任务
     @Override
     public AmbulanceTargetAllocator calc()
     {

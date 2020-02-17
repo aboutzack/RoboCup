@@ -47,6 +47,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
     private CommunicationMessage recentCommand;
     private Boolean isVisualDebug;
 
+    //每个at初始化一个对象和一个messageManager
     @Override
     public void initialize(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
@@ -170,6 +171,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
                 this.commandExecutorAmbulance.setCommand(command);
             }
         }
+        //mrl的代码直接跳过这一步,因为executor什么也不干
         if (this.recentCommand != null)
         {
             Action action = null;

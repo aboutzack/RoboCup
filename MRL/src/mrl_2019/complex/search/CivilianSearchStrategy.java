@@ -350,6 +350,7 @@ public class CivilianSearchStrategy extends SearchStrategy {
         return new Pair<>(null, null);
     }
 
+    //找不到
     private boolean amIInLoop() {
         if (thisCycleTryCount >= 5) {
             if (MRLConstants.DEBUG_SEARCH)

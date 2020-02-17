@@ -32,6 +32,7 @@ public class VictimClassifier {
         this.agentInfo = agentInfo;
     }
 
+    //从myGoodHumans删除所有不满足条件的human
     public void updateGoodHumanList(Collection<StandardEntity> civilians) {
 
         myGoodHumans.clear();
@@ -59,6 +60,7 @@ public class VictimClassifier {
             Human h = (Human) standardEntity;
             if (h.isPositionDefined() && h.isHPDefined() && h.isDamageDefined() && h.isBuriednessDefined()) {
                 StandardEntity posEntity = worldInfo.getEntity(h.getPosition());
+                //在房子里,房子着火了
                 if ((posEntity instanceof Building) && ((Building) posEntity).isOnFire()) {
                     lowInfoHumans.add(h);
                 } else if (agentInfo.getPosition().equals(h.getPosition()) && !worldInfo.getChanged().getChangedEntities().contains(h.getID())) {
