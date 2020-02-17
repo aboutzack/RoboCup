@@ -14,37 +14,34 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.config.NoSuchConfigOptionException;
+import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 /**
- * 在sample的基础上加了随意走动和判断是否stuck
- */
+* @Description: ambulances' extMove
+* @Author: Guanyu-Cai
+* @Date: 2/15/20
+*/
 public class ActionExtMove extends ExtAction {
-
 	private PathPlanning pathPlanning;
 
 	private int thresholdRest;
 	private int kernelTime;
 
 	private EntityID target;
-	/**
-	 * new add to solve the stuked
-	 */
-	private rescuecore2.misc.Pair<Integer, Integer> selfLocation;
-	private Point lastlastPosition=null;
-	private Point lastPosition=null;
-	private Point nowPosition=null;
 
-	private EntityID StuckedTarget;
-	private EntityID lastTarget;
+	private Pair<Integer, Integer> selfLocation;
+	private Point lastPosition=null;
+
+	private int lastMoveTime;
+	private List<EntityID> lastmovePath;
 	private final int STUCK_THRESHOLD = 2000;//threshold of stuck
 
-	private Random random = new Random();
 
 	public ActionExtMove(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
 						 ModuleManager moduleManager, DevelopData developData) {
@@ -66,9 +63,9 @@ public class ActionExtMove extends ExtAction {
 					"adf.sample.module.algorithm.SamplePathPlanning");
 			break;
 		}
-		selfLocation = worldInfo.getLocation(agentInfo.getID());
-		this.nowPosition=new Point(selfLocation.first(),selfLocation.second());
-		this.StuckedTarget=null;
+		this.selfLocation = worldInfo.getLocation(agentInfo.getID());
+		this.lastPosition = new Point(selfLocation.first(), selfLocation.second());
+		this.lastmovePath = new LinkedList<>();
 	}
 
 	@Override
@@ -124,6 +121,7 @@ public class ActionExtMove extends ExtAction {
 			return this;
 		}
 		this.pathPlanning.updateInfo(messageManager);
+		this.selfLocation = worldInfo.getLocation(agentInfo.getID());
 		return this;
 	}
 
@@ -147,73 +145,48 @@ public class ActionExtMove extends ExtAction {
 
 	@Override
 	public ExtAction calc() {
-		lastlastPosition=lastPosition;
-		lastPosition=nowPosition;
-		nowPosition=new Point(worldInfo.getLocation(agentInfo.getID()).first(),worldInfo.getLocation(agentInfo.getID()).second());
-		/*
-		if(lastlastPosition!=null && lastPosition!=null && nowPosition!=null) {
-			System.out.println(this.agentInfo.getID() + " " + lastlastPosition.getLocation().x + " " + lastlastPosition.getLocation().y);
-			System.out.println(this.agentInfo.getID() + " " + lastPosition.getLocation().x + " " + lastPosition.getLocation().y);
-			System.out.println(this.agentInfo.getID() + " " + nowPosition.getLocation().x + " " + nowPosition.getLocation().y);
-		}
-		*/
-		if(CalStucked()){
-			if(lastTarget!=null) {
-				//System.out.println(this.agentInfo.getID()+"Stucked***********");
-				StuckedTarget = lastTarget;
-			}else{
-				StuckedTarget = null;
-			}
-		}
-
 		this.result = null;
 		Human agent = (Human) this.agentInfo.me();
-		/********************************/
-		Action randomaction =randomWalk();
 
 		if (this.needRest(agent)) {
 			this.result = this.calcRest(agent, this.pathPlanning, this.target);
-			lastTarget=null;
 			if (this.result != null) {
 				return this;
 			}
 		}
-		if (this.target == null) {//如果没有目标 就乱走
-			if(randomaction!=null) {
-				lastTarget=null;
-				//System.out.println(this.agentInfo.getID()+"randomwolk*********");
-				this.result = randomaction;
-			}
+		if (this.target == null) {
 			return this;
 		}
-		if(StuckedTarget!=null) {
-			if (CalEqual(this.target, StuckedTarget)) {
-				System.out.print("----equal----");
-				lastTarget=StuckedTarget;
-				//System.out.println(this.agentInfo.getID()+"randomwolk*********");
-				this.result = randomaction;
-				return this;
-			} else {
-				StuckedTarget=null;
-				this.pathPlanning.setFrom(agent.getPosition());
-				this.pathPlanning.setDestination(this.target);
-				lastTarget=target;
-				List<EntityID> path = this.pathPlanning.calc().getResult();
-				if (path != null && path.size() > 0) {
-					this.result = new ActionMove(path);
-				}
-				return this;
-			}
-		}else{
-			this.pathPlanning.setFrom(agent.getPosition());
-			this.pathPlanning.setDestination(this.target);
-			lastTarget=target;
-			List<EntityID> path = this.pathPlanning.calc().getResult();
-			if (path != null && path.size() > 0) {
-				this.result = new ActionMove(path);
-			}
-			return this;
+		this.pathPlanning.setFrom(agent.getPosition());
+		this.pathPlanning.setDestination(this.target);
+		List<EntityID> path = this.pathPlanning.calc().getResult();
+		if (path != null && path.size() > 0) {
+			this.result = moveOnPath(path);
 		}
+		return this;
+
+	}
+
+	private Action moveOnPath(List<EntityID> path) {
+		Action action = null;
+		if (path == null) {
+			return null;
+		}
+		lastmovePath.clear();
+		lastmovePath.addAll(path);
+
+		if (agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil() && isStuck(path)){
+			System.out.println(this.agentInfo.getID()+" stuck！");
+			// TODO: 2/16/20 比randomWalk更好的解决stuck的方法
+			action = randomWalk();
+		}
+		lastMoveTime = agentInfo.getTime();
+		if (action == null) {
+			if (lastmovePath != null && !lastmovePath.isEmpty()) {
+				action = new ActionMove(lastmovePath);
+			}
+		}
+		return action;
 	}
 
 	private boolean needRest(Human agent) {
@@ -272,94 +245,85 @@ public class ActionExtMove extends ExtAction {
 		return firstResult != null ? new ActionMove(firstResult) : null;
 	}
 
-	public boolean CalStucked(){
-		if(this.lastlastPosition!=null&&this.lastPosition!=null){
-			int moveDistance1 = CSUSelectorTargetByDis.getDistance.distance(lastlastPosition,lastPosition);
-			int moveDistance2 = CSUSelectorTargetByDis.getDistance.distance(lastlastPosition,nowPosition);
-			int moveDistance3 = CSUSelectorTargetByDis.getDistance.distance(lastPosition,nowPosition);
-			if(moveDistance1<STUCK_THRESHOLD||moveDistance2<STUCK_THRESHOLD||moveDistance3<STUCK_THRESHOLD){
-				return true;
+	/**
+	* @Description: 通过计算移动距离来判断是否stuck
+	* @Author: Guanyu-Cai
+	* @Date: 2/16/20
+	*/
+	private boolean isStuck(List<EntityID> path){
+		if (lastMoveTime < scenarioInfo.getKernelAgentsIgnoreuntil()) {
+			return false;
+		}
+		if (path.size() > 0) {
+			EntityID target = path.get(path.size() - 1);
+			if (target.equals(agentInfo.getPosition())) {
+				return false;
 			}
 		}
-		return false;
-	}
-
-	/**
-	 * 返回是否移动过近
-	 * @param from
-	 * @param end
-	 * @return
-	 */
-	public boolean CalNear(EntityID from,EntityID end){
-		rescuecore2.misc.Pair<Integer, Integer> fromLocation = worldInfo.getLocation(from);
-		rescuecore2.misc.Pair<Integer, Integer> endLocation = worldInfo.getLocation(end);
-		Point frompoint = new Point(fromLocation.first(), fromLocation.second());//update the position
-		Point endpoint = new Point(endLocation.first(), endLocation.second());
-		int moveDistance = CSUSelectorTargetByDis.getDistance.distance(frompoint,endpoint);
+		Point position = new Point(selfLocation.first(), selfLocation.second());
+		int moveDistance = CSUSelectorTargetByDis.getDistance.distance(position, lastPosition);
+		lastPosition = position;
 		if (moveDistance <= STUCK_THRESHOLD) {
 			return true;
 		}else{
 			return false;
 		}
 	}
-	public boolean CalEqual(EntityID from,EntityID end){
-		return from.getValue() == end.getValue();
-	}
 
-	public Action randomWalk() { ///
-
-		final int cnt_limit = 1000;
+	/**
+	* @Description: 处理stuck
+	* @Author: Guanyu-Cai
+	* @Date: 2/18/20
+	*/
+	public Action randomWalk() {
+		Random random = new Random();
 
 		Collection<StandardEntity> inRnage = worldInfo.getObjectsInRange(agentInfo.getID(), 50000);
 		EntityID position = agentInfo.getPosition();
-
 		Object[] array = inRnage.toArray();
-		//System.out.println(array.length);
-		/*System.out.println("Random walk: inRnage==null? " + (inRnage==null) + 
-							"; array.size = " + array.length + " random entity");*/
-		if (array.length>0) {
-			StandardEntity entity = (StandardEntity) array[random.nextInt(array.length)];
-			List<EntityID> path = null;
-			/*
-			 * 挨个寻找可到达的 未起火的
-			 */
-			for (int cnt=0;cnt<cnt_limit;cnt++){
+
+		Action action = null;
+		List<EntityID> path = null;
+		//找不到完全无障碍的area时，随机找一个有障碍的area，尝试走过去
+		Area blockedArea = null;
+		if (array.length > 0) {
+			int start = random.nextInt(array.length);
+			for (int i = 0; i < array.length; i++) {
+				StandardEntity entity = (StandardEntity) array[(start + i) % array.length];
 				if (!(entity instanceof Area)) {
-					entity = (StandardEntity) array[random.nextInt(array.length)];
 					continue;
 				}
 				if (entity instanceof Building && ((Building) entity).isOnFire()) {
-					entity = (StandardEntity) array[random.nextInt(array.length)];
 					continue;
 				}
 				if (entity.getID().getValue() == agentInfo.getID().getValue()) {
-					entity = (StandardEntity) array[random.nextInt(array.length)];
 					continue;
 				}
 				if (position.getValue() == entity.getID().getValue()) {
-					entity = (StandardEntity) array[random.nextInt(array.length)];
 					continue;
 				}
 				Area nearArea = (Area) entity;
-				if (!nearArea.isBlockadesDefined()) {
-					entity = (StandardEntity) array[random.nextInt(array.length)];
+				if (nearArea.isBlockadesDefined()) {
+					blockedArea = nearArea;
 					continue;
 				}
-				//System.out.println("nearArea BlockadesDefined");
-
 				pathPlanning.setFrom(position);
 				pathPlanning.setDestination(entity.getID());
-				path = this.pathPlanning.calc().getResult();
+				path = pathPlanning.calc().getResult();
+				action = new ActionMove(path);
 				break;
 			}
-			if (path == null) {
-				//System.out.println("Random walk failed.");
-				return null;
-			}
-			//System.out.println("Random walk succeed.");
-			return new ActionMove(path);
 		}
-		return null;
+		if (action == null && blockedArea != null) {
+			pathPlanning.setFrom(position);
+			pathPlanning.setDestination(blockedArea.getID());
+			path = pathPlanning.calc().getResult();
+			action = new ActionMove(path);
+		}
+
+		lastmovePath.clear();
+		lastmovePath.addAll(path);
+		return action;
 	}
 }
 
