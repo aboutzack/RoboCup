@@ -1,21 +1,22 @@
 
 package CSU_Yunlu_2019.extaction.at;
 
+import CSU_Yunlu_2019.module.algorithm.DebugLog;
 import CSU_Yunlu_2019.module.algorithm.StuckDetector;
 import adf.agent.action.common.ActionMove;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.WorldInfo;
 import adf.component.module.algorithm.PathPlanning;
-import rescuecore2.standard.entities.*;
+import rescuecore2.standard.entities.Blockade;
+import rescuecore2.standard.entities.Building;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import static rescuecore2.standard.entities.StandardEntityURN.*;
-
-import CSU_Yunlu_2019.module.algorithm.DebugLog;
+import static rescuecore2.standard.entities.StandardEntityURN.REFUGE;
 
 public class StuckAvoid {
     
@@ -70,15 +71,15 @@ public class StuckAvoid {
 				pathPlanning.setDestination(ne.getID());
 				List<EntityID> path = pathPlanning.calc().getResult();
 				if (path != null && path.size() > 0) {
-					logger.log("[AvoidStuck]: neighbors: " + array.length);
-					logger.log("[AvoidStuck] Succeed");
+//					logger.log("[AvoidStuck]: neighbors: " + array.length);
+//					logger.log("[AvoidStuck] Succeed");
 					return new ActionMove(path);
 				}
 			}
 		}
 
-		logger.log("[AvoidStuck]: neighbors: " + array.length);
-		logger.log("[AvoidStuck] Failed.");
+//		logger.log("[AvoidStuck]: neighbors: " + array.length);
+//		logger.log("[AvoidStuck] Failed.");
 		return null;
 	}
     

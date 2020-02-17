@@ -298,7 +298,8 @@ public class ActionFireFighting extends ExtAction
             //neighbourBuilding.sort(new DistanceSorter(this.worldInfo, agent));
             if(calcExtinguishTargetWater(burningBuilding.get(0).getID()) > agent.getWater()){
                 return this.getMoveAction(pathPlanning, agentPosition, calcRefillWaterTarget().getID());
-            }else{System.out.println("********fireExtinguish3333333*******");
+            }else{
+//                System.out.println("********fireExtinguish3333333*******");
                 return new ActionExtinguish(burningBuilding.get(0).getID(), this.maxExtinguishPower);
             }
         }
