@@ -204,7 +204,7 @@ return false;
 	}
     
     
-    private boolean is_area_blocked(EntityID id){
+    private boolean is_area_blocked(EntityID id){     //传过来的是街道的id，判断这个街区是不是还有障碍物
 		Area area = (Area) this.worldInfo.getEntity(id);
 		if(area.isBlockadesDefined()&&!area.getBlockades().isEmpty())  return true;
 		return false;
@@ -212,50 +212,52 @@ return false;
 	
     
     private boolean is_nearsest_to_me(List<EntityID> nearPolice, EntityID id) {
-
-		if(nearPolice == null || nearPolice.isEmpty()) return true;
+                                //传入附近警察和有障碍街道的id
+		if(nearPolice == null || nearPolice.isEmpty()) return true;     //附近没有警察返回为真
 		
-		double me_distance = getDistance(this.agentInfo.getPosition(), id);
+		double me_distance = getDistance(this.agentInfo.getPosition(), id);    //到该障碍物的距离
 
-		for (EntityID nearplice_id : nearPolice) {
-			double d = getDistance(nearplice_id, id);
+		for (EntityID nearplice_id : nearPolice) {                                                             
+			double d = getDistance(nearplice_id, id);                                              
 			if (d < me_distance)
 				return false;
 		}
-		return true;
+		return true;                //判断是不是我离该障碍物是最近的
 	}
 
     
 private EntityID get_result_from_set(Set<EntityID> set, List<EntityID> nearPolice) {
-		
+		 //set是阻塞智能体道路的集合
 		if(set == null) return null;
-		
-		EntityID positionID = this.agentInfo.getPosition();
+		     
+		EntityID positionID = this.agentInfo.getPosition();    //取出当前智能体的位置
 		if (set.contains(positionID)) {
-			if ( is_area_blocked(positionID) ) {//  &&  !this.no_need_to_clear.contains(positionID)
+			if ( is_area_blocked(positionID) ) {//  判断这个智能体所处区域是不是阻塞的是阻塞的直接返回去
 				return positionID;
 			} else
-				set.remove(positionID);
+				set.remove(positionID);              //不是的话移出道路集合
 		}
-		if (!set.isEmpty()) {
+		if (!set.isEmpty()) {  //该区域非空的话
 			List<EntityID> sortList = new ArrayList<>(set);
 			sortList.sort(new sorter(this.worldInfo, this.agentInfo.getID()));
 			for (EntityID id : sortList) {// int i = 0;i < sortList.size();++i)
 											// {
-				if (is_area_blocked(id)  ) {// && !this.no_need_to_clear.contains(id)
-					if (is_nearsest_to_me(nearPolice, id)) {
+				if (is_area_blocked(id)  ) {//  判断这个智能体所处区域是不是阻塞的是阻塞的直接返回去
+					
+					if (is_nearsest_to_me(nearPolice, id)) {      
+						
 						if (this.have_police_office)
 							this.messageManager
-									.addMessage(new MessageReport(true, false, true, this.agentInfo.getID()));
+									.addMessage(new MessageReport(true, false, true, this.agentInfo.getID()));  //给警察局发回消息
 						
 						try{
 						//return id;
-						this.pathPlanning.setFrom(positionID);
-		                this.pathPlanning.setDestination(id);
-		                List<EntityID> path = this.pathPlanning.calc().getResult();
-		                if (path != null && path.size() > 0)
+						this.pathPlanning.setFrom(positionID);     //设置起点
+		                this.pathPlanning.setDestination(id);         //设置终点
+		                List<EntityID> path = this.pathPlanning.calc().getResult(); //path是一个id集合
+		                if (path != null && path.size() > 0)     
 		                {
-		                	return path.get(path.size() - 1);
+		                	return path.get(path.size() - 1);     //去最近的一个阻塞的街区
 		                }
 		                }
 						catch (Exception e){
@@ -316,13 +318,13 @@ private double getDistance(EntityID from, EntityID to) {
 
 
 	private void clear_Blocked_Roads(Set<EntityID> ori_road){
-
-	Set<EntityID> roads = new HashSet<>();
+               //传入的参数是待清理的路段的id的集合
+	Set<EntityID> roads = new HashSet<>();   //roads的集合
 	for (EntityID i : ori_road) {
-			StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(i);
-			if(entity instanceof Road){
+			StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(i);  //根据id得到实体
+			if(entity instanceof Road){    
 				Road road = (Road) entity;
-				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()){
+				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()){   //这里没处理
 						//blockedRoads.add(entity.getID());
 						
 				}
@@ -344,79 +346,23 @@ private double getDistance(EntityID from, EntityID to) {
     public RoadDetector calc()
     {
     	
-    	//System.out.println("###################clca Function:############################");
-		//this.P_information();
-    	
-    	List<EntityID> nearPolice = new ArrayList<>();
-		// nearPolice.add(this.agentInfo.getID());
-		//get_near_police(nearPolice);
-    	
-
-		EntityID id ;
-
-
-	//int time = this.agentInfo.getTime();
-
-	//if(time%100 == 0){
-	//this.clustering.clac();
-	
-	//Set<EntityID> center = new HashSet<>(this.clustering.centerIDs());
-
-	//id  = get_result_from_set(center, nearPolice);
-	//while(center.size() != 1){
-	//	center.remove(id);
-	//	id = get_result_from_set(center, nearPolice);
-	//	}
-	///this.result = id;
-	//System.out.println("choose another center");
-	//return this;
-
-//}
-
+    	//this.result是机器人要去的地方
+    	//目标是返回下一个要去的地方的id
+    	List<EntityID> nearPolice = new ArrayList<>();    
+	EntityID id ;
 		
-	
-
-//		if(this.is_no_move()){
-//		id = get_result_from_set(this.blockedRoads, nearPolice);
-//		while(id == this.result){
-//		this.blockedRoads.remove(this.result);
-//		id = get_result_from_set(this.blockedRoads, nearPolice);
-//		}
-//		this.result = id;
-//		
-//		System.out.println("***************chosse another target***************");
-//		}
-
-
-
-		//this.StuckedAgent_BlockedRoad.removeAll(this.no_need_to_clear );
-		if(this.result == null || !this.StuckedAgent_BlockedRoad.contains(this.result) ){
-		//this.StuckedAgent_BlockedRoad.removeAll(this.no_need_to_clear);
-		this.clear_Blocked_Roads(this.StuckedAgent_BlockedRoad);
-		id = get_result_from_set(this.StuckedAgent_BlockedRoad, nearPolice);
+		if(this.result == null || !this.StuckedAgent_BlockedRoad.contains(this.result) ){   //目的地为空的话或者
+		this.clear_Blocked_Roads(this.StuckedAgent_BlockedRoad);                     
+		id = get_result_from_set(this.StuckedAgent_BlockedRoad, nearPolice);//id是下一个要去的目的地
 		if (id != null)
 			{
-			//System.out.println("_______________________choose the Blocked_agent Roads");
 			this.result=id; 
-			return this;
+			return this;    //寻路返回下一一个要去的地方
 			
 			}
 
 		}
-		//if (this.result != null)
-			//return this;
-		
-		
-		//the first step
-       // Set<EntityID> Areas1 = new HashSet<>();
-		//Areas1.addAll(get_center_of_Set(this.StuckedAgent_BlockedRoad));
-		//Areas1.addAll(get_center_of_Set(this.BuriedAgent_BlockedRoad));
-		//Areas1.addAll();
-		//Areas1.addAll(this.BuriedAgent_BlockedRoad);
-		
-		
-		
-		
+		//如果机器人有地方要去的话
 		//the second step
 		if(this.result == null || this.entrance_of_Refuge_and_Hydrant.contains(this.result)){
 		this.entrance_of_Refuge_and_Hydrant .removeAll(this.no_need_to_clear);
