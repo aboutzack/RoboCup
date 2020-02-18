@@ -225,3 +225,4 @@ CGY：修复at的ActionExtMove的stuck判定和处理的问题、测试<br>
 CRF：调试寻找火源的代码，查看并对比运行效果。<br>
 GYQ：加装内存，尝试跑一些大图。<br>
 YBC：调试寻路代码，在一些判断上还有问题。
+CGY：修改search代码<br>
