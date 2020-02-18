@@ -219,6 +219,7 @@ GYJ：阅读理解了autoRun.sh，尝试修改config.sh以运行自动测试。<
 GYQ：运行CSU代码分析智能体行为，对应策略代码。<br>
 CRF：分析CSUSearchForFire中寻找火源的策略以及CSUBuildingDetector中建筑物体检测的相关程式。<br>
 CGY：修复at的ActionExtMove的stuck判定和处理的问题、测试<br>
+GYJ：继续配自动测试脚本<br>
 
 2020年2月18日
 
@@ -226,3 +227,4 @@ CRF：调试寻找火源的代码，查看并对比运行效果。<br>
 GYQ：加装内存，尝试跑一些大图。<br>
 YBC：调试寻路代码，在一些判断上还有问题。
 CGY：修改search代码<br>
+GYJ：划划划划划<brß>
