@@ -281,6 +281,7 @@ public class CivilianSearchManager extends Search {
                 civilianSearchDecisionMaker.update();
             }
             needChange = false;
+            //最有可能有人的building
             targetArea = civilianSearchDecisionMaker.getNextArea();
             if (targetArea == null) {
                 target = null;

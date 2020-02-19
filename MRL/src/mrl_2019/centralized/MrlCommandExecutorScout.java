@@ -15,6 +15,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.util.Collection;
 
+//未作任何处理
 public class MrlCommandExecutorScout extends CommandExecutor<CommandScout> {
     private static final int ACTION_UNKNOWN = -1;
     private static final int ACTION_SCOUT = 1;

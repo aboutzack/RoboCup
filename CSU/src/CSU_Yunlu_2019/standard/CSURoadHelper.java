@@ -39,7 +39,7 @@ public class CSURoadHelper {
 	private EntityID selfId;
 	private WorldInfo world;
 
-	private CsuLineOfSightPerception lineOfSightPerception;
+	private CSULineOfSightPerception lineOfSightPerception;
 	private List<EntityID> observableAreas;
 
 	private List<CSUEdgeHelper> csuEdges;
@@ -62,7 +62,7 @@ public class CSURoadHelper {
 		this.world = world;
 		this.selfRoad = road;
 		this.selfId = road.getID();
-		this.lineOfSightPerception = new CsuLineOfSightPerception(world);
+		this.lineOfSightPerception = new CSULineOfSightPerception(world);
 		this.csuEdges = createCsuEdges();
 
 		this.CLEAR_WIDTH = scenarioInfo.getClearRepairRad();

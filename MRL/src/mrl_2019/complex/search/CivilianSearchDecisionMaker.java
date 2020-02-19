@@ -47,6 +47,7 @@ public class CivilianSearchDecisionMaker {
         sBulding = new HashSet<>();
     }
 
+    //更新需要考虑的范围
     public void update() {
 
 //        if (searchInPartition) {
@@ -124,6 +125,7 @@ public class CivilianSearchDecisionMaker {
 //        return pathInProgress;
 //    }
 //
+    //获取最有可能有人的building
     Area getNextArea() {
         EntityID greatestValue = null;
         double maxValue = 0;

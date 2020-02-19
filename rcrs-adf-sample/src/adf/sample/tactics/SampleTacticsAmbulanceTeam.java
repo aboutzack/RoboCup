@@ -47,6 +47,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
     private CommunicationMessage recentCommand;
     private Boolean isVisualDebug;
 
+    //每个at初始化一个对象和一个messageManager
     @Override
     public void initialize(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
@@ -103,12 +104,14 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         registerModule(this.commandExecutorScout);
     }
 
+    //pre_compute phase
     @Override
     public void precompute(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, PrecomputeData precomputeData, DevelopData developData)
     {
         modulesPrecompute(precomputeData);
     }
 
+    //pre_compute
     @Override
     public void resume(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, PrecomputeData precomputeData, DevelopData developData)
     {
@@ -120,6 +123,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         }
     }
 
+    //non_pre_compute
     @Override
     public void preparate(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData)
     {
@@ -131,6 +135,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         }
     }
 
+    //从messageManager获取message产生action，然后sendActionMessage
     @Override
     public Action think(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
@@ -161,10 +166,12 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
             CommandAmbulance command = (CommandAmbulance) message;
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID()).getValue() == agentID.getValue())
             {
+                //CommandAmbulance优先级高于CommandScout
                 this.recentCommand = command;
                 this.commandExecutorAmbulance.setCommand(command);
             }
         }
+        //mrl的代码直接跳过这一步,因为executor什么也不干
         if (this.recentCommand != null)
         {
             Action action = null;
@@ -182,7 +189,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
                 return action;
             }
         }
-        // autonomous
+        // autonomous,没有收到执行scout或者ambulance的message
         EntityID target = this.humanDetector.calc().getTarget();
         Action action = this.actionTransport.setTarget(target).calc().getAction();
         if (action != null)
@@ -204,6 +211,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         return new ActionRest();
     }
 
+    //发送action给相应的智能体
     private void sendActionMessage(MessageManager messageManager, AmbulanceTeam ambulance, Action action)
     {
         Class<? extends Action> actionClass = action.getClass();

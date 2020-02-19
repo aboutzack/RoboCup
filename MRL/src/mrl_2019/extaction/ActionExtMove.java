@@ -225,11 +225,13 @@ public class ActionExtMove extends ExtAction {
 
     }
 
+    //按照这个path不能行动
     private boolean amIMotionLess(List<EntityID> plan) {
         return !plan.isEmpty() && !plan.contains(agentInfo.getPosition())
                 || stuckCondition(plan);
     }
 
+    //通过现在的坐标和上一次move的坐标判断是否小于threshold来判断师傅stuck
     private boolean stuckCondition(List<EntityID> plan) {
         if (lastMoveTime < scenarioInfo.getKernelAgentsIgnoreuntil())
             return false;

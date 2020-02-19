@@ -5,7 +5,7 @@ import adf.agent.info.AgentInfo;
 
 public class DebugLog {
 
-    private final boolean DEBUGLOG = true;
+    private final boolean DEBUGLOG = false;
 
     private AgentInfo agentInfo = null;
 

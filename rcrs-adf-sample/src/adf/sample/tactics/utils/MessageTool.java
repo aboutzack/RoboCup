@@ -31,6 +31,7 @@ public class MessageTool
     private int sendingAvoidTimeReceived;
     @SuppressWarnings("unused")
     private int sendingAvoidTimeSent;
+    //重复发送清障请求的间隔时间
     private int sendingAvoidTimeClearRequest;
     private int estimatedMoveDistance;
 
@@ -67,6 +68,7 @@ public class MessageTool
         this.dominanceAgentID = new EntityID(0);
     }
 
+    //获取message发送者,设置receivedTimeMap
     public void reflectMessage(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, MessageManager messageManager)
     {
         Set<EntityID> changedEntities = worldInfo.getChanged().getChangedEntities();
@@ -75,14 +77,17 @@ public class MessageTool
         for (CommunicationMessage message : messageManager.getReceivedMessageList(StandardMessage.class))
         {
             StandardEntity entity = null;
+            //发送message的entity
             entity = MessageUtil.reflectMessage(worldInfo, (StandardMessage) message);
             if (entity != null) { this.receivedTimeMap.put(entity.getID(), time); }
         }
     }
 
+    //发送房屋,路,市民的最新信息,存储在messagesManager
     @SuppressWarnings("incomplete-switch")
     public void sendInformationMessages(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, MessageManager messageManager)
     {
+        //改变的房屋,路,市民...
         Set<EntityID> changedEntities = worldInfo.getChanged().getChangedEntities();
 
         this.updateInfo(agentInfo, worldInfo, scenarioInfo, messageManager);
@@ -101,6 +106,7 @@ public class MessageTool
                             Road road = (Road) entity;
                             if (isNonBlockadeAndNotReceived(road))
                             {
+                                //
                                 message = new MessageRoad(true, StandardMessagePriority.LOW,
                                         road, null,
                                         true, false);
@@ -130,6 +136,7 @@ public class MessageTool
         recordLastPosition(agentInfo);
     }
 
+    //发送清理路障请求给pf,存储在messageManager
     public void sendRequestMessages (AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, MessageManager messageManager)
     {
         if (agentInfo.me().getStandardURN() == AMBULANCE_TEAM
@@ -174,6 +181,7 @@ public class MessageTool
                 if (isSendRequest && ((currentTime - this.lastSentTime) >= this.sendingAvoidTimeClearRequest))
                 {
                     this.lastSentTime = currentTime;
+                    //给pf发送清理请求
                     messageManager.addMessage(
                             new CommandPolice( true, null, agent.getPosition(), CommandPolice.ACTION_CLEAR )
                     );

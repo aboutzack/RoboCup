@@ -23,6 +23,7 @@ import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
+//返回所有可活动at和at分配的目标
 public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
 {
     private Collection<EntityID> priorityHumans;
@@ -76,6 +77,7 @@ public class SampleAmbulanceTargetAllocator extends AmbulanceTargetAllocator
         return this.convert(this.ambulanceTeamInfoMap);
     }
 
+    //给可活动的agents分配任务
     @Override
     public AmbulanceTargetAllocator calc()
     {

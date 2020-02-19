@@ -1,14 +1,15 @@
 
 package CSU_Yunlu_2019.module.algorithm;
 
-import java.util.*;
-
 import adf.agent.info.AgentInfo;
 import rescuecore2.worldmodel.EntityID;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+
 public class StuckDetector {
     
-    private final boolean DEBUGLOG = true;
+    private final boolean DEBUGLOG = false;
     private final int OldMax = 5;
     private final int OldLine = 1;
 

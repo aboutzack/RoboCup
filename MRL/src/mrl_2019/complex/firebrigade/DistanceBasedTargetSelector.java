@@ -186,9 +186,11 @@ public class DistanceBasedTargetSelector {
 
 
         AmbulanceTarget bestTarget = null;
+        //只是简单地选择最近的
         bestTarget = findBestVictim(targetsMap, elements);
 
         //considering inertia for the current target to prevent loop in target selection
+        //防止在两个目标之间走来走去
         if (previousTarget != null && victims.contains(worldInfo.getEntity(previousTarget.getVictimID()))) {
             if (bestTarget != null && !bestTarget.getVictimID().equals(previousTarget.getVictimID())) {
                 Human bestHuman = (Human) worldInfo.getEntity(bestTarget.getVictimID());
@@ -212,6 +214,7 @@ public class DistanceBasedTargetSelector {
 
     }
 
+    //计算cluster中心
     private void calculateMapCenters(int clusterIndex, Collection<StandardEntity> elements) {
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
         int maxX = 0, maxY = 0;
@@ -229,6 +232,7 @@ public class DistanceBasedTargetSelector {
 
     }
 
+    //删除不在victims中的target
     private void refreshTargetsMap(Set<StandardEntity> victims, Map<EntityID, AmbulanceTarget> targetsMap) {
         List<EntityID> toRemoves = new ArrayList<EntityID>();
         for (EntityID targetID : targetsMap.keySet()) {
@@ -241,6 +245,7 @@ public class DistanceBasedTargetSelector {
         }
     }
 
+    //在rescueRange内最近的
     private AmbulanceTarget findBestVictim(Map<EntityID, AmbulanceTarget> targetsMap, Collection<StandardEntity> elements) {
         AmbulanceTarget bestTarget = null;
         if (targetsMap != null && !targetsMap.isEmpty()) {
@@ -261,6 +266,8 @@ public class DistanceBasedTargetSelector {
 
         return bestTarget;
     }
+
+    //另一种计算cost的方法
     private void MrlNewCostsCalculation() {
         List<EntityID> ambulanceNumber=new ArrayList<>(worldInfo.getEntityIDsOfType(StandardEntityURN.AMBULANCE_TEAM)) ;
         for( EntityID team :ambulanceNumber){
@@ -340,6 +347,7 @@ public class DistanceBasedTargetSelector {
 //        }
 //
 
+    //以某种权重计算cost
     private void calculateVictimsCostValue(){
 
         if (targetsMap != null && !targetsMap.isEmpty()) {
@@ -393,6 +401,7 @@ public class DistanceBasedTargetSelector {
                         //euclidean distance from this victim to the nearest refuge
                         target.setDistanceToRefuge(worldInfo.getDistance(human.getPosition(), findNearestRefuge(human.getPosition())));
 
+                        //距离clusterCenter的距离
                         target.setDistanceToPartition(Util.distance(victim.getLocation(worldInfo.getRawWorld()), clusterCenterMap.get(this.clusterIndex)));
 //                        deathTimeForAgent = (int) Math.ceil(human.getHP() / (double) human.getDamage()); //a pessimistic time to death
                     }
@@ -455,6 +464,7 @@ public class DistanceBasedTargetSelector {
      */
     private int computingDistance(Human human) {
 
+        //重要程度
         double coefficient = 1;
         if (human instanceof AmbulanceTeam) {
             coefficient = 0.90;
@@ -519,6 +529,7 @@ public class DistanceBasedTargetSelector {
      // if ((deathTimeForAgent>earlyCOmplete)&& (earlyCOmplete/deathTimeForAgent)>beta)
 
 
+    //救援的利益
     private double calculateVictimProfitability(Human human) {
         List<EntityID> ambulanceNumber = new ArrayList<>(worldInfo.getEntityIDsOfType(StandardEntityURN.AMBULANCE_TEAM));
         for (StandardEntity next : worldInfo.getEntitiesOfType(

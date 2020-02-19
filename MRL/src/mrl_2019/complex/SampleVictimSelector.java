@@ -38,6 +38,7 @@ public class SampleVictimSelector extends HumanDetector {
     private Map<EntityID, BuildingProperty> sentBuildingMap;
     private Map<EntityID, Integer> sentTimeMap;
     private PathPlanning pathPlanning;
+    //value:postponeTime
     private Map<StandardEntity, Integer> blockedVictims;
     private Random rnd = new Random(System.currentTimeMillis());
 
@@ -72,6 +73,7 @@ public class SampleVictimSelector extends HumanDetector {
     @Override
     public HumanDetector calc() {
 //        Clustering clustering = this.moduleManager.getModule(SampleModuleKey.AMBULANCE_MODULE_CLUSTERING);
+        //worldInfo中寻找最近的一个Human
         if (clustering == null) {
             this.result = this.failedClusteringCalc();
             return this;
@@ -111,6 +113,7 @@ public class SampleVictimSelector extends HumanDetector {
         }
 
         for (int i = 0; i < 6; i++) {
+            //删除所有被困住的human
             victimClassifier.getMyGoodHumans().removeAll(blockedVictims.keySet());
             result = targetSelector.nextTarget(victimClassifier.getMyGoodHumans());
             if (result != null) {
@@ -120,6 +123,7 @@ public class SampleVictimSelector extends HumanDetector {
                     if (agentInfo.getPosition().equals(position.getID()) || path != null && !path.isEmpty()) {
                         return this;
                     }
+                    //找不到路,设置postponeTime时间内能到达,否则放弃
                     int postponeTime = rnd.nextInt(6) + 5;
                     blockedVictims.put(worldInfo.getEntity(result), postponeTime);
 //                    System.out.println("BLOCKED VICTIM: " + agentInfo.getTime() + " agent: " + agentInfo.getID() + " victim: " + result + " postpone: " + postponeTime);
@@ -131,6 +135,7 @@ public class SampleVictimSelector extends HumanDetector {
         return this;
     }
 
+    //更新postponeTime,删除postponeTime<=0的entity
     private void updateBlockedVictims() {
         ArrayList<StandardEntity> toRemove = new ArrayList<StandardEntity>();
         int postponeTime;
@@ -138,6 +143,7 @@ public class SampleVictimSelector extends HumanDetector {
             postponeTime = blockedVictims.get(standardEntity);
             postponeTime--;
             if (postponeTime <= 0) {
+                //
                 toRemove.add(standardEntity);
             } else {
                 blockedVictims.put(standardEntity, postponeTime);

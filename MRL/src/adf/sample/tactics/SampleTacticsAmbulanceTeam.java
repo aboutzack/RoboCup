@@ -183,6 +183,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
             }
         }
         // autonomous
+        //搜索human
         EntityID target = this.humanDetector.calc().getTarget();
         Action action = this.actionTransport.setTarget(target).calc().getAction();
         if (action != null)
@@ -190,6 +191,7 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
             this.sendActionMessage(messageManager, agent, action);
             return action;
         }
+        //搜索房屋
         target = this.search.calc().getTarget();
         action = this.actionExtMove.setTarget(target).calc().getAction();
         if (action != null)

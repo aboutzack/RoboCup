@@ -78,6 +78,7 @@ public class RayMoveActExecutor {
 
 
         //find obstacle blockades which blocked my way.
+        //找到挡着的障碍物
         List<StandardEntity> obstacles = findObstacles(location, plan);
         if (obstacles.isEmpty()) {
             return null;
@@ -96,12 +97,14 @@ public class RayMoveActExecutor {
 
         Point2D centerOfCurrentLocation = Util.getPoint(worldInfo.getLocation(currentPosition));
         Point2D middleNextEdge = null;
+        //找到绕开blockade的路
         if (plan.size() > 1) {
             if (currentPosition instanceof Road) {
                 MrlRoad mrlRoad = world.getMrlRoad(currentPosition.getID());
 
                 for (MrlEdge mrlEdge : mrlRoad.getMrlEdgesTo(plan.get(1))) {
                     if (!mrlEdge.isBlocked()) {
+                        //相邻的边没有被阻塞的中点
                         middleNextEdge = Util.getMiddle(mrlEdge.getOpenPart());
                         break;
                     }
@@ -111,13 +114,16 @@ public class RayMoveActExecutor {
                 middleNextEdge = Util.getMiddle(currentPosition.getEdgeTo(plan.get(1)).getLine());
             }
         } else {
+            //原来的plan就没打算动
             middleNextEdge = centerOfCurrentLocation;
         }
 
         Line2D guideLine = new Line2D(location, middleNextEdge);
+        //行走的线不会和障碍物的凸包相碰
         if (!Util.hasIntersection(mergedObstacles.getConvexPolygon(), guideLine)) {
             Util.improveLine(guideLine, MRLConstants.AGENT_SIZE).getEndPoint();
             movePointList.add(Util.improveLine(guideLine, MRLConstants.AGENT_SIZE).getEndPoint());
+            //找到了到达target的路
             Action action = moveToPoints(movePointList);
             if (action != null) {
                 return action;
