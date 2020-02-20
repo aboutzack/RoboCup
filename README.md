@@ -232,5 +232,6 @@ GYJ：划划划划划<brß>
 2020年2月19日
 
 CRF：理解center的对火警分配的程式，调试代码。<br>
-XJ：调试PFdetector代码
+XJ：调试PFdetector代码<br>
+GYJ：调试自动测试脚本<br>
 
