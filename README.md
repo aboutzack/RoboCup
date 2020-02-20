@@ -234,9 +234,11 @@ GYJ：划划划划划<brß>
 CRF：理解center的对火警分配的程式，调试代码。<br>
 XJ：调试PFdetector代码<br>
 GYJ：调试自动测试脚本<br>
+CGY:修改PathPlanning代码<br>
 
 2020年2月20日
 
 GYQ:运行CSU代码分析智能体行为，理解策略<br>
 CRF：理解火警algorithm中pathplanning的智能体移动的思想，调试代码。<br>
-YBC：调试代码，跑图，试解决警察两点来回转圈的问题
+YBC：调试代码，跑图，试解决警察两点来回转圈的问题<br>
+CGY:修改和测试PathPlanning代码<br>
