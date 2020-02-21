@@ -1,20 +1,18 @@
 package CSU_Yunlu_2019.standard;
 
-import java.awt.Point;
-import java.awt.Polygon;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
-import java.util.List;
-
 import CSU_Yunlu_2019.standard.simplePartition.Locator;
 import CSU_Yunlu_2019.util.Util;
-
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Blockade;
 import rescuecore2.standard.entities.Building;
 import rescuecore2.standard.entities.Edge;
+
+import java.awt.*;
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+import java.util.List;
 
 /**
  * Calculate distance.
@@ -307,5 +305,13 @@ public class Ruler {
 		l = Locator.getLine(edge);
 		d = (int) l.ptSegDist(point);
 		return d;
+	}
+
+	public static double getManhattanDistance(Pair<Integer, Integer> pair1, Pair<Integer, Integer> pair2) {
+		int x1 = pair1.first().intValue();
+		int y1 = pair1.second().intValue();
+		int x2 = pair2.first().intValue();
+		int y2 = pair2.second().intValue();
+		return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 	}
 }

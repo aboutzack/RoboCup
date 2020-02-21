@@ -7,6 +7,7 @@ import rescuecore2.worldmodel.EntityID;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+//检查是否stuck的算法
 public class StuckDetector {
     
     private final boolean DEBUGLOG = false;
