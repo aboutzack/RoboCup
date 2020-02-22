@@ -120,6 +120,10 @@ public class CSUSearch extends Search {
 		List<EntityID> path = this.pathPlanning.calc().getResult();
 		if (path != null && path.size() > 0) {
 			this.result = path.get(path.size() - 1);
+		} else {//剩下的building都不可到达,重置
+			Collection<EntityID> toRemove = new HashSet<>(unsearchedBuildingIDs);
+			this.reset();
+			unsearchedBuildingIDs.removeAll(toRemove);
 		}
 		return this;
 	}
