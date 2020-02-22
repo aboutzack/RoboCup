@@ -252,3 +252,7 @@ CRF：理解火警algorithm中的kmeans聚类思想，调试代码。<br>
 CGY:改进PathPlanning代码<br>
 XJ：调试PF-detactor代码。<br>
 YBC：划了划水。
+
+2020年2月22日
+
+CXX：结合大家群里的问题阅读了相应代码。
