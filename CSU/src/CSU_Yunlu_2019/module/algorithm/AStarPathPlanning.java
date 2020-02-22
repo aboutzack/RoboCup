@@ -41,6 +41,7 @@ public class AStarPathPlanning  extends PathPlanning {
     private Area previousTarget = null;
     private HashSet<EntityID> impassableRoads;
     private EntityID lastNearestTarget = null;
+    private boolean amIPoliceForce = false;
     //持续像同一个目标移动的次数
     private int repeatMovingTime = 0;
     private static final double PASSABLE = 1;
@@ -72,6 +73,9 @@ public class AStarPathPlanning  extends PathPlanning {
         stuckDetector = new StuckDetector(this.agentInfo);
         this.passableRoads = new HashSet<>();
         this.impassableRoads = new HashSet<>();
+        if (agentInfo.me().getStandardURN() == StandardEntityURN.POLICE_FORCE) {
+            this.amIPoliceForce = true;
+        }
     }
 
     @Override
@@ -333,29 +337,30 @@ public class AStarPathPlanning  extends PathPlanning {
                 StandardEntity positionEntity = worldInfo.getPosition(agentInfo.getID());
                 //下面还要乘上一个常数,代表路是否能通过的权值
                 this.cost = parent.getCost() + Ruler.getManhattanDistance(worldInfo.getLocation(id), worldInfo.getLocation(parent.getID()));
-                if (positionEntity.getStandardURN() != StandardEntityURN.ROAD) {//当前在房子里,不需要考虑可见的Road
-                    if (entity.getStandardURN() == StandardEntityURN.ROAD) {
-                        //如果可通过
-                        if (passableRoads.contains(id)) {
+                if (!amIPoliceForce) {
+                    if (positionEntity.getStandardURN() != StandardEntityURN.ROAD) {//当前在房子里,不需要考虑可见的Road
+                        if (entity.getStandardURN() == StandardEntityURN.ROAD) {
+                            //如果可通过
+                            if (passableRoads.contains(id)) {
+                                cost *= PASSABLE;
+                            }else if (impassableRoads.contains(id)) {
+                                cost *= IMPASSABLE;
+                                impassable = true;
+                            }else {
+                                cost *= UNKNOWN;
+                            }
+                        }else {//当前entity是building
                             cost *= PASSABLE;
-                        }else if (impassableRoads.contains(id)) {
-                            cost *= IMPASSABLE;
-                            impassable = true;
-                        }else {
-                            cost *= UNKNOWN;
                         }
-                    }else {//当前entity是building
-                            cost *= PASSABLE;
-                    }
-                }else {//当前在Road上,考虑可见的Road是否可以通过
-                    //如果当前entity是road
-                    if (entity.getStandardURN() == StandardEntityURN.ROAD) {
-                        //如果可通过
-                        if (passableRoads.contains(id)) {
-                            cost *= PASSABLE;
-                        }else if(((Road)entity).isBlockadesDefined()) {
-                            CSURoadHelper roadHelper = new CSURoadHelper((Road) entity, worldInfo, scenarioInfo);
-                            roadHelper.update();
+                    }else {//当前在Road上,考虑可见的Road是否可以通过
+                        //如果当前entity是road
+                        if (entity.getStandardURN() == StandardEntityURN.ROAD) {
+                            //如果可通过
+                            if (passableRoads.contains(id)) {
+                                cost *= PASSABLE;
+                            }else if(((Road)entity).isBlockadesDefined()) {
+                                CSURoadHelper roadHelper = new CSURoadHelper((Road) entity, worldInfo, scenarioInfo);
+                                roadHelper.update();
                                 if (roadHelper.isPassable()) {//可通过
                                     // TODO: 2/22/20 判断是否能通过的算法表现并不好
                                     passableRoads.add(id);
@@ -367,15 +372,16 @@ public class AStarPathPlanning  extends PathPlanning {
                                     cost *= IMPASSABLE;
                                     impassable = true;
                                 }
-                        } else if (impassableRoads.contains(id)){//看不到此road且之前发现路是不通的
-                            cost *= IMPASSABLE;
-                            impassable = true;
-                        }else {
-                            cost *= UNKNOWN;
+                            } else if (impassableRoads.contains(id)){//看不到此road且之前发现路是不通的
+                                cost *= IMPASSABLE;
+                                impassable = true;
+                            }else {
+                                cost *= UNKNOWN;
+                            }
                         }
-                    }
-                    else {//当前entity是building
-                        cost *= PASSABLE;
+                        else {//当前entity是building
+                            cost *= PASSABLE;
+                        }
                     }
                 }
                 this.length = parent.getLength() + 1;
