@@ -365,7 +365,7 @@ private double getDistance(Human human,Road road) {
 */	
 	//摘于MRL
 	private RoadDetector getRoadDetector(EntityID positionID, Set<EntityID> entityIDSet) {
-
+      //智能体自己的位置和
         this.pathPlanning.setFrom(positionID);
         this.pathPlanning.setDestination(entityIDSet);
         List<EntityID> path = this.pathPlanning.calc().getResult();
@@ -397,7 +397,7 @@ private double getDistance(Human human,Road road) {
 		
 		if(this.result == null || !this.StuckedAgent_BlockedRoad.contains(this.result) ){   //目的地为空的话或者
 		this.clear_Blocked_Roads(this.StuckedAgent_BlockedRoad);                     
-		id = get_result_from_set(this.StuckedAgent_BlockedRoad, nearPolice);//id是下一个要去的目的地
+		id = get_result_from_set(this.StuckedAgent_BlockedRoad, nearPolice);//id是下一个要去的目的地，自己是最近的就会去清理最近的障碍物
 		if (id != null)
 			{
 			this.result=id; 
@@ -420,13 +420,13 @@ private double getDistance(Human human,Road road) {
     	EntityID positionID = this.agentInfo.getPosition();
 		this.StuckedAgentOrRefuge_BlockedRoad.removeAll(no_need_to_clear);
 		this.priorityRoads.removeAll(no_need_to_clear);
-		//update_roads()函数本来在updateInfo()中
+		//update_roads()函数本来在updateInfo()中，更新StuckedAgentOrRefuge_Blocked，加入避难所，消防栓，消防等所在的街区
 		this.update_roads();
-		//先清理StuckedAgentOrRefuge_BlockedRoad
+		//先清理StuckedAgentOrRefuge_Blocked
 		if(!this.StuckedAgentOrRefuge_BlockedRoad.isEmpty()) {
-			return getRoadDetector(positionID,this.StuckedAgentOrRefuge_BlockedRoad);
+			return getRoadDetector(positionID,this.StuckedAgentOrRefuge_BlockedRoad);//this.result在此处被赋值主要是前往对应的街道
 		}
-		//result在这些里边就仍然不变
+		//result在这些里边就仍然不变，下次运行执行
 		if(this.result != null && this.StuckedAgentOrRefuge_BlockedRoad.contains(this.result) ||this.result != null && this.priorityRoads .contains(this.result)){
 >>>>>>> 61cd9f4ba50b7680aed88ba6fa548c17c5de424a:CSU/src/CSU_Yunlu_2019/module/complex/pf/CSURoadDetector.java
 			return this;
@@ -560,6 +560,7 @@ private double getDistance(Human human,Road road) {
 
     //更新路况
     private void update_roads() {
+		  //将避难所附近的障碍物全部加入 StuckedAgentOrRefuge_BlockedRoad附近
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
     		StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(id);
     		//refuge
@@ -567,6 +568,8 @@ private double getDistance(Human human,Road road) {
 				this.StuckedAgentOrRefuge_BlockedRoad.addAll(this.get_all_Bloacked_Entrance_of_Building((Building) entity));	
 			}
 		}
+		
+		 //消防栓优先清理通过no_need_to_clear判断需不需要清理，加入priorityRoad数组
 		for (EntityID id: this.worldInfo.getChanged().getChangedEntities()) {
 			StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(id);
 			//hydrant
@@ -574,6 +577,7 @@ private double getDistance(Human human,Road road) {
 				this.priorityRoads.add(entity.getID());
 		}
     	
+		//接下来集中清理火警和救护车队	，建筑物的出入口，路段
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
 			StandardEntity entity = this.worldInfo.getEntity(id);
 			//firebrigade和ambulanceteam
@@ -592,7 +596,7 @@ private double getDistance(Human human,Road road) {
 					this.StuckedAgentOrRefuge_BlockedRoad.addAll(entrances);
 				}
 			}
-			//civilian
+			//civilian，
 			else if (entity instanceof Civilian) {
 				Human human = (Human) entity;
 				if (!human.isPositionDefined() || !human.isHPDefined()||human.getHP()<1000) {
@@ -614,7 +618,7 @@ private double getDistance(Human human,Road road) {
 			else if (entity instanceof Road) {
 				Road road = (Road) entity;
 				if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
-					this.no_need_to_clear.add(id);
+					this.no_need_to_clear.add(id);   
 				}
 				//我想的是这条路上没有被困的智能体就从set里去掉
 				if(this.StuckedAgentOrRefuge_BlockedRoad.contains(entity)) {

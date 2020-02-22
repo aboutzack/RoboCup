@@ -20,7 +20,7 @@ public class DebugLog {
     public void log(String info) {
         if (agentInfo != null)
             info = this.agentInfo.getID() + ": " + info;
-        // if (DEBUGLOG)
+         if (DEBUGLOG)
             System.out.println(info);
     }
 
