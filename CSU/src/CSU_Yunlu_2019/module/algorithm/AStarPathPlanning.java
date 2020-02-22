@@ -46,10 +46,8 @@ public class AStarPathPlanning  extends PathPlanning {
     private int repeatMovingTime = 0;
     private static final double PASSABLE = 1;
     private static final double UNKNOWN = 1.2;
-    // TODO: 2/20/20 确定权值或函数
     private static final double IMPASSABLE = 100;
-    // TODO: 2/22/20 不进入着火的房屋?
-
+    private static final double BURNING = 100;
     public AStarPathPlanning(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
         this.init();
@@ -159,6 +157,9 @@ public class AStarPathPlanning  extends PathPlanning {
                 }
             }
         }
+        if (result != null && result.isEmpty()) {
+            result = null;
+        }
         return this;
     }
 
@@ -183,11 +184,13 @@ public class AStarPathPlanning  extends PathPlanning {
             Area nearestTarget = null;
             previousPath.clear();
             Node node = getPathEndNode(target.getID());
-            path = getPathByEndNode(node);
-            previousTarget = nearestTarget;
-            previousPath = path;
+            if (node != null) {
+                path = getPathByEndNode(node);
+                previousTarget = nearestTarget;
+                previousPath = path;
+            }
         } else if (previousTarget.equals(target)) {
-            //截取之前的路即可
+            //截取之前的路,但要重新判断是否可以通过
             ArrayList<EntityID> temp = new ArrayList<>();
             for (EntityID aPreviousPath : previousPath) {
                 if (!sourceArea.getID().equals(aPreviousPath)) {
@@ -198,7 +201,27 @@ public class AStarPathPlanning  extends PathPlanning {
             }
             //删点已经走过的路
             previousPath.removeAll(temp);
-            path = previousPath;
+            boolean stillPassable = true;
+            //检测路点是否可通过
+            for (int i = 0; i < Math.min(3, previousPath.size()); i++) {
+                Area area = (Area)worldInfo.getEntity(previousPath.get(i));
+                if (area instanceof Road && area.isBlockadesDefined()){
+                    CSURoadHelper roadHelper = new CSURoadHelper((Road) area, worldInfo, scenarioInfo);
+                    stillPassable = stillPassable && roadHelper.isPassable();
+                }
+            }
+            if (stillPassable) {
+                path = previousPath;
+            }else {
+                Area nearestTarget = null;
+                previousPath.clear();
+                Node node = getPathEndNode(target.getID());
+                if (node != null) {
+                    path = getPathByEndNode(node);
+                    previousTarget = nearestTarget;
+                    previousPath = path;
+                }
+            }
         }
         return path;
     }
@@ -278,7 +301,7 @@ public class AStarPathPlanning  extends PathPlanning {
             // debugLog("iteration " + cnt);
         }
         debugLog("path not found.");
-        return current;
+        return null;
     }
 
     /**
@@ -337,51 +360,40 @@ public class AStarPathPlanning  extends PathPlanning {
                 StandardEntity positionEntity = worldInfo.getPosition(agentInfo.getID());
                 //下面还要乘上一个常数,代表路是否能通过的权值
                 this.cost = parent.getCost() + Ruler.getManhattanDistance(worldInfo.getLocation(id), worldInfo.getLocation(parent.getID()));
-                if (!amIPoliceForce) {
-                    if (positionEntity.getStandardURN() != StandardEntityURN.ROAD) {//当前在房子里,不需要考虑可见的Road
-                        if (entity.getStandardURN() == StandardEntityURN.ROAD) {
-                            //如果可通过
-                            if (passableRoads.contains(id)) {
+                Area area = (Area) worldInfo.getEntity(entity.getID());
+                if ((area instanceof Building) && ((Building) area).isFierynessDefined()) {//防止进入着火的屋子
+                    int fieriness = ((Building) area).getFieryness();
+                    if (fieriness > 0 && fieriness < 4) {
+                        cost *= BURNING;
+                    }
+                }else if (!amIPoliceForce) {//at或者fb
+                    //如果当前entity是road
+                    if (area instanceof Road) {
+                        //如果可通过
+                        if (passableRoads.contains(id)) {
+                            cost *= PASSABLE;
+                        } else if (area.isBlockadesDefined()) {
+                            CSURoadHelper roadHelper = new CSURoadHelper((Road) entity, worldInfo, scenarioInfo);
+                            roadHelper.update();
+                            if (roadHelper.isPassable()) {//可通过
+                                // TODO: 2/22/20 判断是否能通过的算法表现并不好
+                                passableRoads.add(id);
+                                impassableRoads.remove(id);
                                 cost *= PASSABLE;
-                            }else if (impassableRoads.contains(id)) {
+                            } else {//不可通过
+                                impassableRoads.add(id);
+                                passableRoads.remove(id);
                                 cost *= IMPASSABLE;
                                 impassable = true;
-                            }else {
-                                cost *= UNKNOWN;
                             }
-                        }else {//当前entity是building
-                            cost *= PASSABLE;
+                        } else if (impassableRoads.contains(id)) {//看不到此road且之前发现路是不通的
+                            cost *= IMPASSABLE;
+                            impassable = true;
+                        } else {
+                            cost *= UNKNOWN;
                         }
-                    }else {//当前在Road上,考虑可见的Road是否可以通过
-                        //如果当前entity是road
-                        if (entity.getStandardURN() == StandardEntityURN.ROAD) {
-                            //如果可通过
-                            if (passableRoads.contains(id)) {
-                                cost *= PASSABLE;
-                            }else if(((Road)entity).isBlockadesDefined()) {
-                                CSURoadHelper roadHelper = new CSURoadHelper((Road) entity, worldInfo, scenarioInfo);
-                                roadHelper.update();
-                                if (roadHelper.isPassable()) {//可通过
-                                    // TODO: 2/22/20 判断是否能通过的算法表现并不好
-                                    passableRoads.add(id);
-                                    impassableRoads.remove(id);
-                                    cost *= PASSABLE;
-                                } else {//不可通过
-                                    impassableRoads.add(id);
-                                    passableRoads.remove(id);
-                                    cost *= IMPASSABLE;
-                                    impassable = true;
-                                }
-                            } else if (impassableRoads.contains(id)){//看不到此road且之前发现路是不通的
-                                cost *= IMPASSABLE;
-                                impassable = true;
-                            }else {
-                                cost *= UNKNOWN;
-                            }
-                        }
-                        else {//当前entity是building
-                            cost *= PASSABLE;
-                        }
+                    } else {//当前entity是building
+                        cost *= PASSABLE;
                     }
                 }
                 this.length = parent.getLength() + 1;

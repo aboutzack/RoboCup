@@ -176,7 +176,7 @@ public class ActionExtMove extends ExtAction {
 		lastmovePath.addAll(path);
 
 		if (agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil() && isStuck(path)){
-			System.out.println(this.agentInfo.getID()+" stuck！");
+//			System.out.println(this.agentInfo.getID()+" stuck!");
 			// TODO: 2/16/20 比randomWalk更好的解决stuck的方法
 			action = randomWalk();
 		}
@@ -310,7 +310,11 @@ public class ActionExtMove extends ExtAction {
 				pathPlanning.setFrom(position);
 				pathPlanning.setDestination(entity.getID());
 				path = pathPlanning.calc().getResult();
-				action = new ActionMove(path);
+				if (path != null && !path.isEmpty()) {
+					action = new ActionMove(path);
+					lastmovePath.clear();
+					lastmovePath.addAll(path);
+				}
 				break;
 			}
 		}
@@ -318,11 +322,12 @@ public class ActionExtMove extends ExtAction {
 			pathPlanning.setFrom(position);
 			pathPlanning.setDestination(blockedArea.getID());
 			path = pathPlanning.calc().getResult();
-			action = new ActionMove(path);
+			if (path != null && !path.isEmpty()) {
+				action = new ActionMove(path);
+				lastmovePath.clear();
+				lastmovePath.addAll(path);
+			}
 		}
-
-		lastmovePath.clear();
-		lastmovePath.addAll(path);
 		return action;
 	}
 }

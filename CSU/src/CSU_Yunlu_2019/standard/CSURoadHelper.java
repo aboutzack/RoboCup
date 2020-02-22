@@ -1,14 +1,5 @@
 package CSU_Yunlu_2019.standard;
 
-import java.awt.Point;
-import java.awt.Polygon;
-import java.awt.geom.Area;
-import java.util.LinkedList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
 import CSU_Yunlu_2019.geom.ExpandApexes;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.info.ScenarioInfo;
@@ -17,12 +8,13 @@ import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
-import rescuecore2.standard.entities.Blockade;
-import rescuecore2.standard.entities.Building;
-import rescuecore2.standard.entities.Edge;
-import rescuecore2.standard.entities.Road;
-import rescuecore2.standard.entities.StandardEntity;
+import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
+
+import java.awt.*;
+import java.awt.geom.Area;
+import java.util.List;
+import java.util.*;
 
 /**
  * Mainly for blockades.

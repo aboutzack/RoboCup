@@ -101,8 +101,9 @@ public class CSUSearch extends Search {
 		if (this.getCountUpdateInfo() >= 2) {
 			return this;
 		}
-
+		// TODO: 2/22/20 searched的条件?
 		this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+//		System.out.println("ChangeList有 " + this.worldInfo.getChanged().getChangedEntities());
 
 		if (this.unsearchedBuildingIDs.isEmpty()) {
 			this.reset();
