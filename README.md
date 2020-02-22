@@ -250,6 +250,5 @@ CGY:修改和测试PathPlanning代码<br>
 
 CRF：理解火警algorithm中的kmeans聚类思想，调试代码。<br>
 CGY:改进PathPlanning代码<br>
-XJ：调试PF-detactor代码
-
-YBC：划了划水
+XJ：调试PF-detactor代码。<br>
+YBC：划了划水。
