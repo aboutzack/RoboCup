@@ -253,3 +253,7 @@ YBC：划了划水。
 
 CXX：结合大家群里的问题阅读了相应代码。<br>CRF：调试并丰富了complex中火警center对不同agent的状态情况的处理办法。<br>
 CGY:改进pathplanning,写tdp,修复search代码<br>
+
+2020年2月23日
+
+CRF：调试algorithm中kmeans代码，查看fb中的bug代码。<br>
