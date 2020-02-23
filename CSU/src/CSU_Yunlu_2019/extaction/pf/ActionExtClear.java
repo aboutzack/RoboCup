@@ -1721,7 +1721,7 @@ public class ActionExtClear extends ExtAction {
 	public ExtAction calc() {
 		Action tmp;
 		if (isStucked((Human) (agentInfo.me()))) {
-			result = clearWhenStuck();   //返回的动作是清理
+			result = clearWhenStuck();
 		} else {
 			tmp = mixingClear();
 			if (tmp == null) {
@@ -1867,7 +1867,7 @@ public class ActionExtClear extends ExtAction {
 
 			//System.out.println("time = " + time + ", agent = " + agentInfo.me() + " is stucked clear, " + "target = "
 					//+ blockade + " ----- PoliceForceAgent, stuckedClear()");
-			return new ActionClear(blockade.getID());   //清除对应ID的障碍物
+			return new ActionClear(blockade.getID());
 		} else {
 			// TODO to finish it
 			Action tmp = directClear();
@@ -2639,11 +2639,11 @@ public class ActionExtClear extends ExtAction {
 		//the new add code
 
 		if (blockade == null)
-			return false;    
+			return false;
 		double minDistance = Ruler.getDistanceToBlock(blockade, human.getX(), human.getY());
 
 		if (minDistance > 500) {
-			//System.out.println(time + ", " + human + ", " + "is stucked");                 //判断是否在建筑物里面
+			//System.out.println(time + ", " + human + ", " + "is stucked");
 			return true;
 		}
 
