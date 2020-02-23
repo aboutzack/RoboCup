@@ -91,6 +91,7 @@ public class CSUBuildingDetector extends BuildingDetector{
      */
     public double getCosAngel(Building a,Building b,Building c)
     {
+        if (a == null || b == null || c == null) return 0.0D;
     	double flag = (a.getX()-b.getX()) * (c.getY()-b.getY()) - (a.getY()-b.getY()) * (c.getX()-b.getX());
     	double ba = Math.sqrt((double)((a.getX()-b.getX())*(a.getX()-b.getX()) + (a.getY()-b.getY())*(a.getY()-b.getY())));
     	double bc = Math.sqrt((double)((c.getX()-b.getX())*(c.getX()-b.getX()) + (c.getY()-b.getY())*(c.getY()-b.getY())));
