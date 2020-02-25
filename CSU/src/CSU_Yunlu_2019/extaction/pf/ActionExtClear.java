@@ -928,9 +928,11 @@ public class ActionExtClear extends ExtAction {
 						if (stuckedAgentList != null)///////////////////////
 							for (EntityID entityID : stuckedAgentList) {
 								Human agent = (Human) worldInfo.getEntity(entityID);
-								if (agent.getPosition().getValue() == cur_entity.getID().getValue()) {
-									// System.out.println("cur_entity.gentID");
-									needClearAgent.add(entityID);
+								if(agent!=null && cur_entity!=null) {
+									if (agent.getPosition().getValue() == cur_entity.getID().getValue()) {
+										// System.out.println("cur_entity.gentID");
+										needClearAgent.add(entityID);
+									}
 								}
 
 							}
