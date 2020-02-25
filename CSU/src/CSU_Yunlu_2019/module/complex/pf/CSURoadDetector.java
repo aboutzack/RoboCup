@@ -39,8 +39,6 @@ import CSU_Yunlu_2019.standard.Ruler;
 
 public class CSURoadDetector extends RoadDetector {
     private Set<EntityID> targetAreas;
-    private Set<EntityID> priorityRoads;
-
     private PathPlanning pathPlanning;
     private Clustering clustering;
 
@@ -230,14 +228,12 @@ private double getDistance(Human human,Road road) {
 		}	
 		//先看StuckedAgentOrRefuge_BlockedRoad,优先级最高
 		if(!this.StuckedAgentOrRefuge_BlockedRoad.isEmpty()) {
-			System.out.println("-------------------------------------StuckedAgentOrRefuge_BlockedRoad-------------------------------------");
 				return this.getRoadDetector(positionID, this.StuckedAgentOrRefuge_BlockedRoad);
 		}	
 		//然后去refuge
 		if(initflag) this.GetToNearestRefuge(positionID);
 		//最后看priorityRoads，优先级其次
 		if(!this.priorityRoads.isEmpty()){
-			System.out.println("--------------------------------------------priorityRoads---------------------------------");
 			return getRoadDetector(positionID,this.priorityRoads);
 		}
 			
@@ -342,6 +338,7 @@ private double getDistance(Human human,Road road) {
     }
 
     private Set<EntityID> StuckedAgentOrRefuge_BlockedRoad = new HashSet<>();
+    private Set<EntityID> priorityRoads = new HashSet<>();
     private Set<EntityID> no_need_to_clear = new HashSet<>();
     private Set<EntityID> blockedRoads = new HashSet<>();
     
@@ -427,21 +424,21 @@ private double getDistance(Human human,Road road) {
 			//road 
 			else if (entity instanceof Road) {
 				Road road = (Road) entity;
-				if (road.isBlockadesDefined() && road.getBlockades().isEmpty()) {
-					this.StuckedAgentOrRefuge_BlockedRoad.remove(id);
-					this.priorityRoads.remove(id);
-					continue;
-				}
-				boolean BuildFlag=true;
-				for(EntityID eid : road.getNeighbours()) {
-					StandardEntity ent = (StandardEntity)this.worldInfo.getEntity(eid);
-					if(ent instanceof Building) {
-						this.blockedRoads.add(id);
-						BuildFlag=false;
-						break;
+					if (road.isBlockadesDefined() && road.getBlockades().isEmpty()) {
+						this.StuckedAgentOrRefuge_BlockedRoad.remove(id);
+						this.priorityRoads.remove(id);
+						continue;
 					}
-				}
-				if(BuildFlag) this.priorityRoads.add(id);
+					boolean BuildFlag=true;
+					for(EntityID eid : road.getNeighbours()) {
+						StandardEntity ent = (StandardEntity)this.worldInfo.getEntity(eid);
+						if(ent instanceof Building) {
+							this.blockedRoads.add(id);
+							BuildFlag=false;
+							break;
+						}
+					}
+					if(BuildFlag) this.priorityRoads.add(id);
 			}
 			
 		}
