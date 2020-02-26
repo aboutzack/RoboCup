@@ -268,3 +268,7 @@ CGY：写tdp1<br>CRF：写火警部分的tdp。<br>
 
 YBC：写警察tdp,改了ActionExtClear一个空指针bug，调试提交RoadDetector代码。<br>
 CGY:还在写tdp<br>CRF：写Clustering模块的tdp。<br>
+
+2020年2月26日
+
+YBC：理清ActionExtClear思路与guideline思路，开始尝试修改这拉跨的清理过程。<br>
