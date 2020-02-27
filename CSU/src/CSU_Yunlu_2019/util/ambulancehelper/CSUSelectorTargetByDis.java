@@ -49,15 +49,15 @@ public class CSUSelectorTargetByDis {
         switch (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("SampleRoadDetector.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-                this.clustering = moduleManager.getModule("SampleVictimSelector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
+                this.clustering = moduleManager.getModule("CSUatHumanDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case PRECOMPUTED:
                 this.pathPlanning = moduleManager.getModule("SampleRoadDetector.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-                this.clustering = moduleManager.getModule("SampleVictimSelector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
+                this.clustering = moduleManager.getModule("CSUatHumanDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case NON_PRECOMPUTE:
                 this.pathPlanning = moduleManager.getModule("SampleRoadDetector.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-                this.clustering = moduleManager.getModule("SampleVictimSelector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
+                this.clustering = moduleManager.getModule("CSUatHumanDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
         }
 
