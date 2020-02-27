@@ -102,12 +102,34 @@ public class CSUSearch extends Search {
 			return this;
 		}
 		// TODO: 2/22/20 searched的条件?
-		this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+		Set<EntityID> changedEntities = this.worldInfo.getChanged().getChangedEntities();
+		//删除所有没有broken的建筑
+		for (EntityID entityID : changedEntities) {
+			StandardEntity entity = worldInfo.getEntity(entityID);
+			if (entity instanceof Building) {
+				Building building = (Building) entity;
+				if (building.isBrokennessDefined() && building.getBrokenness() == 0) {
+					unsearchedBuildingIDs.remove(entityID);
+				}
+			}
+		}
 //		System.out.println("ChangeList有 " + this.worldInfo.getChanged().getChangedEntities());
+		Area positionArea = agentInfo.getPositionArea();
+		if (positionArea instanceof Building) {//在屋子里
+			unsearchedBuildingIDs.remove(positionArea.getID());
+		}else {//在门口
+			List<EntityID> neighbours = positionArea.getNeighbours();
+			unsearchedBuildingIDs.removeAll(neighbours);
+		}
 
 		if (this.unsearchedBuildingIDs.isEmpty()) {
 			this.reset();
-			this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+			if (positionArea instanceof Building) {//在屋子里
+				unsearchedBuildingIDs.remove(positionArea.getID());
+			}else {//在门口
+				List<EntityID> neighbours = positionArea.getNeighbours();
+				unsearchedBuildingIDs.removeAll(neighbours);
+			}
 		}
 		return this;
 	}

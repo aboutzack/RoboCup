@@ -26,7 +26,6 @@ import java.util.*;
 public class AStarPathPlanning  extends PathPlanning {
 
     private final boolean DEBUGLOG = false;
-    private final boolean LESS = false;
 
     private Map<EntityID, Set<EntityID>> graph;
 
