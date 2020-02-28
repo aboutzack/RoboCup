@@ -1,25 +1,8 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
-import static rescuecore2.standard.entities.StandardEntityURN.AMBULANCE_TEAM;
-import static rescuecore2.standard.entities.StandardEntityURN.FIRE_BRIGADE;
-import static rescuecore2.standard.entities.StandardEntityURN.POLICE_FORCE;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
-import adf.debug.TestLogger;
-import org.apache.log4j.Logger;
-
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
-import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import adf.agent.communication.standard.bundle.information.MessageBuilding;
-import adf.agent.communication.standard.bundle.information.MessageCivilian;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
+import adf.agent.communication.standard.bundle.information.*;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -29,12 +12,17 @@ import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
-import rescuecore2.standard.entities.Building;
-import rescuecore2.standard.entities.FireBrigade;
-import rescuecore2.standard.entities.Road;
-import rescuecore2.standard.entities.StandardEntity;
-import rescuecore2.standard.entities.StandardEntityURN;
+import adf.debug.TestLogger;
+import org.apache.log4j.Logger;
+import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class CSUSearchForFire extends Search {
 	private PathPlanning pathPlanning;
@@ -63,17 +51,17 @@ public class CSUSearchForFire extends Search {
 		if (agentURN == AMBULANCE_TEAM) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
 						"adf.sample.module.algorithm.AStarPathPlanning");
-				this.clustering = moduleManager.getModule("TestSearch.Clustering.Ambulance",
+				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
 						"adf.sample.module.algorithm.at.AT_SampleKMeans");
 			} else if (agentURN == FIRE_BRIGADE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
 						"adf.sample.module.algorithm.AStarPathPlanning");
-				this.clustering = moduleManager.getModule("TestSearch.Clustering.Fire",
+				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
 						"adf.sample.module.algorithm.fb.FB_SampleKMeans");
 			} else if (agentURN == POLICE_FORCE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
 						"adf.sample.module.algorithm.AStarPathPlanning");
-				this.clustering = moduleManager.getModule("TestSearch.Clustering.Police",
+				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
 						"adf.sample.module.algorithm.pf.PF_SampleKMeans");
 			}
 		registerModule(this.clustering);

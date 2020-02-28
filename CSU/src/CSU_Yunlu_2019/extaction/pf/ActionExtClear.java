@@ -1,35 +1,11 @@
 package CSU_Yunlu_2019.extaction.pf;
 
-import java.awt.Point;
-import java.awt.Polygon;
-import java.awt.Shape;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.Lists;
-
 import CSU_Yunlu_2019.exception.ActionCommandException;
 import CSU_Yunlu_2019.module.route.pov.POVRouter;
-import CSU_Yunlu_2019.standard.CSUEdgeHelper;
-import CSU_Yunlu_2019.standard.CSURoadHelper;
-import CSU_Yunlu_2019.standard.CriticalArea;
-import CSU_Yunlu_2019.standard.EntranceHelper;
-import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.standard.*;
 import CSU_Yunlu_2019.util.CircleQueue;
 import CSU_Yunlu_2019.util.CircleStack;
 import CSU_Yunlu_2019.util.Util;
-//import PF_CSUpfRoadDetector.sorter;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
@@ -42,8 +18,9 @@ import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
 import adf.component.extaction.ExtAction;
-import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.algorithm.Clustering;
+import adf.component.module.algorithm.PathPlanning;
+import com.google.common.collect.Lists;
 import javolution.util.FastMap;
 import rescuecore2.config.NoSuchConfigOptionException;
 import rescuecore2.misc.Pair;
@@ -51,21 +28,18 @@ import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
-import rescuecore2.standard.entities.AmbulanceTeam;
-import rescuecore2.standard.entities.Area;
-import rescuecore2.standard.entities.Blockade;
-import rescuecore2.standard.entities.Building;
-import rescuecore2.standard.entities.Edge;
-import rescuecore2.standard.entities.FireBrigade;
-import rescuecore2.standard.entities.Human;
-import rescuecore2.standard.entities.PoliceForce;
-import rescuecore2.standard.entities.Road;
-import rescuecore2.standard.entities.StandardEntity;
-import rescuecore2.standard.entities.StandardEntityURN;
+import rescuecore2.standard.entities.*;
 import rescuecore2.standard.messages.StandardMessageURN;
 import rescuecore2.worldmodel.ChangeSet;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
+
+import java.awt.*;
+import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
+//import PF_CSUpfRoadDetector.sorter;
 
 public class ActionExtClear extends ExtAction {
 
@@ -153,7 +127,7 @@ public class ActionExtClear extends ExtAction {
 					"adf.sample.module.algorithm.SamplePathPlanning");
 			break;
 		}
-		this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
+		this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 					"adf.sample.module.algorithm.SampleKMeans");
 		//moduleManager.registerModule(this.clustering);
 		//registerModule(this.pathPlanning);

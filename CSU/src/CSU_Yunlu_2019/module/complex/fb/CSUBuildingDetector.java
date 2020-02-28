@@ -33,13 +33,13 @@ public class CSUBuildingDetector extends BuildingDetector{
         switch (si.getMode())
         {
             case PRECOMPUTATION_PHASE:
-                this.clustering = moduleManager.getModule("CSUfbBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
+                this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
                 break;
             case PRECOMPUTED:
-                this.clustering = moduleManager.getModule("CSUfbBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
+                this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
                 break;
             case NON_PRECOMPUTE:
-                this.clustering = moduleManager.getModule("CSUfbBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
+                this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "CSU_Yunlu_2019.module.algorithm.fb.FB_SampleKMeans");
                 break;
         }
         registerModule(this.clustering);
