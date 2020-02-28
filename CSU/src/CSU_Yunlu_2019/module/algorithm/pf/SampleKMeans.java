@@ -72,7 +72,7 @@ public class SampleKMeans extends StaticClustering{
 	        
 	        clusterSize = Math.min(30, agentSize);
 	        
-	        System.out.println("\n *** 簇的数量 " + clusterSize + " *** \n");
+//	        System.out.println("\n *** 簇的数量 " + clusterSize + " *** \n");
 	    }
 
 	    @Override

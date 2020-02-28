@@ -52,17 +52,17 @@ public class CSUSearchForFire extends Search {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
-						"adf.sample.module.algorithm.at.AT_SampleKMeans");
+						"adf.sample.module.algorithm.SampleKMeans");
 			} else if (agentURN == FIRE_BRIGADE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
-						"adf.sample.module.algorithm.fb.FB_SampleKMeans");
+						"adf.sample.module.algorithm.SampleKMeans");
 			} else if (agentURN == POLICE_FORCE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
-						"adf.sample.module.algorithm.pf.PF_SampleKMeans");
+						"adf.sample.module.algorithm.SampleKMeans");
 			}
 		registerModule(this.clustering);
 		registerModule(this.pathPlanning);
