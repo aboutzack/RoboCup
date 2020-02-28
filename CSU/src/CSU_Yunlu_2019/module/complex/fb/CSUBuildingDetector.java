@@ -2,12 +2,7 @@ package CSU_Yunlu_2019.module.complex.fb;
 
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
-import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import adf.agent.communication.standard.bundle.information.MessageBuilding;
-import adf.agent.communication.standard.bundle.information.MessageCivilian;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
+import adf.agent.communication.standard.bundle.information.*;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -17,9 +12,11 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.complex.BuildingDetector;
+import mrl_2019.complex.firebrigade.BuildingProperty;
 import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
+
 import java.util.*;
 
 public class CSUBuildingDetector extends BuildingDetector{
@@ -28,6 +25,7 @@ public class CSUBuildingDetector extends BuildingDetector{
     private Clustering clustering;
     private List<Building> buildingsList = new ArrayList<>();
     private List<Building> convexBuildings;
+    private Map<EntityID, BuildingProperty> sentBuildingMap;
 
     public CSUBuildingDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
     {
@@ -45,6 +43,7 @@ public class CSUBuildingDetector extends BuildingDetector{
                 break;
         }
         registerModule(this.clustering);
+        this.sentBuildingMap = new HashMap<>();
     }
 
 
@@ -59,7 +58,37 @@ public class CSUBuildingDetector extends BuildingDetector{
 
         this.reflectMessage(messageManager);
         this.clustering.updateInfo(messageManager);
+        preProcessChangedEntities(messageManager);
         return this;
+    }
+
+    /**
+    * @Description: 根据changedEntities的信息进行通讯等操作
+    * @Date: 2/28/20
+    */
+    private void preProcessChangedEntities(MessageManager messageManager) {
+        worldInfo.getChanged().getChangedEntities().forEach(changedId -> {
+            StandardEntity entity = worldInfo.getEntity(changedId);
+            if (entity instanceof Building) {
+                Building building = (Building) worldInfo.getEntity(changedId);
+                if (building.isFierynessDefined() && building.getFieryness() > 0) {
+                    BuildingProperty buildingProperty = sentBuildingMap.get(changedId);
+                    if (buildingProperty == null || buildingProperty.getFieryness() != building.getFieryness() || buildingProperty.getFieryness() == 1) {
+                        messageManager.addMessage(new MessageBuilding(true, building));
+                        messageManager.addMessage(new MessageBuilding(false, building));
+                        sentBuildingMap.put(changedId, new BuildingProperty(building));
+                    }
+                }
+            } else if (entity instanceof Civilian) {
+                Civilian civilian = (Civilian) entity;
+                if ((civilian.isHPDefined() && civilian.getHP() > 1000 && civilian.isDamageDefined() && civilian.getDamage() > 0)
+                        || ((civilian.isPositionDefined() && !(worldInfo.getEntity(civilian.getPosition()) instanceof Refuge))
+                        && (worldInfo.getEntity(civilian.getPosition()) instanceof Building))) {
+                    messageManager.addMessage(new MessageCivilian(true, civilian));
+                    messageManager.addMessage(new MessageCivilian(false, civilian));
+                }
+            }
+        });
     }
     
     /*

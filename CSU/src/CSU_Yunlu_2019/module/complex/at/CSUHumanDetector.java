@@ -209,7 +209,15 @@ public class CSUHumanDetector extends HumanDetector {
         }
         this.clustering.updateInfo(messageManager);
         this.reflectMessage(messageManager);
+        preProcessChangedEntities(messageManager);
+        return this;
+    }
 
+    /**
+    * @Description: 根据changedEntities的信息进行通讯等操作
+    * @Date: 2/28/20
+    */
+    private void preProcessChangedEntities(MessageManager messageManager) {
         Set<StandardEntity> inBuildingAmbulances = new HashSet<>();
         worldInfo.getChanged().getChangedEntities().forEach(id -> {
             StandardEntity entity = worldInfo.getEntity(id);
@@ -220,18 +228,11 @@ public class CSUHumanDetector extends HumanDetector {
                         && position.getID().equals(agentInfo.getPosition())) {
                     inBuildingAmbulances.add(entity);
                 }
-            }
-        });
-
-
-        worldInfo.getChanged().getChangedEntities().forEach(id -> {
-            StandardEntity entity = worldInfo.getEntity(id);
-            if (entity instanceof Building) {
+            } else if (entity instanceof Building) {
                 Building building = (Building) worldInfo.getEntity(id);
                 if (building.isFierynessDefined() && building.getFieryness() > 0 /*|| building.isTemperatureDefined() && building.getTemperature() > 0*/) {
                     CSUBuilding CSU_Building = sentBuildingMap.get(id);
                     if (CSU_Building == null || CSU_Building.getFireyness() != building.getFieryness()) {
-//                        printDebugMessage("burningBuilding: " + building.getID());
                         messageManager.addMessage(new MessageBuilding(true, building));
                         messageManager.addMessage(new MessageBuilding(false, building));
                         sentBuildingMap.put(id, new CSUBuilding(building));
@@ -247,16 +248,10 @@ public class CSUHumanDetector extends HumanDetector {
                         messageManager.addMessage(new MessageCivilian(true, civilian));
                         messageManager.addMessage(new MessageCivilian(false, civilian));
                     }
-//                    System.out.println(" CIVILIAN_MESSAGE: " + agentInfo.getTime() + " " + agentInfo.getID() + " --> " + civilian.getID());
                 }
 
             }
         });
-
-
-        return this;
-
-
     }
 
 

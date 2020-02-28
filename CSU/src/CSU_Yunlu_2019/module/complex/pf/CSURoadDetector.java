@@ -1,34 +1,29 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
-import java.util.*;
-
-import adf.agent.communication.standard.bundle.centralized.CommandPolice;
-import adf.agent.communication.standard.bundle.centralized.MessageReport;
-import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
-import adf.agent.precompute.PrecomputeData;
-import adf.component.communication.CommunicationMessage;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
-import rescuecore2.misc.Pair;
+import adf.agent.communication.standard.bundle.centralized.CommandPolice;
+import adf.agent.communication.standard.bundle.information.*;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
+import adf.agent.precompute.PrecomputeData;
+import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.RoadDetector;
+import mrl_2019.complex.firebrigade.BuildingProperty;
+import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
-import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
-import rescuecore2.worldmodel.EntityID;
 import rescuecore2.worldmodel.Entity;
-import CSU_Yunlu_2019.standard.Ruler;
+import rescuecore2.worldmodel.EntityID;
+
+import java.util.*;
 //import PF_CSUpfRoadDetector.sorter;
 
 /**
@@ -53,9 +48,10 @@ public class CSURoadDetector extends RoadDetector {
 
 	private Set<EntityID> entrance_of_Refuge_and_Hydrant = new HashSet<>();
 	private MessageManager messageManager =new MessageManager();
-    
-    
-    public CSURoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
+	private Map<EntityID, BuildingProperty> sentBuildingMap;
+
+
+	public CSURoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
     {
         super(ai, wi, si, moduleManager, developData);
         switch (scenarioInfo.getMode())
@@ -76,6 +72,7 @@ public class CSURoadDetector extends RoadDetector {
         registerModule(this.pathPlanning);
         this.have_police_office = !wi.getEntityIDsOfType(StandardEntityURN.POLICE_OFFICE).isEmpty();
         this.result = null;
+        this.sentBuildingMap = new HashMap<>();
     }
     private boolean is_area_blocked(EntityID id){
 		Area area = (Area) this.worldInfo.getEntity(id);
@@ -334,8 +331,40 @@ private double getDistance(Human human,Road road) {
 				}
 			}
 		}
+        preProcessChangedEntities(messageManager);
+		// TODO: 2/28/20 调用getReceivedMessageList,并根据message作相应的处理
         return this;
     }
+
+	/**
+	 * @Description: 根据changedEntities的信息进行通讯等操作
+	 * @Date: 2/28/20
+	 */
+	private void preProcessChangedEntities(MessageManager messageManager) {
+		worldInfo.getChanged().getChangedEntities().forEach(changedId -> {
+			StandardEntity entity = worldInfo.getEntity(changedId);
+			if (entity instanceof Building) {
+				Building building = (Building) worldInfo.getEntity(changedId);
+				if (building.isFierynessDefined() && building.getFieryness() > 0) {
+					BuildingProperty buildingProperty = sentBuildingMap.get(changedId);
+					if (buildingProperty == null || buildingProperty.getFieryness() != building.getFieryness() || buildingProperty.getFieryness() == 1) {
+						messageManager.addMessage(new MessageBuilding(true, building));
+						messageManager.addMessage(new MessageBuilding(false, building));
+						sentBuildingMap.put(changedId, new BuildingProperty(building));
+					}
+				}
+			} else if (entity instanceof Civilian) {
+				Civilian civilian = (Civilian) entity;
+				if ((civilian.isHPDefined() && civilian.getHP() > 1000 && civilian.isDamageDefined() && civilian.getDamage() > 0)
+						|| ((civilian.isPositionDefined() && !(worldInfo.getEntity(civilian.getPosition()) instanceof Refuge))
+						&& (worldInfo.getEntity(civilian.getPosition()) instanceof Building))) {
+					messageManager.addMessage(new MessageCivilian(true, civilian));
+					messageManager.addMessage(new MessageCivilian(false, civilian));
+					// TODO: 2/28/20 判断Civilian是否需要帮忙清障,并选择是否帮忙清障
+				}
+			}
+		});
+	}
 
     private Set<EntityID> StuckedAgentOrRefuge_BlockedRoad = new HashSet<>();
     private Set<EntityID> priorityRoads = new HashSet<>();
