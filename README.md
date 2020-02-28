@@ -275,8 +275,12 @@ YBC：理清ActionExtClear思路与guideline思路，开始尝试修改这拉跨
 CXX：审阅tdp，跑地图。
 CGY:改tdp,修改at的search<br>
 GYQ:审阅部分tdp，学习Graham-Scan算法<br>
+XJ:审阅tdp<br>
 
 2020年2月27日
 
 CRF：SampleKmeans添加按照tdp添加isodata算法部分代码。<br>
 CGY:看fb代码,debug,考虑通讯<br>
+
+2020年2月27日
+XJ：阅读messag部分的源代码，调试pf的mssagemanager，尝试实现警察之间的通信。
