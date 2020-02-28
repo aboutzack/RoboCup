@@ -283,4 +283,5 @@ CRF：SampleKmeans添加按照tdp添加isodata算法部分代码。<br>
 CGY:看fb代码,debug,考虑通讯<br>
 
 2020年2月27日
-XJ：阅读messag部分的源代码，调试pf的mssagemanager，尝试实现警察之间的通信。
+
+XJ：阅读messag部分的源代码，调试pf的mssagemanager，尝试实现警察之间的通信。<br>CRF：调试buildingDetector中的bug。<br>
