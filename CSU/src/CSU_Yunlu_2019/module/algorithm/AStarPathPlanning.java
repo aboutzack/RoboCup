@@ -3,12 +3,15 @@ package CSU_Yunlu_2019.module.algorithm;
 
 import CSU_Yunlu_2019.standard.CSURoadHelper;
 import CSU_Yunlu_2019.standard.Ruler;
+import adf.agent.communication.MessageManager;
+import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.collections.LazyMap;
@@ -34,7 +37,6 @@ public class AStarPathPlanning  extends PathPlanning {
     private List<EntityID> result;
 
     private StuckDetector stuckDetector;
-    private Random random = new Random();
     private HashSet<EntityID> passableRoads;
     private List<EntityID> previousPath = new ArrayList<>();
     private Area previousTarget = null;
@@ -121,6 +123,25 @@ public class AStarPathPlanning  extends PathPlanning {
     @Override
     public PathPlanning preparate() {
         super.preparate();
+        return this;
+    }
+
+    @Override
+    public PathPlanning updateInfo(MessageManager messageManager) {
+        super.updateInfo(messageManager);
+        if (this.getCountUpdateInfo() >= 2) {
+            return this;
+        }
+        for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
+            Class<? extends CommunicationMessage> messageClass = message.getClass();
+            if (messageClass == MessageRoad.class) {
+                MessageRoad messageRoad = (MessageRoad) message;
+                if (messageRoad.isPassable()) {
+                    impassableRoads.remove(messageRoad.getRoadID());
+                    passableRoads.add(messageRoad.getRoadID());
+                }
+            }
+        }
         return this;
     }
 
