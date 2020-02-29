@@ -36,7 +36,7 @@ public class AStarPathPlanning  extends PathPlanning {
     private List<EntityID> targets;
     private List<EntityID> result;
 
-    private StuckDetector stuckDetector;
+//    private StuckDetector stuckDetector;
     private HashSet<EntityID> passableRoads;
     private List<EntityID> previousPath = new ArrayList<>();
     private Area previousTarget = null;
@@ -69,7 +69,7 @@ public class AStarPathPlanning  extends PathPlanning {
         }
         this.graph = neighbours;
 
-        stuckDetector = new StuckDetector(this.agentInfo);
+//        stuckDetector = new StuckDetector(this.agentInfo);
         this.passableRoads = new HashSet<>();
         this.impassableRoads = new HashSet<>();
         if (agentInfo.me().getStandardURN() == StandardEntityURN.POLICE_FORCE) {
@@ -151,22 +151,25 @@ public class AStarPathPlanning  extends PathPlanning {
 
     @Override
     public PathPlanning calc() {
+//        long a = System.currentTimeMillis();
         this.result=null;
         List<EntityID> planPath = null;
         Area sourceArea = (Area) worldInfo.getEntity(from);
         debugLog(targets.size() + " targets.");
-        stuckDetector.update(from);
-        stuckDetector.warnStuck();
-
+//        long b = System.currentTimeMillis();
         //上次计算出的最近target还未到达
         if (lastNearestTarget != null && targets.contains(lastNearestTarget)) {
             Area target = (Area) worldInfo.getEntity(lastNearestTarget);
             planPath = new ArrayList<>(getPath(sourceArea, target));
             result = planPath;
         }
+//        System.out.println("\r<br> lastNearestTarget执行耗时 : "+(System.currentTimeMillis()-b)/1000f+" 秒 ");
 
         if (result == null || result.isEmpty()) {
+            long c = System.currentTimeMillis();
             targets.sort(new DistanceComparator(worldInfo, agentInfo));
+//            System.out.println("\r<br> targets排序耗时 : "+(System.currentTimeMillis()-c)/1000f+" 秒 ");
+            long d = System.currentTimeMillis();
             for (EntityID target1 : targets) {
                 Area target = (Area) worldInfo.getEntity(target1);
                 lastNearestTarget = target1;
@@ -176,10 +179,13 @@ public class AStarPathPlanning  extends PathPlanning {
                     break;
                 }
             }
+//            System.out.println("\r<br> 寻找可到达target耗时 : "+(System.currentTimeMillis()-d)/1000f+" 秒 ");
         }
         if (result != null && result.isEmpty()) {
             result = null;
         }
+//        System.out.println(agentInfo.getID() +" 总执行耗时 : "+(System.currentTimeMillis()-a)/1000f+" 秒 ");
+//        System.out.println("==================================");
         return this;
     }
 
@@ -224,10 +230,17 @@ public class AStarPathPlanning  extends PathPlanning {
             boolean stillPassable = true;
             //检测路点是否可通过
             for (int i = 0; i < Math.min(3, previousPath.size()); i++) {
-                Area area = (Area)worldInfo.getEntity(previousPath.get(i));
+                EntityID id = previousPath.get(i);
+                Area area = (Area)worldInfo.getEntity(id);
                 if (area instanceof Road && area.isBlockadesDefined()){
                     CSURoadHelper roadHelper = new CSURoadHelper((Road) area, worldInfo, scenarioInfo);
-                    stillPassable = stillPassable && roadHelper.isPassable();
+                    roadHelper.update();
+                    if (!roadHelper.isPassable()) {
+                        stillPassable = false;
+                        passableRoads.remove(id);
+                        impassableRoads.add(id);
+                        break;
+                    }
                 }
             }
             if (stillPassable) {
@@ -279,8 +292,10 @@ public class AStarPathPlanning  extends PathPlanning {
         Node current = new Node(null, from, target);
         //能找到路的的距离target最近的点
         Node nearest = current;
-        open.add(current);
-        nodeMap.put(from, current);
+        if (!current.isImpassable()) {
+            open.add(current);
+            nodeMap.put(from, current);
+        }
         int cnt = 0;
         double count = 0;
         while (!open.isEmpty()) {
@@ -294,20 +309,25 @@ public class AStarPathPlanning  extends PathPlanning {
 			Collection<EntityID> neighbours = this.graph.get(cid);
 
             for (EntityID nid : neighbours) {
-                Node neighbor = new Node(current, nid, target);
                 if (closed.contains(nid)) {
-                    open.remove(cid);
                     continue;
-                } else if (!open.contains(nid)) {//不在open
+                }
+                Node neighbor = new Node(current, nid, target);
+                if (neighbor.isImpassable()) {
+                    closed.add(nid);
+                    continue;
+                }
+                Node node = nodeMap.get(nid);
+                if (!open.contains(node)) {//不在open
                     if (!neighbor.isImpassable() && isInProperRange(worldInfo.getLocation(from), worldInfo.getLocation(target), worldInfo.getLocation(nid))) {
                         open.add(neighbor);
                         nodeMap.put(nid, neighbor);
-                    }else {
+                    } else {
                         closed.add(nid);
                         nodeMap.put(nid, neighbor);
                     }
-                } else if (nodeMap.containsKey(nid) && nodeMap.get(nid).estimate() > neighbor.estimate()) {//在open,更新g值
-                    open.remove(nodeMap.get(nid));
+                } else if (node != null && node.estimate() > neighbor.estimate()) {//在open,更新g值
+                    open.remove(node);
                     open.add(neighbor);
                     nodeMap.put(nid, neighbor);
                 }
@@ -321,6 +341,7 @@ public class AStarPathPlanning  extends PathPlanning {
             // debugLog("iteration " + cnt);
         }
         debugLog("path not found.");
+//        System.out.println("unSolved at"+cnt);
         return null;
     }
 
