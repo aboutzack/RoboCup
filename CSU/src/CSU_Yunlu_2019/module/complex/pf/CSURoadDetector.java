@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
+import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
@@ -14,7 +15,6 @@ import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.RoadDetector;
-import mrl_2019.complex.firebrigade.BuildingProperty;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
@@ -48,7 +48,7 @@ public class CSURoadDetector extends RoadDetector {
 
 	private Set<EntityID> entrance_of_Refuge_and_Hydrant = new HashSet<>();
 	private MessageManager messageManager =new MessageManager();
-	private Map<EntityID, BuildingProperty> sentBuildingMap;
+	private Map<EntityID, CSUBuilding> sentBuildingMap;
 
 
 	public CSURoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
@@ -346,11 +346,11 @@ private double getDistance(Human human,Road road) {
 			if (entity instanceof Building) {
 				Building building = (Building) worldInfo.getEntity(changedId);
 				if (building.isFierynessDefined() && building.getFieryness() > 0) {
-					BuildingProperty buildingProperty = sentBuildingMap.get(changedId);
-					if (buildingProperty == null || buildingProperty.getFieryness() != building.getFieryness() || buildingProperty.getFieryness() == 1) {
+					CSUBuilding csuBuilding = sentBuildingMap.get(changedId);
+					if (csuBuilding == null || csuBuilding.getFireyness() != building.getFieryness() || csuBuilding.getFireyness() == 1) {
 						messageManager.addMessage(new MessageBuilding(true, building));
 						messageManager.addMessage(new MessageBuilding(false, building));
-						sentBuildingMap.put(changedId, new BuildingProperty(building));
+						sentBuildingMap.put(changedId, new CSUBuilding(building));
 					}
 				}
 			} else if (entity instanceof Civilian) {

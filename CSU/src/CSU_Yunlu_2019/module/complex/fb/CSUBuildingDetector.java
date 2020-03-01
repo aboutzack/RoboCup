@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
+import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.*;
@@ -12,7 +13,6 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.complex.BuildingDetector;
-import mrl_2019.complex.firebrigade.BuildingProperty;
 import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
@@ -25,7 +25,7 @@ public class CSUBuildingDetector extends BuildingDetector{
     private Clustering clustering;
     private List<Building> buildingsList = new ArrayList<>();
     private List<Building> convexBuildings;
-    private Map<EntityID, BuildingProperty> sentBuildingMap;
+    private Map<EntityID, CSUBuilding> sentBuildingMap;
 
     public CSUBuildingDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
     {
@@ -72,11 +72,11 @@ public class CSUBuildingDetector extends BuildingDetector{
             if (entity instanceof Building) {
                 Building building = (Building) worldInfo.getEntity(changedId);
                 if (building.isFierynessDefined() && building.getFieryness() > 0) {
-                    BuildingProperty buildingProperty = sentBuildingMap.get(changedId);
-                    if (buildingProperty == null || buildingProperty.getFieryness() != building.getFieryness() || buildingProperty.getFieryness() == 1) {
+                    CSUBuilding csuBuilding = sentBuildingMap.get(changedId);
+                    if (csuBuilding == null || csuBuilding.getFireyness() != building.getFieryness() || csuBuilding.getFireyness() == 1) {
                         messageManager.addMessage(new MessageBuilding(true, building));
                         messageManager.addMessage(new MessageBuilding(false, building));
-                        sentBuildingMap.put(changedId, new BuildingProperty(building));
+                        sentBuildingMap.put(changedId, new CSUBuilding(building));
                     }
                 }
             } else if (entity instanceof Civilian) {
