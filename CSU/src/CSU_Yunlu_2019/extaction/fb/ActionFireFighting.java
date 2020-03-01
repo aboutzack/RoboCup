@@ -22,8 +22,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
 
-import static rescuecore2.standard.entities.StandardEntityURN.HYDRANT;
-import static rescuecore2.standard.entities.StandardEntityURN.REFUGE;
+import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class ActionFireFighting extends ExtAction
 {
@@ -362,35 +361,51 @@ public class ActionFireFighting extends ExtAction
     private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
     {
         StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
-        if (positionURN == REFUGE)
+        if (positionURN == REFUGE || positionURN == HYDRANT)
         {
             return new ActionRefill();
         }
-        Action action = this.calcRefugeAction(agent, pathPlanning, target, true);
-        if (action != null)
-        {
-            return action;
-        }
-        action = this.calcHydrantAction(agent, pathPlanning, target);
-        if (action != null)
-        {
-            if (positionURN == HYDRANT && action.getClass().equals(ActionMove.class))
-            {
-                pathPlanning.setFrom(agent.getPosition());
-                pathPlanning.setDestination(target);
-                double currentDistance = pathPlanning.calc().getDistance();
-                List<EntityID> path = ((ActionMove) action).getPath();
-                pathPlanning.setFrom(path.get(path.size() - 1));
-                pathPlanning.setDestination(target);
-                double newHydrantDistance = pathPlanning.calc().getDistance();
-                if (currentDistance <= newHydrantDistance)
-                {
-                    return new ActionRefill();
-                }
-            }
-            return action;
-        }
-        return null;
+        // TODO: 3/1/20 如何在refuge和hydrant中进行选择
+        return calcRefugeAndHydrantAction(agent, pathPlanning, target);
+
+//        Action action = this.calcRefugeAction(agent, pathPlanning, target, true);
+//        if (action != null)
+//        {
+//            return action;
+//        }
+//        action = this.calcHydrantAction(agent, pathPlanning, target);
+//        if (action != null)
+//        {
+//            if (positionURN == HYDRANT && action.getClass().equals(ActionMove.class))
+//            {
+//                pathPlanning.setFrom(agent.getPosition());
+//                pathPlanning.setDestination(target);
+//                double currentDistance = pathPlanning.calc().getDistance();
+//                List<EntityID> path = ((ActionMove) action).getPath();
+//                pathPlanning.setFrom(path.get(path.size() - 1));
+//                pathPlanning.setDestination(target);
+//                double newHydrantDistance = pathPlanning.calc().getDistance();
+//                if (currentDistance <= newHydrantDistance)
+//                {
+//                    return new ActionRefill();
+//                }
+//            }
+//            return action;
+//        }
+//        return null;
+    }
+
+    private Action calcRefugeAndHydrantAction(Human human, PathPlanning pathPlanning, EntityID target)
+    {
+        Set<EntityID> availableSupplier = getAvailableHydrants();
+        availableSupplier.addAll(this.worldInfo.getEntityIDsOfType(StandardEntityURN.REFUGE));
+        return this.calcSupplyAction(
+                human,
+                pathPlanning,
+                availableSupplier,
+                target,
+                true
+        );
     }
 
     private Action calcRefugeAction(Human human, PathPlanning pathPlanning, EntityID target, boolean isRefill)
@@ -464,6 +479,30 @@ public class ActionFireFighting extends ExtAction
         }
         return firstResult != null ? new ActionMove(firstResult) : null;
     }
+
+    /**
+    * @Description: 获取有可能没人的hydrants
+    * @Author: Guanyu-Cai
+    * @Date: 3/1/20
+    */
+    public Set<EntityID> getAvailableHydrants() {
+        // TODO: 3/1/20 记录其他每个人的位置,将排除范围扩大到所有的hydrants
+        Set<EntityID> availableHydrants = new HashSet<>();
+        for (EntityID id : worldInfo.getChanged().getChangedEntities()) {
+            StandardEntity entity = worldInfo.getEntity(id);
+            if (entity instanceof FireBrigade && !entity.getID().equals(agentInfo.getID())) {
+                FireBrigade fireBrigade = (FireBrigade) entity;
+                if (fireBrigade.isPositionDefined()) {
+                    Entity position = worldInfo.getPosition(fireBrigade);
+                    if (position instanceof Hydrant) {
+                        availableHydrants.remove(position.getID());
+                    }
+                }
+            }
+        }
+        return availableHydrants;
+    }
+
 
     private class DistanceSorter implements Comparator<StandardEntity>
     {

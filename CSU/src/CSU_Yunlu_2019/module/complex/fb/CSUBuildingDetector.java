@@ -3,7 +3,9 @@ package CSU_Yunlu_2019.module.complex.fb;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
-import adf.agent.communication.standard.bundle.information.*;
+import adf.agent.communication.standard.bundle.StandardMessage;
+import adf.agent.communication.standard.bundle.information.MessageBuilding;
+import adf.agent.communication.standard.bundle.information.MessageCivilian;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -101,7 +103,7 @@ public class CSUBuildingDetector extends BuildingDetector{
     
     /**
      * 获取y值最小,最下面最左边的建筑
-     * @param buildings
+     * @param fireBuildings
      * @return
      */
     public Building getLowestBuilding(List<Building> fireBuildings) {
@@ -255,45 +257,10 @@ public class CSUBuildingDetector extends BuildingDetector{
     private void reflectMessage(MessageManager messageManager) {
         Set<EntityID> changedEntities = this.worldInfo.getChanged().getChangedEntities();
         changedEntities.add(this.agentInfo.getID());
-        int time = this.agentInfo.getTime();
 
-        for(CommunicationMessage message : messageManager.getReceivedMessageList()) {
-            Class<? extends CommunicationMessage> messageClass = message.getClass();
-            if(messageClass == MessageBuilding.class) {
-                MessageBuilding mb = (MessageBuilding)message;
-                if(!changedEntities.contains(mb.getBuildingID())) {
-                    MessageUtil.reflectMessage(this.worldInfo, mb);
-                }
-            } else if(messageClass == MessageRoad.class) {
-                MessageRoad mr = (MessageRoad)message;
-                if(mr.isBlockadeDefined() && !changedEntities.contains(mr.getBlockadeID())) {
-                    MessageUtil.reflectMessage(this.worldInfo, mr);
-                }
-                
-            } else if(messageClass == MessageCivilian.class) {
-                MessageCivilian mc = (MessageCivilian) message;
-                if(!changedEntities.contains(mc.getAgentID())){
-                    MessageUtil.reflectMessage(this.worldInfo, mc);
-                }
-                
-            } else if(messageClass == MessageAmbulanceTeam.class) {
-                MessageAmbulanceTeam mat = (MessageAmbulanceTeam)message;
-                if(!changedEntities.contains(mat.getAgentID())) {
-                    MessageUtil.reflectMessage(this.worldInfo, mat);
-                }
-               
-            } else if(messageClass == MessageFireBrigade.class) {
-                MessageFireBrigade mfb = (MessageFireBrigade) message;
-                if(!changedEntities.contains(mfb.getAgentID())) {
-                    MessageUtil.reflectMessage(this.worldInfo, mfb);
-                }
-               
-            } else if(messageClass == MessagePoliceForce.class) {
-                MessagePoliceForce mpf = (MessagePoliceForce) message;
-                if(!changedEntities.contains(mpf.getAgentID())) {
-                    MessageUtil.reflectMessage(this.worldInfo, mpf);
-                }
-                
+        for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
+            if (message instanceof StandardMessage) {
+                MessageUtil.reflectMessage(this.worldInfo, (StandardMessage) message);
             }
         }
     }
@@ -371,45 +338,54 @@ public class CSUBuildingDetector extends BuildingDetector{
                 StandardEntityURN.FIRE_STATION,
                 StandardEntityURN.POLICE_OFFICE
         );
-        StandardEntity me = this.agentInfo.me();
-        List<StandardEntity> agents = new ArrayList<>(worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
-        Set<StandardEntity> fireBuildings = new HashSet<>();
-        for (StandardEntity entity : entities)
-        {
-            if (((Building) entity).isOnFire())
-            {
+        // TODO: 3/1/20 根据着火建筑的聚类和凸包,更精确的选择目标
+        ArrayList<StandardEntity> fireBuildings = new ArrayList<>();
+        for (StandardEntity entity : entities) {
+            if (((Building) entity).isOnFire()) {
                 fireBuildings.add(entity);
             }
         }
-        for (StandardEntity entity : fireBuildings)
-        {
-            if (agents.isEmpty())
-            {
-                break;
-            }
-            else if (agents.size() == 1)
-            {
-                if (agents.get(0).getID().getValue() == me.getID().getValue())
-                {
-                    return entity.getID();
-                }
-                break;
-            }
-            agents.sort(new DistanceSorter(this.worldInfo, entity));
-            StandardEntity a0 = agents.get(0);
-            StandardEntity a1 = agents.get(1);
-
-            if (me.getID().getValue() == a0.getID().getValue() || me.getID().getValue() == a1.getID().getValue())
-            {
-                return entity.getID();
-            }
-            else
-            {
-                agents.remove(a0);
-                agents.remove(a1);
-            }
-        }
-        return null;
+        fireBuildings.sort(new DistanceSorter(worldInfo, agentInfo.me()));
+        return fireBuildings.isEmpty() ? null : fireBuildings.get(0).getID();
+//        StandardEntity me = this.agentInfo.me();
+//        List<StandardEntity> agents = new ArrayList<>(worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
+//        Set<StandardEntity> fireBuildings = new HashSet<>();
+//        for (StandardEntity entity : entities)
+//        {
+//            if (((Building) entity).isOnFire())
+//            {
+//                fireBuildings.add(entity);
+//            }
+//        }
+//        for (StandardEntity entity : fireBuildings)
+//        {
+//            if (agents.isEmpty())
+//            {
+//                break;
+//            }
+//            else if (agents.size() == 1)
+//            {
+//                if (agents.get(0).getID().getValue() == me.getID().getValue())
+//                {
+//                    return entity.getID();
+//                }
+//                break;
+//            }
+//            agents.sort(new DistanceSorter(this.worldInfo, entity));
+//            StandardEntity a0 = agents.get(0);
+//            StandardEntity a1 = agents.get(1);
+//
+//            if (me.getID().getValue() == a0.getID().getValue() || me.getID().getValue() == a1.getID().getValue())
+//            {
+//                return entity.getID();
+//            }
+//            else
+//            {
+//                agents.remove(a0);
+//                agents.remove(a1);
+//            }
+//        }
+//        return null;
     }
 
     @Override
