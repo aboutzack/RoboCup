@@ -11,6 +11,7 @@ import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
 import adf.agent.action.police.ActionClear;
 import adf.agent.communication.MessageManager;
+import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -89,6 +90,8 @@ public class ActionExtClear extends ExtAction {
 	
 	private Action lastAction = null;
 	private int lasttime = 0;
+
+        MessageManager messageManager=null;
 	
 	
 	
@@ -298,6 +301,7 @@ public class ActionExtClear extends ExtAction {
 	@Override
 	public ExtAction updateInfo(MessageManager messageManager) {
 		super.updateInfo(messageManager);
+                this.messageManager= messageManager;
 		if (this.getCountUpdateInfo() >= 2) {
 			return this;
 		}
@@ -1808,9 +1812,35 @@ public class ActionExtClear extends ExtAction {
 		//if(result instanceof ActionMove) result = randomWalk();
 		this.check_same_action();
 		//System.out.println("this is the 1754 return");
+                send_message();
 		return this;
 	}
-	
+	private void send_message(){
+
+		Road road = getCsuRoad(worldInfo.getPosition(agentInfo.getID()).getID()).getSelfRoad();// 身处的道路
+		if (!road.isBlockadesDefined() || road.getBlockades().isEmpty())
+		{
+                   System.out.println("执行==================================================1");  //可以通过，第一个参数表示是否发送无线电
+
+			this.messageManager.addMessage(new MessageRoad(true,road,null,false,true));
+
+			
+		}
+                else
+                {
+                        
+                        Collection<Blockade> blockades = worldInfo.getBlockades(road);         //找出最近的障碍物加入消息中
+
+                        
+                        
+		       Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+			        	
+                       this.messageManager.addMessage(new MessageRoad(true,road,block,false,true)); //不可以通过，选择最近的障碍物加入
+                   System.out.println("执行==================================================2");
+                }
+		
+
+	}
 	
 	private void check_same_action(){ 
 		//System.out.println("start to update to new action++++++++++++++++++++++");

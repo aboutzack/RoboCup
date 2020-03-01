@@ -47,7 +47,7 @@ public class CSURoadDetector extends RoadDetector {
     
 
 	private Set<EntityID> entrance_of_Refuge_and_Hydrant = new HashSet<>();
-	private MessageManager messageManager =new MessageManager();
+	private MessageManager messageManager =null;
 	private Map<EntityID, CSUBuilding> sentBuildingMap;
 
 
@@ -302,7 +302,7 @@ private double getDistance(Human human,Road road) {
     }
     @Override
     public RoadDetector updateInfo(MessageManager messageManager)
-    {
+    {   this.messageManager=messageManager;
         super.updateInfo(messageManager);
         if (this.getCountUpdateInfo() >= 2)
         {
