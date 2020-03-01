@@ -291,3 +291,6 @@ CGY:A*在大图上太慢,调试代码<br>
 
 CRF：优化samplekmeans框架。<br>
 CGY:测试A*,修复bug,看buildingDetector<br>
+
+2020年3月1日
+CGY:完善fb的通讯,修改cluster之外的灭火策略<br>
