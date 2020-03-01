@@ -290,3 +290,4 @@ CGY:A*在大图上太慢,调试代码<br>
 2020年2月29日
 
 CRF：优化samplekmeans框架。<br>
+CGY:测试A*,修复bug,看buildingDetector<br>
