@@ -293,9 +293,9 @@ CRF：优化samplekmeans框架。<br>
 CGY:测试A*,修复bug,看buildingDetector<br>
 
 2020年3月1日
-
-CGY:完善fb的通讯,修改cluster之外的灭火策略<br>
+CGY:完善fb的通讯,修改cluster之外的灭火策略<br>GYJ：重新测试地图，检验阶段代码成果，观察search策略<br>
 
 2020年3月2日
 
-CXX：调试地图。<br>CRF：修改kmeans中预处理模块。<br>
+CXX：调试地图。<br>CRF：修改kmeans中预处理模块。<br>GYJ:阅读AIT的search，观察具体实现细节<br>
+
