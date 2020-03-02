@@ -294,3 +294,6 @@ CGY:测试A*,修复bug,看buildingDetector<br>
 
 2020年3月1日
 CGY:完善fb的通讯,修改cluster之外的灭火策略<br>
+
+2020年3月2日
+CXX：调试地图。
