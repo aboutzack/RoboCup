@@ -298,9 +298,9 @@ CGY:完善fb的通讯,修改cluster之外的灭火策略<br>GYJ：重新测试�
 2020年3月2日
 
 CXX：调试地图。<br>CRF：修改kmeans中预处理模块。<br>GYJ:阅读AIT的search，观察具体实现细节<br>
-
+CGY:写FireCluster<br>
 2020年3月3日：
 
 CRF：调试Kmeans中预处理模块。<br>
 GYJ：看AIT，MRL的search，以编写search,添加debug开关常量类<br>
-
+CGY:写FireCluster<br>
