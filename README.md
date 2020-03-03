@@ -302,4 +302,5 @@ CXX：调试地图。<br>CRF：修改kmeans中预处理模块。<br>GYJ:阅读AI
 2020年3月3日：
 
 CRF：调试Kmeans中预处理模块。<br>
+GYJ：看AIT，MRL的search，以编写search,添加debug开关常量类<br>
 
