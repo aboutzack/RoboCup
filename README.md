@@ -299,3 +299,7 @@ CGY:完善fb的通讯,修改cluster之外的灭火策略<br>GYJ：重新测试�
 
 CXX：调试地图。<br>CRF：修改kmeans中预处理模块。<br>GYJ:阅读AIT的search，观察具体实现细节<br>
 
+2020年3月3日：
+
+CRF：调试Kmeans中预处理模块。<br>
+
