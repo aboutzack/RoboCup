@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
+import CSU_Yunlu_2019.module.algorithm.fb.CSUFireClustering;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
@@ -92,22 +93,22 @@ public class CSUBuildingDetector extends BuildingDetector{
             }
         });
     }
-    
+
     /*
      * 判断点pp是否在边(ea,eb)左边
      */
     public boolean toLeft (Building ea,Building eb,Building pp)
     {
-    	return ((eb.getX() - ea.getX()) * (pp.getY() - ea.getY()) - (eb.getY() - ea.getY()) * (pp.getX() - ea.getX())) > 0;	
+    	return ((eb.getX() - ea.getX()) * (pp.getY() - ea.getY()) - (eb.getY() - ea.getY()) * (pp.getX() - ea.getX())) > 0;
     }
-    
+
     /**
      * 获取y值最小,最下面最左边的建筑
      * @param fireBuildings
      * @return
      */
     public Building getLowestBuilding(List<Building> fireBuildings) {
-    	
+
     	Building res = null;
     	for(Building building : fireBuildings) {
     		if(res == null || (res.getY() > building.getY()) || (res.getY() == building.getY() && res.getX() > building.getX())) {
@@ -116,7 +117,7 @@ public class CSUBuildingDetector extends BuildingDetector{
     	}
     	return res;
     }
-    
+
     /**
      * 求角abc的余弦角度
      */
@@ -128,17 +129,17 @@ public class CSUBuildingDetector extends BuildingDetector{
     	double bc = Math.sqrt((double)((c.getX()-b.getX())*(c.getX()-b.getX()) + (c.getY()-b.getY())*(c.getY()-b.getY())));
     	double cosB = (a.getX()-b.getX())*(c.getX()-b.getX()) + (a.getY()-b.getY())*(c.getY()-b.getY());
     	cosB /= ba * bc;
-    	
+
     	if (flag > 0.000001) {
 			return Math.acos(cosB);
 		}
     	if(flag < -0.000001) {
     		return (Math.acos(cosB) + Math.PI);
     	}
-    	
+
     	return 0.0D;
     }
-    
+
     /**
      * 求余弦值
      */
@@ -148,10 +149,10 @@ public class CSUBuildingDetector extends BuildingDetector{
     	double bc = 1;
     	double cosB = (a.getY()-b.getY())*(-1);
     	cosB /= ba * bc;
-    	
+
     	return cosB;
     }
-    
+
     /**
      * 根据一个极点找到另一个极点构成极边
      * @param a
@@ -175,12 +176,12 @@ public class CSUBuildingDetector extends BuildingDetector{
     		if (fireBuilding != a)
     			buildingsList.add(fireBuilding);
     	}
-    	
+
     	buildingsList.remove(resultBuilding);
-    	
+
     	return resultBuilding;
 	}
-    
+
     /*
      * 计算凸包
      */
@@ -200,7 +201,7 @@ public class CSUBuildingDetector extends BuildingDetector{
 	    	Building extremePoint1 = getLowestBuilding(fireBuildings);
 	    	//获取极点连着的一条极边
 	    	Building extremePoint2 = getAnotherBuilding(extremePoint1, fireBuildings);
-	    	
+
     		Collections.sort(buildingsList,new Comparator<Building>() {
 	    		public int compare(Building a,Building b)
 	    		{
@@ -215,7 +216,7 @@ public class CSUBuildingDetector extends BuildingDetector{
 	    			}
 	    		}
 	    	});
-	    	
+
 	    	Stack<Building> extremePoint = new Stack<Building>();
 	    	Stack<Building> temp = new Stack<Building>();
 	    	extremePoint.push(extremePoint1);
@@ -239,17 +240,17 @@ public class CSUBuildingDetector extends BuildingDetector{
 	    			}
 	    		}
 	    	}
-	    	
+
 	    	while(!extremePoint.isEmpty()) {
 	    		resultBuildings.add(extremePoint.pop());
 	    	}
-	    	
+
 	    	return resultBuildings;
     	}else {
     		return null;
     	}
     }
-    
+
     /**
      * 更新信息
      * @param messageManager
@@ -268,17 +269,28 @@ public class CSUBuildingDetector extends BuildingDetector{
     @Override
     public BuildingDetector calc()
     {
-        this.result = this.calcTargetInCluster();
-        if (this.result == null)
-        {
-            this.result = this.calcTargetInWorld();
+        if (clustering instanceof CSUFireClustering) {//使用CSUFireClustering时的策略
+            CSUFireClustering fireClustering = (CSUFireClustering) clustering;
+            // TODO: 3/4/20 精确的选择着火建筑的算法
+            int clusterIndex = fireClustering.getMyNearestClusterIndex();
+            if (clusterIndex != -1) {
+                Collection<EntityID> clusterEntityIDs = fireClustering.getClusterEntityIDs(clusterIndex);
+                this.result = (EntityID) clusterEntityIDs.toArray()[(int) (Math.random() * clusterEntityIDs.size())];
+
+            }else {
+                this.result = null;
+            }
+        } else {//没有使用动态分配cluster时的策略
+            this.result = this.calcTargetInCluster();
+            if (this.result == null) {
+                this.result = this.calcTargetInWorld();
+            }
         }
         return this;
     }
 
     private EntityID calcTargetInCluster()
     {
-	//System.out.println("\n***************************************************Cluster BuildingDetector.*********************** \n");
         int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
         if (clusterIndex == -1) {
             return null;
@@ -298,7 +310,7 @@ public class CSUBuildingDetector extends BuildingDetector{
                 fireBuildings.add((Building)entity);
             }
         }
-        
+
         convexBuildings = GetConvexHull(fireBuildings);
         Random random = new Random();
         if(convexBuildings.size() != 0) {
@@ -328,7 +340,7 @@ public class CSUBuildingDetector extends BuildingDetector{
                 agents.remove(a0);
                 agents.remove(a1);
             }
-        }       
+        }
         return null;
     }
 
@@ -350,45 +362,6 @@ public class CSUBuildingDetector extends BuildingDetector{
         }
         fireBuildings.sort(new DistanceSorter(worldInfo, agentInfo.me()));
         return fireBuildings.isEmpty() ? null : fireBuildings.get(0).getID();
-//        StandardEntity me = this.agentInfo.me();
-//        List<StandardEntity> agents = new ArrayList<>(worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
-//        Set<StandardEntity> fireBuildings = new HashSet<>();
-//        for (StandardEntity entity : entities)
-//        {
-//            if (((Building) entity).isOnFire())
-//            {
-//                fireBuildings.add(entity);
-//            }
-//        }
-//        for (StandardEntity entity : fireBuildings)
-//        {
-//            if (agents.isEmpty())
-//            {
-//                break;
-//            }
-//            else if (agents.size() == 1)
-//            {
-//                if (agents.get(0).getID().getValue() == me.getID().getValue())
-//                {
-//                    return entity.getID();
-//                }
-//                break;
-//            }
-//            agents.sort(new DistanceSorter(this.worldInfo, entity));
-//            StandardEntity a0 = agents.get(0);
-//            StandardEntity a1 = agents.get(1);
-//
-//            if (me.getID().getValue() == a0.getID().getValue() || me.getID().getValue() == a1.getID().getValue())
-//            {
-//                return entity.getID();
-//            }
-//            else
-//            {
-//                agents.remove(a0);
-//                agents.remove(a1);
-//            }
-//        }
-//        return null;
     }
 
     @Override

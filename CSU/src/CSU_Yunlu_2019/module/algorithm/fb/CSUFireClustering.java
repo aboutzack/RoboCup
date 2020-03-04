@@ -31,7 +31,7 @@ public class CSUFireClustering extends DynamicClustering {
     private int idCounter = 1;
     private List<Cluster> clusters;
     private List<Polygon> clusterConvexPolygons;
-    private int myClusterIndex = -1;
+    private int myNearestClusterIndex = -1;
     private PathPlanning pathPlanning;
     private WorldInfo worldInfo;
     private ScenarioInfo scenarioInfo;
@@ -67,24 +67,6 @@ public class CSUFireClustering extends DynamicClustering {
         calcCluster();
         this.clusterConvexPolygons.clear();
         if (getClusterNumber() > 0) {
-            for (int i = 0; i < getClusterNumber(); i++) {
-                //生成凸包的多边形
-                clusterConvexPolygons.add(i, clusters.get(i).getConvexHull().getConvexPolygon());
-            }
-
-            double minDistance = Double.MAX_VALUE;
-            int nearestClusterIndex = 0;
-            for (int i = 0; i < this.clusterConvexPolygons.size(); i++) {
-                double distance = Ruler.getDistance(this.clusterConvexPolygons.get(i), worldInfo.getLocation(agentInfo.getID()), false);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestClusterIndex = i;
-                }
-            }
-
-            //直接选择距离最近的凸包
-            myClusterIndex = nearestClusterIndex;
-
             Map<FireCluster, Set<FireCluster>> eat = new HashMap<>();
             List<FireCluster> eatenFireClusters = new ArrayList<>();
             //计算所有cluster可以合并的所有cluster
@@ -114,6 +96,26 @@ public class CSUFireClustering extends DynamicClustering {
                     clusters.remove(c);
                 }
             }
+
+            //更新凸包
+            for (int i = 0; i < getClusterNumber(); i++) {
+                clusterConvexPolygons.add(i, clusters.get(i).getConvexHull().getConvexPolygon());
+            }
+
+            //更新myNearestClusterIndex
+            double minDistance = Double.MAX_VALUE;
+            int nearestClusterIndex = 0;
+            for (int i = 0; i < this.clusterConvexPolygons.size(); i++) {
+                double distance = Ruler.getDistance(this.clusterConvexPolygons.get(i), worldInfo.getLocation(agentInfo.getID()), false);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestClusterIndex = i;
+                }
+            }
+            //直接选择距离最近的凸包
+            myNearestClusterIndex = nearestClusterIndex;
+        }else {//当前没有发现着火建筑
+            myNearestClusterIndex = -1;
         }
         return this;
     }
@@ -285,6 +287,14 @@ public class CSUFireClustering extends DynamicClustering {
         return entityClusterMap.get(id);
     }
 
+    public int getMyNearestClusterIndex() {
+        return myNearestClusterIndex;
+    }
+
+    public void setMyNearestClusterIndex(int myNearestClusterIndex) {
+        this.myNearestClusterIndex = myNearestClusterIndex;
+    }
+
     private void addToClusterSet(Cluster cluster, EntityID entityID) {
         entityClusterMap.put(entityID, cluster);
         clusters.add(cluster);
@@ -377,5 +387,21 @@ public class CSUFireClustering extends DynamicClustering {
             }
         }
         return false;
+    }
+
+    public List<Cluster> getClusters() {
+        return clusters;
+    }
+
+    public void setClusters(List<Cluster> clusters) {
+        this.clusters = clusters;
+    }
+
+    public List<Polygon> getClusterConvexPolygons() {
+        return clusterConvexPolygons;
+    }
+
+    public void setClusterConvexPolygons(List<Polygon> clusterConvexPolygons) {
+        this.clusterConvexPolygons = clusterConvexPolygons;
     }
 }

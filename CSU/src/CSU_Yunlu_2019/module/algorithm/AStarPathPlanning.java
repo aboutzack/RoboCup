@@ -1,6 +1,7 @@
 
 package CSU_Yunlu_2019.module.algorithm;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.standard.CSURoadHelper;
 import CSU_Yunlu_2019.standard.Ruler;
 import adf.agent.communication.MessageManager;
@@ -151,24 +152,27 @@ public class AStarPathPlanning  extends PathPlanning {
 
     @Override
     public PathPlanning calc() {
-//        long a = System.currentTimeMillis();
+        long a = System.currentTimeMillis();
         this.result=null;
         List<EntityID> planPath = null;
         Area sourceArea = (Area) worldInfo.getEntity(from);
         debugLog(targets.size() + " targets.");
-//        long b = System.currentTimeMillis();
+        long b = System.currentTimeMillis();
         //上次计算出的最近target还未到达
         if (lastNearestTarget != null && targets.contains(lastNearestTarget)) {
             Area target = (Area) worldInfo.getEntity(lastNearestTarget);
             planPath = new ArrayList<>(getPath(sourceArea, target));
             result = planPath;
         }
-//        System.out.println("\r<br> lastNearestTarget执行耗时 : "+(System.currentTimeMillis()-b)/1000f+" 秒 ");
-
+        if (CSUConstants.DEBUG_PATH_PLANNING) {
+            System.out.println("\r<br> lastNearestTarget执行耗时 : "+(System.currentTimeMillis()-b)/1000f+" 秒 ");
+        }
         if (result == null || result.isEmpty()) {
             long c = System.currentTimeMillis();
             targets.sort(new DistanceComparator(worldInfo, agentInfo));
-//            System.out.println("\r<br> targets排序耗时 : "+(System.currentTimeMillis()-c)/1000f+" 秒 ");
+            if (CSUConstants.DEBUG_PATH_PLANNING) {
+                System.out.println("\r<br> targets排序耗时 : "+(System.currentTimeMillis()-c)/1000f+" 秒 ");
+            }
             long d = System.currentTimeMillis();
             for (EntityID target1 : targets) {
                 Area target = (Area) worldInfo.getEntity(target1);
@@ -179,13 +183,17 @@ public class AStarPathPlanning  extends PathPlanning {
                     break;
                 }
             }
-//            System.out.println("\r<br> 寻找可到达target耗时 : "+(System.currentTimeMillis()-d)/1000f+" 秒 ");
+            if (CSUConstants.DEBUG_PATH_PLANNING) {
+                System.out.println("\r<br> 寻找可到达target耗时 : "+(System.currentTimeMillis()-d)/1000f+" 秒 ");
+            }
         }
         if (result != null && result.isEmpty()) {
             result = null;
         }
-//        System.out.println(agentInfo.getID() +" 总执行耗时 : "+(System.currentTimeMillis()-a)/1000f+" 秒 ");
-//        System.out.println("==================================");
+        if (CSUConstants.DEBUG_PATH_PLANNING) {
+            System.out.println(agentInfo.getID() +" 总执行耗时 : "+(System.currentTimeMillis()-a)/1000f+" 秒 ");
+            System.out.println("==================================");
+        }
         return this;
     }
 
@@ -334,14 +342,18 @@ public class AStarPathPlanning  extends PathPlanning {
             }
             if (cid.getValue() == target.getValue()) {
                 debugLog("Solved at iteration " + cnt);
-//                System.out.println("solved at"+cnt);
+                if (CSUConstants.DEBUG_PATH_PLANNING) {
+                    System.out.println("solved at"+cnt);
+                }
                 return current;
             }
             ++cnt;
             // debugLog("iteration " + cnt);
         }
         debugLog("path not found.");
-//        System.out.println("unSolved at"+cnt);
+        if (CSUConstants.DEBUG_PATH_PLANNING) {
+            System.out.println("unSolved at"+cnt);
+        }
         return null;
     }
 
