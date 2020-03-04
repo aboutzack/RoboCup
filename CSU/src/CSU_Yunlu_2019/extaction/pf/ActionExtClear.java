@@ -1820,7 +1820,7 @@ public class ActionExtClear extends ExtAction {
 		Road road = getCsuRoad(worldInfo.getPosition(agentInfo.getID()).getID()).getSelfRoad();// 身处的道路
 		if (!road.isBlockadesDefined() || road.getBlockades().isEmpty())
 		{
-                   System.out.println("执行==================================================1");  //可以通过，第一个参数表示是否发送无线电
+//                   System.out.println("执行==================================================1");  //可以通过，第一个参数表示是否发送无线电
 
 			this.messageManager.addMessage(new MessageRoad(true,road,null,false,true));
 
@@ -1836,7 +1836,7 @@ public class ActionExtClear extends ExtAction {
 		       Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
 			        	
                        this.messageManager.addMessage(new MessageRoad(true,road,block,false,true)); //不可以通过，选择最近的障碍物加入
-                   System.out.println("执行==================================================2");
+//                   System.out.println("执行==================================================2");
                 }
 		
 

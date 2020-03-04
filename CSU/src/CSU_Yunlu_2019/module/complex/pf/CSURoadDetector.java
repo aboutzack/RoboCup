@@ -33,7 +33,7 @@ import java.util.*;
 */
 
 public class CSURoadDetector extends RoadDetector {
-    private Set<EntityID> targetAreas;
+    private Set<EntityID> targetAreas = new HashSet<>();
     private PathPlanning pathPlanning;
     private Clustering clustering;
 
@@ -538,15 +538,22 @@ private double getDistance(Human human,Road road) {
 		if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_RESCUE) {
 			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
 			if (position != null && position instanceof Building) {
-			this.no_need_to_clear.addAll(((Building) position).getNeighbours());				
-			this.targetAreas.removeAll(((Building) position).getNeighbours());
+				List<EntityID> neighbours = ((Building) position).getNeighbours();
+				if (neighbours != null && !neighbours.isEmpty()) {
+					this.no_need_to_clear.addAll(neighbours);
+					this.targetAreas.removeAll(neighbours);
+				}
+
 			}
 		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_LOAD) {
 			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
 			if (position != null && position instanceof Building) {
-				this.targetAreas.removeAll(((Building) position).getNeighbours());
-			this.no_need_to_clear.addAll(((Building) position).getNeighbours());			
-}
+				List<EntityID> neighbours = ((Building) position).getNeighbours();
+				if (neighbours != null && !neighbours.isEmpty()) {
+					this.targetAreas.removeAll(neighbours);
+					this.no_need_to_clear.addAll(neighbours);
+				}
+			}
 		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_MOVE) {
 			if (messageAmbulanceTeam.getTargetID() == null) {
 				return;
