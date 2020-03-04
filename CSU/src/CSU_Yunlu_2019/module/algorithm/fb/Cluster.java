@@ -158,4 +158,9 @@ public abstract class Cluster {
         newEntities.clear();
         removedEntities.clear();
     }
+
+    public void eat(Cluster cluster) {
+        entities.addAll(cluster.getEntities());
+        buildings.addAll(cluster.getBuildings());
+    }
 }

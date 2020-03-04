@@ -307,6 +307,30 @@ public class Ruler {
 		return d;
 	}
 
+	public static double getDistance(Polygon polygon, rescuecore2.misc.geometry.Point2D point, boolean ignoreInside) {
+		if (ignoreInside && polygon.contains(point.getX(), point.getY())) {
+			return 0;
+		}
+		int count = polygon.npoints;
+		double minDistance = Double.MAX_VALUE;
+		for (int i = 0; i < count; i++) {
+			int j = (i + 1) % count;
+			rescuecore2.misc.geometry.Point2D stPoint = new rescuecore2.misc.geometry.Point2D(polygon.xpoints[i], polygon.ypoints[i]);
+			rescuecore2.misc.geometry.Point2D endPoint = new rescuecore2.misc.geometry.Point2D(polygon.xpoints[j], polygon.ypoints[j]);
+			rescuecore2.misc.geometry.Line2D poly2Line = new rescuecore2.misc.geometry.Line2D(stPoint, endPoint);
+			double distance = getDistance(poly2Line, point);
+			minDistance = Math.min(minDistance, distance);
+			if (minDistance == 0.0) {
+				break;
+			}
+		}
+		return minDistance;
+	}
+
+	public static double getDistance(Polygon polygon, Pair<Integer, Integer> location, boolean ignoreInside) {
+		return getDistance(polygon, new rescuecore2.misc.geometry.Point2D(location.first(), location.second()), ignoreInside);
+	}
+
 	public static double getManhattanDistance(Pair<Integer, Integer> pair1, Pair<Integer, Integer> pair2) {
 		int x1 = pair1.first().intValue();
 		int y1 = pair1.second().intValue();

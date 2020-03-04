@@ -280,6 +280,9 @@ public class CSUBuildingDetector extends BuildingDetector{
     {
 	//System.out.println("\n***************************************************Cluster BuildingDetector.*********************** \n");
         int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+        if (clusterIndex == -1) {
+            return null;
+        }
         Collection<StandardEntity> elements = this.clustering.getClusterEntities(clusterIndex);
         if (elements == null || elements.isEmpty())
         {

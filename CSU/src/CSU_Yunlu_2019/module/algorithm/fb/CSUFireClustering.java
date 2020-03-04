@@ -27,6 +27,7 @@ public class CSUFireClustering extends DynamicClustering {
     private int groupingDistance;
     private Map<EntityID, Cluster> entityClusterMap;
     private static int CLUSTER_RANGE_THRESHOLD;
+    //生成的cluster的计数器
     private int idCounter = 1;
     private List<Cluster> clusters;
     private List<Polygon> clusterConvexPolygons;
@@ -50,13 +51,13 @@ public class CSUFireClustering extends DynamicClustering {
 
         switch (si.getMode()) {
             case PRECOMPUTATION_PHASE:
-                this.pathPlanning = moduleManager.getModule("Clustering.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.pathPlanning = moduleManager.getModule("PathPlanning.Default", "adf.sample.module.algorithm.SamplePathPlanning");
                 break;
             case PRECOMPUTED:
-                this.pathPlanning = moduleManager.getModule("Clustering.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.pathPlanning = moduleManager.getModule("PathPlanning.Default", "adf.sample.module.algorithm.SamplePathPlanning");
                 break;
             case NON_PRECOMPUTE:
-                this.pathPlanning = moduleManager.getModule("Clustering.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.pathPlanning = moduleManager.getModule("PathPlanning.Default", "adf.sample.module.algorithm.SamplePathPlanning");
                 break;
         }
     }
@@ -103,6 +104,7 @@ public class CSUFireClustering extends DynamicClustering {
             for (FireCluster nextCluster : eat.keySet()) {
                 for (FireCluster c : eat.get(nextCluster)) {
                     //合并另一个cluster
+                    nextCluster.eat(c);
                     // refreshing EntityClusterMap
                     for (StandardEntity entity : c.entities) {
                         entityClusterMap.remove(entity.getID());
@@ -136,7 +138,6 @@ public class CSUFireClustering extends DynamicClustering {
                         if (!(neighbourEntity instanceof Building)) {
                             continue;
                         }
-                        //获取这个房屋之前的cluster
                         tempCluster = getCluster(neighbourEntity.getID());
                         if (tempCluster != null) {
                             //获取到所有相邻房屋的cluster
@@ -172,8 +173,14 @@ public class CSUFireClustering extends DynamicClustering {
             //更新凸包
             c.updateConvexHull();
             //并将凸包内的所有房屋设置为这个cluster
-            c.setEntities(getEntitiesInShape(c.getConvexHull().getConvexPolygon()));
-            c.setBuildings(getBuildingsInShape(c.getConvexHull().getConvexPolygon()));
+            Set<StandardEntity> entitiesInShape = getEntitiesInShape(c.getConvexHull().getConvexPolygon());
+            Set<Building> buildingsInShape = getBuildingsInShape(c.getConvexHull().getConvexPolygon());
+            if (entitiesInShape != null && !entitiesInShape.isEmpty()) {
+                c.setEntities(entitiesInShape);
+            }
+            if (buildingsInShape != null && !buildingsInShape.isEmpty()) {
+                c.setBuildings(buildingsInShape);
+            }
         }
     }
 
@@ -297,8 +304,9 @@ public class CSUFireClustering extends DynamicClustering {
             if (maxCId < c.getId()) {
                 maxCId = c.getId();
             }
-            // refreshing EntityClusterMap 更新cluster为最新的
-            for (StandardEntity entity : c.entities) {
+            cluster.eat(c);
+            //更新cluster为最新的
+            for (StandardEntity entity : c.getEntities()) {
                 entityClusterMap.remove(entity.getID()); //added 25 khordad! by sajjad & peyman
                 entityClusterMap.put(entity.getID(), cluster);
             }
@@ -315,7 +323,7 @@ public class CSUFireClustering extends DynamicClustering {
     */
     public Set<StandardEntity> getEntitiesInShape(Shape shape) {
         Set<StandardEntity> result = new HashSet<>();
-        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, HYDRANT, GAS_STATION, FIRE_STATION,
+        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, GAS_STATION, FIRE_STATION,
                 AMBULANCE_CENTRE, POLICE_OFFICE, ROAD)) {
             Area area = (Area) next;
             if (shape.contains(area.getShape().getBounds2D()))
@@ -330,7 +338,7 @@ public class CSUFireClustering extends DynamicClustering {
     */
     public Set<Building> getBuildingsInShape(Shape shape) {
         Set<Building> result = new HashSet<>();
-        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, HYDRANT, GAS_STATION, FIRE_STATION,
+        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, GAS_STATION, FIRE_STATION,
                 AMBULANCE_CENTRE, POLICE_OFFICE)) {
             Building building = (Building) next;
             if (shape.contains(building.getShape().getBounds2D()))
