@@ -383,14 +383,9 @@ public class ActionExtClear extends ExtAction {
 				if(this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
 					 blockades= this.worldInfo.getBlockades(this.target);
 				
-				if(!blockades.isEmpty()){
-				
-				 Set<Blockade> covers = new HashSet<>();
-				 
-				 if (blockades != null)
-				 for (Blockade blockade : blockades) {
-			                covers.add(blockade);
-			        }
+				if(blockades != null && !blockades.isEmpty()){
+
+					Set<Blockade> covers = new HashSet<>(blockades);
 				 //System.out.println("new doClear(Blockade this.worldInfo.getEntity(this.target))");
 			        if (!covers.isEmpty()) { //if police is covered by blockade, clear it first
 			        	Blockade block = (Blockade) this.getClosestEntity(covers, this.agentInfo.me());
