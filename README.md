@@ -304,3 +304,6 @@ CGY:写FireCluster<br>
 CRF：调试Kmeans中预处理模块。<br>
 GYJ：看AIT，MRL的search，以编写search,添加debug开关常量类<br>
 CGY:写FireCluster<br>
+
+2020年3月4日:
+CGY:初步完成fireCluster,下一步将完善buildingDetector策略<br>
