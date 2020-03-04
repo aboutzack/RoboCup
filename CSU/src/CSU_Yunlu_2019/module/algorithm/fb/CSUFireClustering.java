@@ -128,7 +128,7 @@ public class CSUFireClustering extends DynamicClustering {
             Building building = (Building) entity;
             //着过火并且温度大于25
             if (building.isFierynessDefined() && building.getFieryness() != 8
-                    && building.isTemperatureDefined() && building.getTemperature() > 25) {
+                    && building.isTemperatureDefined() && building.getTemperature() > 50) {
                 cluster = getCluster(building.getID());
                 //还未分配cluster
                 if (cluster == null) {
