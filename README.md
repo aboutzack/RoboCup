@@ -311,4 +311,4 @@ CGY:初步完成fireCluster,下一步将完善buildingDetector策略<br>CRF：�
 
 2020年3月5日:
 
-CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>
+CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>
