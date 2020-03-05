@@ -325,7 +325,7 @@ public class ActionExtClear extends ExtAction {
 	public ExtAction setTarget(EntityID target) {
 
 		int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
-		//this.target = get_clustering(clusterIndex);
+		this.target = get_clustering(clusterIndex);
 		//System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
 		//System.out.println("this.clutering.getClusterNumber():"+this.clustering.getClusterNumber()+";clusterIndex at the beginning:"+clusterIndex);
 		//System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -527,13 +527,20 @@ public class ActionExtClear extends ExtAction {
 		//this.clustering.calc();
 		//int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
 		int clusterIndex = this.get_cluster_Index();
-		this.target = get_clustering(clusterIndex);
+		this.target = closetClear();
 
 		//System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
 		//System.out.println("this.clutering.getClusterNumber():"+this.clustering.getClusterNumber()+";clusterIndex at the beginning:"+clusterIndex);
 		//System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-	
+ //this.target=get_clustering(clusterIndex);
+                 if(this.target==null)
+                 {       
+		
+
+                     return    randomWalk_old();
+                 }
+                 this.target=get_clustering(clusterIndex);
 		 entity = this.worldInfo.getEntity(this.target);
 		 location = getSelfLocation();
 		 path = router.getAStar((Area) getSelfPosition(), (Area)entity, router.getNormalCostFunction(),
@@ -571,6 +578,8 @@ public class ActionExtClear extends ExtAction {
 		if(this.worldInfo.getEntity(id) instanceof Road) sortList.add(id);}
 		sortList.sort(new sorter(this.worldInfo,this.agentInfo.getID()));
 		return sortList.get(sortList.size()/2);
+
+                		
 
 
 	}
@@ -612,11 +621,9 @@ public class ActionExtClear extends ExtAction {
 	
 	protected Action randomWalk_old() { ///这边可以使用如果没有找到路障就沿着上次清路障的地方走
 		
-		System.out.println("**++++++++++++++++++++++++++++++++++++++************************************************");
-		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%      use the Function : randWalk_old() %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-		System.out.println("**+++++++++++++++++++++++++++++++++++++*****************************************************");
 		
-		Collection<StandardEntity> inRnage = worldInfo.getObjectsInRange(agentInfo.getID(), 50000);
+		
+		Collection<StandardEntity> inRnage = worldInfo.getObjectsInRange(agentInfo.getID(), 500000);
 		List<Area> target = new LinkedList<>();
 		Collection<Area> blockadeDefinedArea = new LinkedList<>();
 
@@ -653,17 +660,7 @@ public class ActionExtClear extends ExtAction {
 		List<EntityID> path = router.getAStar((Area) getSelfPosition(), randomTarget, router.getNormalCostFunction(),
 				new Point(location.first(), location.second()));
 
-		if (true) {
-			String str = null;
-			for (EntityID next : path) {
-				if (str == null) {
-					str = next.getValue() + "";
-				} else {
-					str = str + ", " + next.getValue();
-				}
-			}
-			//System.out.println(time + ", " + agentInfo.getID() + " randomWalk path: [" + str + "]");
-		}
+		
 		return new ActionMove(path);
 	}
 
@@ -673,11 +670,11 @@ public class ActionExtClear extends ExtAction {
 	 * @see csu.agent.pf.clearStrategy.I_ClearStrategy#blockedClear()
 	 * 返回最近的blockade
 	 */
-	public Blockade blockedClear() {
+	public EntityID closetClear() {
 		Set<Blockade> blockades = new HashSet<>();
 		StandardEntity entity = null;
-		for (EntityID next : agentInfo.getChanged().getDeletedEntities()) {
-			entity = worldInfo.getEntity(next);
+		for (StandardEntity next :  this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+			entity = next;
 
 			if (entity instanceof Blockade) {
 				Blockade bloc = (Blockade) entity;
@@ -688,12 +685,12 @@ public class ActionExtClear extends ExtAction {
 			}
 		}
 
-		Blockade nearestBlockade = null;
+		EntityID nearestBlockade = null;
 		double minDistance = repairDistance;
 		for (Blockade next : blockades) {
 			double distance = findDistanceTo(next, x, y);
 			if (distance < minDistance) {
-				nearestBlockade = next;
+				nearestBlockade = next.getID();
 				minDistance = distance;
 			}
 		}

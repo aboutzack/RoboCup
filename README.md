@@ -309,3 +309,6 @@ CGY:写FireCluster<br>
 
 CGY:初步完成fireCluster,下一步将完善buildingDetector策略<br>CRF：初步完成Kmeans预处理的时间保证。<br>
 
+2020年3月5日:
+XJ:改写了部分PFClear里面的randomwalk函数
+
