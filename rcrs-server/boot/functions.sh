@@ -142,7 +142,7 @@ function processArgs {
           LOGDIR="$LOGDIR/$TIME-$TEAM-$MAPNAME"
         fi
     fi
-    LOGDIR=`readlink -f $LOGDIR`
+##    LOGDIR=`readlink -f $LOGDIR`
     mkdir -p $LOGDIR
 }
 

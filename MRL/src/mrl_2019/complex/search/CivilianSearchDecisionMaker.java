@@ -192,7 +192,7 @@ public class CivilianSearchDecisionMaker {
         }
     }
 
-
+    //从shouldDiscoverBuildings里移出正在烧的建筑
     private void removeBurningBuildings() {
         Building building;
         Set<EntityID> toRemove = new HashSet<>();

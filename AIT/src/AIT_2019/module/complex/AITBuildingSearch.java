@@ -50,15 +50,19 @@ public class AITBuildingSearch extends Search
 
     private int avoidTimeSendingReceived = -1;
     private int avoidTimeSendingSent = -1;
-    private Map<EntityID, Integer> sentTimeMap = new HashMap<>();
+    private Map<EntityID, Integer> sentTimeMap = new HashMap<>();//"建筑id-上次发送这个建筑消息的时间"
 
     private Random random = new Random();
 
+    //有正在处理的cluster聚类
     private boolean hasFocusedAssignedCluster = false;
+    //存正在处理的聚类上的buildingid
     private List<EntityID> buildingIDsOfFocusedCluster = new ArrayList<>();
+    //存已经处理的聚类的下标
     private List<Integer> indexOfEverFocusedClusters = new ArrayList<>();
 
     private EntityID targetID = null;
+
     private EntityID result = null;
 
     // Debug
@@ -248,31 +252,41 @@ public class AITBuildingSearch extends Search
         return this;
     }
 
-
+    //usage:updateInfo
+    //选择一个新的聚类，并将其buildingid存进buildingIDsOfFocusedCluster
     private void setFocusedCluster()
     {
         int clusterIndex = -1;
+        //这个clustering是SampleKMeans的一个实例，其存储了所有的聚类
         this.clustering.calc();
+        //没有正在处理的聚类，处理当前agent所在的聚类
         if (!this.hasFocusedAssignedCluster)
         {
+            //根据当前的agent取出其所在的聚类对应的下标
             clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+            //将其下标加入到"之前处理过的"队列中
             this.indexOfEverFocusedClusters.add(clusterIndex);
+            //有正在处理的聚类
             this.hasFocusedAssignedCluster = true;
         }
         else
-        {
+        {//有正在处理的类，再次进入这个方法时，他已经处理完了，所以随机取一个新的聚类
+            //获得存在的聚类个数
             int clusterNumber = this.clustering.getClusterNumber();
+            //如果"之前处理过的"队列的小等于总共聚类的个数，也就是说对聚类完成了一轮遍历，重新开始一轮新的遍历
             if (this.indexOfEverFocusedClusters.size() == clusterNumber) {
                 this.indexOfEverFocusedClusters.clear();
                 this.hasFocusedAssignedCluster = false;
             }
+            //随机抽取一个新的聚类进行处理
             clusterIndex = this.random.nextInt(clusterNumber);
-
             while (this.indexOfEverFocusedClusters.contains(clusterIndex))
             {
+                //随机抽取直到抽到没处理过的聚类
                 clusterIndex = this.random.nextInt(clusterNumber);
             }
         }
+        //获取对应聚类中的建筑id列表
         this.buildingIDsOfFocusedCluster = this.clustering.getClusterEntities(clusterIndex).stream()
                 .filter(Building.class::isInstance)
                 .filter(se -> !(se instanceof Refuge))
@@ -295,8 +309,11 @@ public class AITBuildingSearch extends Search
         // /Debug
     }
 
+    //usage:sendChangedEntityInfo
+    //是否应该发送消息
     private Boolean checkShouldSend()
     {
+        //发送消息的开关
         boolean shouldSendMessage = true;
         StandardEntity agentMe = this.agentInfo.me();
         Human me = (Human) agentMe;
@@ -306,30 +323,37 @@ public class AITBuildingSearch extends Search
         for (StandardEntity agent : agents)
         {
             if (!shouldSendMessage) { break; }
+            //agent不是human,跳过
             if (!(agent instanceof Human)) { continue; }
-
             Human other = (Human) agent;
             if (other.getPosition() != me.getPosition()) { continue; }
+            //getID获取到的是EntityID，getValue才能获得int指
+            //System.out.println("human的ID:"+other.getID().getValue() +"我的ID:"+ me.getID().getValue());
             if (other.getID().getValue() > me.getID().getValue())
             {
+                //为什么id大于当前agentid就不发消息
                 shouldSendMessage = false;
+                //System.out.println("发送消息");
             }
         }
         return shouldSendMessage;
     }
 
+    //usage:sendChangedEntityInfo
+    //从两栋建筑中选择一栋情况更紧急的
     private Building selectPreferred(Building bld1, Building bld2)
     {
         if (bld1 == null && bld2 == null) { return null; }
         else if (bld1 != null && bld2 == null) { return bld1; }
         else if (bld1 == null && bld2 != null) { return bld2; }
-
         if (bld1.isOnFire() && bld2.isOnFire())
         {
+            //燃烧情况（优先）
             if (bld1.isFierynessDefined() && bld2.isFierynessDefined())
             {
                 return (bld1.getFieryness() > bld2.getFieryness()) ? bld1 : bld2;
             }
+            //温度
             if (bld1.isTemperatureDefined() && bld2.isTemperatureDefined())
             {
                 return (bld1.getTemperature() > bld2.getTemperature()) ? bld1 : bld2;
@@ -343,13 +367,18 @@ public class AITBuildingSearch extends Search
         return bld2;
     }
 
+    //usage:updateInfo
+    //从所有发生了改变的entity中选取building，从这些building中选择一个最紧急的建筑添加到MessageManager里
     private void sendChangedEntityInfo(MessageManager messageManager)
     {
+        //System.out.println("频道:"+messageManager.getChannels().toString()+"个,"+"接受消息列表大小:"+messageManager.getReceivedMessageList().size()+",发送消息列表大小"+messageManager.getSendMessageList().size()+",时间："+this.agentInfo.getTime());
         if (!this.checkShouldSend()) { return; }
 
         Building building = null;
+        //获取地图时间
         int currTime = this.agentInfo.getTime();
         Human me = (Human) this.agentInfo.me();
+        //获取at，fb，pf所在地形
         List<EntityID> agentPositions = this.worldInfo.getEntitiesOfType(
                 AMBULANCE_TEAM, FIRE_BRIGADE, POLICE_FORCE).stream()
             .map(Human.class::cast)
@@ -359,10 +388,11 @@ public class AITBuildingSearch extends Search
         {
             Integer time = this.sentTimeMap.get(id);
             if (time != null && time > currTime) { continue; }
-
             StandardEntity entity = this.worldInfo.getEntity(id);
+            //如果不是建筑，跳过这个entity
             if (!(entity instanceof Building)) { continue; }
             Building bld = (Building) entity;
+            //没有agent在这个building或者这个building的和me在同一位置
             if (!agentPositions.contains(bld.getID())
                     || bld.getID().equals(me.getPosition()))
             {
@@ -374,15 +404,21 @@ public class AITBuildingSearch extends Search
         {
             messageManager.addMessage(new MessageBuilding(true, building));
             this.sentTimeMap.put(building.getID(), currTime + this.avoidTimeSendingSent);
+            //System.out.println(messageManager.getReceivedMessageList());
+            //System.out.println(this.sentTimeMap);
+            //System.out.println("我是"+me.getURN()+"我的位置:"+me.getPosition().getValue()+"选择建筑id:"+building.getID().getValue()+"时间:"+currTime);
             this.out("SEND #" + building.getID());
         }
     }
 
+    //usage:updateInfo
+    //将messge列表中的messagebuilding的信息更新到worldInfo中
     private void reflectOtherEntityInfo(MessageManager messageManager)
     {
         Set<EntityID> changedEntityIDs =
                 this.worldInfo.getChanged().getChangedEntities();
         int time = this.agentInfo.getTime();
+        //对消息列表进行遍历
         for (CommunicationMessage message
                 : messageManager.getReceivedMessageList(MessageBuilding.class))
         {
@@ -395,6 +431,8 @@ public class AITBuildingSearch extends Search
         }
     }
 
+    //usage:updateInfo,calc
+    //判断自己是否被卡住
     private boolean isStuckedInBlockade()
     {
         return this.stuckedHumans.calc().getClusterIndex(this.agentInfo.getID()) == 0;

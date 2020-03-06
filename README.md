@@ -308,9 +308,8 @@ CGY:写FireCluster<br>
 2020年3月4日:
 
 CGY:初步完成fireCluster,下一步将完善buildingDetector策略<br>CRF：初步完成Kmeans预处理的时间保证。<br>
+GYJ:初步设计search思路<br>
 
 2020年3月5日:
-<<<<<<< HEAD
 XJ:改写了部分PFClear里面的randomwalk函数
-CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>
->>>>>>> c0378eede640ef205dbea71f17e42f79e434faae
+CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>GYJ:划水<>

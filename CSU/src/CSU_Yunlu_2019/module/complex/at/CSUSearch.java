@@ -204,4 +204,8 @@ public class CSUSearch extends Search {
 		this.worldInfo.requestRollback();
 		return this;
 	}
+
+	public boolean isStucked(){
+		return true;
+	}
 }
