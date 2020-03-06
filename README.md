@@ -312,9 +312,9 @@ GYJ:初步设计search思路<br>
 
 2020年3月5日:
 
-XJ:改写了部分PFClear里面的randomwalk函数
-CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>GYJ:划水<>
+XJ:改写了部分PFClear里面的randomwalk函数<br>
+CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>GYJ:划水<br>
 
 2020年3月6日:
 
-CGY:正在引入CSU_2016的AdvancedModel,开发CSUWorldHelper和CSUBuildingHelper<br>
+CGY:正在引入CSU_2016的AdvancedModel,开发CSUWorldHelper和CSUBuildingHelper<br>CRF：调试kmeans在merge过程中clusterEntityList无法及时更新。<br>
