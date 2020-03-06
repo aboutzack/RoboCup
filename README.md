@@ -311,5 +311,10 @@ CGY:初步完成fireCluster,下一步将完善buildingDetector策略<br>CRF：�
 GYJ:初步设计search思路<br>
 
 2020年3月5日:
+
 XJ:改写了部分PFClear里面的randomwalk函数
 CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>CRF：解决kmeans划分cluster中建筑物重复，开始研究precompute。<br>GYJ:划水<>
+
+2020年3月6日:
+
+CGY:正在引入CSU_2016的AdvancedModel,开发CSUWorldHelper和CSUBuildingHelper<br>
