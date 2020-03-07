@@ -318,3 +318,4 @@ CGY:拆分BuildingDetector策略,看16年代码,打算移植一套worldModel<br>
 2020年3月6日:
 
 CGY:正在引入CSU_2016的AdvancedModel,开发CSUWorldHelper和CSUBuildingHelper<br>CRF：调试kmeans在merge过程中clusterEntityList无法及时更新。<br>
+GYJ:正在编写at的search<br>
