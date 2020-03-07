@@ -41,13 +41,35 @@ public class SampleKMeans extends StaticClustering{
 	    private List<List<EntityID>> clusterEntityIDsList;
 
 	    private int clusterSize;
-	    private int agentSize;	//智能体数量
+	    private int agentSize;	//only firebridge
 
 	    private boolean assignAgentsFlag;
 
 	    private Map<EntityID, Set<EntityID>> shortestPathGraph;
 
+	    /** crf add */
+	    List<node> allDistanceGraph= new ArrayList<>();
+	    private void sortListByDistance(List<node> list){
+	    	Collections.sort(list,new Comparator<node>(){
+	    		@Override
+	    		public int compare(node o1,node o2){
+	    			if (o1.distance >o2.distance) return 1;
+	    			else if(o1.distance <o2.distance) return -1;
+	    			else return 0;
+	    		}
+	    	});
+	    }
+	    // private Map<Integer,List<StandardEntity>> distanceGraph;
+	    // public <Integer extends Comparable<? super Integer>,List<StandardEntity>> Map<Integer,List<StandardEntity>> sortByKey(Map<Integer,List<StandardEntity>> map){
+	    // 	Map<Integer,List<StandardEntity>> result = new LinkedHashMap<>();
+	    // 	// Map<Integer,List<StandardEntity>> result = Maps.newLinkedHashMap();
+	    // 	map.entrySet().stream().sorted(Map.Entry.<Integer,List<StandardEntity>>comparingByKey().reversed()).forEachOrdered(e->result.put(e.getKey(),e.getValue()));
+	    // 	return result;
+	    // }
+
+
 	    public SampleKMeans(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
+
 	        super(ai, wi, si, moduleManager, developData);
 	        this.repeatPrecompute = developData.getInteger("sample.module.SampleKMeans.repeatPrecompute", 7);
 	        this.repeatPreparate = developData.getInteger("sample.module.SampleKMeans.repeatPreparate", 30);
@@ -68,6 +90,7 @@ public class SampleKMeans extends StaticClustering{
 	                StandardEntityURN.POLICE_OFFICE
 	        );
 	        
+	        
 	        if(agentInfo.me().getStandardURN().equals(StandardEntityURN.AMBULANCE_TEAM)){
 	        	agentSize = scenarioInfo.getScenarioAgentsAt();
 	        } else if(agentInfo.me().getStandardURN().equals(StandardEntityURN.FIRE_BRIGADE)){
@@ -83,19 +106,39 @@ public class SampleKMeans extends StaticClustering{
 
 	    @Override
 	    public Clustering updateInfo(MessageManager messageManager) {
+	    	System.out.println("updateinfo check connect");
+	    	// System.out.println(messageManager);
 	        super.updateInfo(messageManager);
 	        if(this.getCountUpdateInfo() >= 2) {
 	            return this;
 	        }
+	        
+	        this.updateKmeans();
 	        this.centerList.clear();
 	        this.clusterEntitiesList.clear();
 	        return this;
 	    }
 
+		public void updateKmeans(){
+	    	// System.out.println("############## before update kmeans=================");
+	    	// System.out.println(centerList.size());
+	    	// for (StandardEntity center:centerList) System.out.println(center);
+	    	// // for (int i = 0; i < clusterEntitiesList.size(); i++) if(clusterEntitiesList.get(i).size()>0)System.out.println(i+"  "+centerList.get(i)+"  "+clusterEntitiesList.get(i).size());
+
+	    	// /** the process of change kmeans  */
+	    	// System.out.println("-----after change -------");
+	    	// System.out.println(centerList.size());
+	    	// for (StandardEntity center:centerList) System.out.println(center);
+	    	// for (int i = 0; i < clusterEntitiesList.size(); i++) if(clusterEntitiesList.get(i).size()>0) System.out.println(i+"  "+centerList.get(i)+"  "+clusterEntitiesList.get(i).size());
+
+	    }
+	    
+
 	    @Override
 	    public Clustering precompute(PrecomputeData precomputeData) {
 	        super.precompute(precomputeData);
 	        if(this.getCountPrecompute() >= 2) {
+	        	
 	            return this;
 	        }
 	        this.calcPathBased(this.repeatPrecompute);
@@ -107,11 +150,13 @@ public class SampleKMeans extends StaticClustering{
 	            precomputeData.setEntityIDList(KEY_CLUSTER_ENTITY + i, this.clusterEntityIDsList.get(i));
 	        }
 	        precomputeData.setBoolean(KEY_ASSIGN_AGENT, this.assignAgentsFlag);
+		       	
 	        return this;
 	    }
 
 	    @Override
 	    public Clustering resume(PrecomputeData precomputeData) {
+	    	System.out.println("resume  connnect");
 	        super.resume(precomputeData);
 	        if(this.getCountResume() >= 2) {
 	            return this;
@@ -132,11 +177,134 @@ public class SampleKMeans extends StaticClustering{
 	    public Clustering preparate() {
 	        super.preparate();
 	        if(this.getCountPreparate() >= 2) {
+
 	            return this;
 	        }
 	        this.calcStandard(this.repeatPreparate);
 	        this.entities = null;
 	        return this;
+	    }
+
+	    public boolean checkMerge(StandardEntity e1,StandardEntity e2){
+			return true;
+	    }
+
+	    /**
+	     * crf
+	     * Main param: clusterEntityList\centerList\centerID
+	     * Method:首先根据邻里关系小范围聚类(整体中心数降至1/3)
+	     *        再根据凝聚层次聚类进行指定距离范围(mergeRange为范围大小)的聚类合并。		  	
+	     *
+	     */
+	    private void calcStandard(int repeat) {
+	        
+	        this.initShortestPath(this.worldInfo);
+	        
+	        /** init */
+	        this.allDistanceGraph.clear();
+
+	        for(StandardEntity tementity:entities){
+	        	// System.out.println(tementity);
+	        	Pair<Integer,Integer> firstLocation = this.worldInfo.getLocation(tementity);
+	        	for (EntityID id :this.shortestPathGraph.get(tementity.getID())) {
+	        		Pair<Integer,Integer> secondLocation = this.worldInfo.getLocation(this.worldInfo.getEntity(id));
+	        		// System.out.println(id+"  "+this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second()));
+	        		this.allDistanceGraph.add(new node(tementity,this.worldInfo.getEntity(id),this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second())));
+	        	}
+	        }
+
+	        /** sort and preprocess */
+	        // this.sortListByDistance(this.allDistanceGraph);
+	        for (int i = allDistanceGraph.size()-1; i > 0; i-=2) this.allDistanceGraph.remove(i);
+	        
+
+	        while(this.allDistanceGraph.size()>0){
+	        	this.clusterEntitiesList.put(this.centerList.size(),new ArrayList<>());
+	        	this.clusterEntitiesList.get(this.centerList.size()).add(this.allDistanceGraph.get(0).e2);
+	        	
+	        	this.centerList.add(this.allDistanceGraph.get(0).e1);
+	        	this.centerIDs.add(this.allDistanceGraph.get(0).e1.getID());
+
+	        	EntityID e1ID = this.allDistanceGraph.get(0).e1.getID();
+	        	EntityID e2ID = this.allDistanceGraph.get(0).e2.getID();
+	        	this.allDistanceGraph.remove(0);
+	        	
+	        	/** first merge */
+	        	//check point
+	        	for (int i = 0;i < this.allDistanceGraph.size() ;i++ ) {
+	        		if (this.allDistanceGraph.get(i).e1.getID().equals(e1ID) || this.allDistanceGraph.get(i).e2.getID().equals(e1ID) ||this.allDistanceGraph.get(i).e1.getID().equals(e2ID) || this.allDistanceGraph.get(i).e2.getID().equals(e2ID) ) {
+	        			//check is already exist
+	        			if (!this.clusterEntitiesList.get(this.centerList.size()-1).contains(this.allDistanceGraph.get(i).e1)) 
+	        				this.clusterEntitiesList.get(this.centerList.size()-1).add(this.allDistanceGraph.get(i).e1);
+	        			if (!this.clusterEntitiesList.get(this.centerList.size()-1).contains(this.allDistanceGraph.get(i).e2)) 
+	        				this.clusterEntitiesList.get(this.centerList.size()-1).add(this.allDistanceGraph.get(i).e2);
+	        				// if (this.allDistanceGraph.get(i).e1.getID().equals(e1ID) || this.allDistanceGraph.get(i).e1.getID().equals(e2ID)) 
+	        				// 	this.centerIDs.remove(centerIDs.indexOf(this.allDistanceGraph.get(i).e1.getID()));
+	        				this.allDistanceGraph.remove(i);
+	        		}
+	        	}
+	        }
+
+	        /** 检验第一阶段merge输出点 check and print cluster groups*/
+	        // System.out.println("----------------- "+this.shortestPathGraph.size()+" buildings in total and after kmeans here are "+centerList.size()+" "+centerIDs.size()+" cluster groups and  "+ agentSize +" firebridges-------------------------");
+	        // for (int i = 0;i <clusterEntitiesList.size() ; i++) {
+	        // 	System.out.println("cluster ID is "+i+"    and the center is "+centerList.get(i)+"      and size of this cluster is "+clusterEntitiesList.get(i).size());
+	        // 	for (StandardEntity teme :clusterEntitiesList.get(i) ) System.out.println(teme);
+	        // }
+
+
+
+	        /**
+	        `* crf:
+	         * iterator merge   select 0 as begin point
+	         * mergeRange:一次merge的节点数=>越小精度越大，当num选取1时为凝聚层次聚类。
+	         * pace:遍历步伐数=>越大速度越快，当pace为1时为遍历全部点集。
+	         * stdCenter:temp center 
+	         */
+	        int mergeRange = 8,pace = 3;
+	        StandardEntity stdCenter = centerList.get(0);
+	        List<node> singleDistance = new ArrayList<>();
+	        while(centerList.size() > this.agentSize){
+	        	singleDistance.clear();
+	        	Pair<Integer,Integer> firstLocation = this.worldInfo.getLocation(centerList.get(0));
+	    	    for (int i = 0; i < centerList.size(); i+=pace) {
+	    	    	if (i != centerList.indexOf(stdCenter)) {
+	    	    		Pair<Integer,Integer> secondLocation = this.worldInfo.getLocation(centerList.get(i));
+	       		 		singleDistance.add(new node(stdCenter,centerList.get(i),this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second())));	
+	        		}
+	        	}
+	       	 	
+	       	 	this.sortListByDistance(singleDistance);
+	       	 	
+	       	 	for (int i = 0;i < Math.min(mergeRange,singleDistance.size()) ;i++ ) {
+	        		//merge  second merge  
+	        		this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).add(singleDistance.get(0).e2);
+	        		if (this.centerList.indexOf(singleDistance.get(0).e2) >= 0) {
+	        			for (StandardEntity teme : this.clusterEntitiesList.get(this.centerList.indexOf(singleDistance.get(0).e2))) {
+	        				if (!this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).contains(teme)) {
+	        					this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).add(teme);
+	        				}
+	        			}
+	        			// clusterEntitiesList.get(centerList.indexOf(stdCenter)).add(teme);
+	        			
+	        			//remove => 从clusterEntityList、centerList、centerID 
+	        			this.clusterEntitiesList.remove(singleDistance.get(0).e2);
+	        			this.centerIDs.remove(this.centerList.indexOf(singleDistance.get(0).e2));
+	        			this.centerList.remove(this.centerList.indexOf(singleDistance.get(0).e2));
+
+	        			singleDistance.remove(0);
+	        		}
+	        	}
+	        	//transform stdCenter=>the farthest building
+	        	stdCenter = singleDistance.get(singleDistance.size()-1).e2;
+	        }
+	        /** 检验第二阶段merge输出点  */
+			// System.out.println("----------------- "+this.shortestPathGraph.size()+" buildings in total and after kmeans here are "+centerList.size()+" "+centerIDs.size()+" cluster groups and  "+ agentSize +" firebridges-------------------------");
+	    	// for (int i = 0; i < centerList.size();i++ ) {
+	    	// 	System.out.println(i+"  "+centerList.get(i)+"  "+clusterEntitiesList.get(i).size());
+	    	// 	for (StandardEntity teme:clusterEntitiesList.get(i)) System.out.println(teme);
+	    	// }
+
 	    }
 
 	    @Override
@@ -181,187 +349,118 @@ public class SampleKMeans extends StaticClustering{
 
 	    @Override
 	    public Clustering calc() {
+		
 	        return this;
 	    }
 
-	    private void calcStandard(int repeat) {
-	        this.initShortestPath(this.worldInfo);
-	        Random random = new Random();
-
-	        List<StandardEntity> entityList = new ArrayList<>(this.entities);
-	        this.centerList = new ArrayList<>(this.clusterSize);
-	        this.clusterEntitiesList = new HashMap<>(this.clusterSize);
-
-	        //init list
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            this.clusterEntitiesList.put(index, new ArrayList<>());
-	            this.centerList.add(index, entityList.get(0));
-	        }
-	        //System.out.println("[" + this.getClass().getSimpleName() + "] Cluster : " + this.clusterSize);
-	        //init center
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            StandardEntity centerEntity;
-	            do {
-	                centerEntity = entityList.get(Math.abs(random.nextInt()) % entityList.size());
-	            } while (this.centerList.contains(centerEntity));
-	            this.centerList.set(index, centerEntity);
-	        }
-	        //calc center
-	        for (int i = 0; i < repeat; i++) {
-	            this.clusterEntitiesList.clear();
-	            for (int index = 0; index < this.clusterSize; index++) {
-	                this.clusterEntitiesList.put(index, new ArrayList<>());
-	            }
-	            for (StandardEntity entity : entityList) {
-	                StandardEntity tmp = this.getNearEntityByLine(this.worldInfo, this.centerList, entity);
-	                this.clusterEntitiesList.get(this.centerList.indexOf(tmp)).add(entity);
-	            }
-	            for (int index = 0; index < this.clusterSize; index++) {
-	                int sumX = 0, sumY = 0;
-	                for (StandardEntity entity : this.clusterEntitiesList.get(index)) {
-	                    Pair<Integer, Integer> location = this.worldInfo.getLocation(entity);
-	                    sumX += location.first();
-	                    sumY += location.second();
-	                }
-	                int centerX = sumX / this.clusterEntitiesList.get(index).size();
-	                int centerY = sumY / this.clusterEntitiesList.get(index).size();
-	                StandardEntity center = this.getNearEntityByLine(this.worldInfo, this.clusterEntitiesList.get(index), centerX, centerY);
-	                if(center instanceof Area) {
-	                    this.centerList.set(index, center);
-	                }
-	                else if(center instanceof Human) {
-	                    this.centerList.set(index, this.worldInfo.getEntity(((Human) center).getPosition()));
-	                }
-	                else if(center instanceof Blockade) {
-	                    this.centerList.set(index, this.worldInfo.getEntity(((Blockade) center).getPosition()));
-	                }
-	            }
-	            if  (scenarioInfo.isDebugMode()) { /*System.out.print("*");*/ }
-	        }
-
-	        if  (scenarioInfo.isDebugMode()) { /*System.out.println();*/ }
-
-	        //set entity
-	        this.clusterEntitiesList.clear();
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            this.clusterEntitiesList.put(index, new ArrayList<>());
-	        }
-	        for (StandardEntity entity : entityList) {
-	            StandardEntity tmp = this.getNearEntityByLine(this.worldInfo, this.centerList, entity);
-	            this.clusterEntitiesList.get(this.centerList.indexOf(tmp)).add(entity);
-	        }
-
-	        //this.clusterEntitiesList.sort(comparing(List::size, reverseOrder()));
-
-	        if(this.assignAgentsFlag) {
-	            List<StandardEntity> firebrigadeList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
-	            List<StandardEntity> policeforceList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE));
-	            List<StandardEntity> ambulanceteamList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.AMBULANCE_TEAM));
-
-	            this.assignAgents(this.worldInfo, firebrigadeList);
-	            this.assignAgents(this.worldInfo, policeforceList);
-	            this.assignAgents(this.worldInfo, ambulanceteamList);
-	        }
-
-	        this.centerIDs = new ArrayList<>();
-	        for(int i = 0; i < this.centerList.size(); i++) {
-	            this.centerIDs.add(i, this.centerList.get(i).getID());
-	        }
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            List<StandardEntity> entities = this.clusterEntitiesList.get(index);
-	            List<EntityID> list = new ArrayList<>(entities.size());
-	            for(int i = 0; i < entities.size(); i++) {
-	                list.add(i, entities.get(i).getID());
-	            }
-	            this.clusterEntityIDsList.add(index, list);
-	        }
-	    }
+	    
 
 	    private void calcPathBased(int repeat) {
-	        this.initShortestPath(this.worldInfo);
-	        Random random = new Random();
-	        List<StandardEntity> entityList = new ArrayList<>(this.entities);
-	        this.centerList = new ArrayList<>(this.clusterSize);
-	        this.clusterEntitiesList = new HashMap<>(this.clusterSize);
+	    	this.initShortestPath(this.worldInfo);
+	        
+	        /** init */
+	        this.allDistanceGraph.clear();
 
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            this.clusterEntitiesList.put(index, new ArrayList<>());
-	            this.centerList.add(index, entityList.get(0));
-	        }
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            StandardEntity centerEntity;
-	            do {
-	                centerEntity = entityList.get(Math.abs(random.nextInt()) % entityList.size());
-	            } while (this.centerList.contains(centerEntity));
-	            this.centerList.set(index, centerEntity);
-	        }
-	        for (int i = 0; i < repeat; i++) {
-	            this.clusterEntitiesList.clear();
-	            for (int index = 0; index < this.clusterSize; index++) {
-	                this.clusterEntitiesList.put(index, new ArrayList<>());
-	            }
-	            for (StandardEntity entity : entityList) {
-	                StandardEntity tmp = this.getNearEntity(this.worldInfo, this.centerList, entity);
-	                this.clusterEntitiesList.get(this.centerList.indexOf(tmp)).add(entity);
-	            }
-	            for (int index = 0; index < this.clusterSize; index++) {
-	                int sumX = 0, sumY = 0;
-	                for (StandardEntity entity : this.clusterEntitiesList.get(index)) {
-	                    Pair<Integer, Integer> location = this.worldInfo.getLocation(entity);
-	                    sumX += location.first();
-	                    sumY += location.second();
-	                }
-	                int centerX = sumX / clusterEntitiesList.get(index).size();
-	                int centerY = sumY / clusterEntitiesList.get(index).size();
-
-	                //this.centerList.set(index, getNearEntity(this.worldInfo, this.clusterEntitiesList.get(index), centerX, centerY));
-	                StandardEntity center = this.getNearEntity(this.worldInfo, this.clusterEntitiesList.get(index), centerX, centerY);
-	                if (center instanceof Area) {
-	                    this.centerList.set(index, center);
-	                } else if (center instanceof Human) {
-	                    this.centerList.set(index, this.worldInfo.getEntity(((Human) center).getPosition()));
-	                } else if (center instanceof Blockade) {
-	                    this.centerList.set(index, this.worldInfo.getEntity(((Blockade) center).getPosition()));
-	                }
-	            }
-	            if  (scenarioInfo.isDebugMode()) { /*System.out.print("*");*/ }
+	        for(StandardEntity tementity:entities){
+	        	// System.out.println(tementity);
+	        	Pair<Integer,Integer> firstLocation = this.worldInfo.getLocation(tementity);
+	        	for (EntityID id :this.shortestPathGraph.get(tementity.getID())) {
+	        		Pair<Integer,Integer> secondLocation = this.worldInfo.getLocation(this.worldInfo.getEntity(id));
+	        		// System.out.println(id+"  "+this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second()));
+	        		this.allDistanceGraph.add(new node(tementity,this.worldInfo.getEntity(id),this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second())));
+	        	}
 	        }
 
-	        if  (scenarioInfo.isDebugMode()) { /*System.out.println();*/ }
+	        /** sort and preprocess */
+	        // this.sortListByDistance(this.allDistanceGraph);
+	        for (int i = allDistanceGraph.size()-1; i > 0; i-=2) this.allDistanceGraph.remove(i);
+	        
 
-	        this.clusterEntitiesList.clear();
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            this.clusterEntitiesList.put(index, new ArrayList<>());
-	        }
-	        for (StandardEntity entity : entityList) {
-	            StandardEntity tmp = this.getNearEntity(this.worldInfo, this.centerList, entity);
-	            this.clusterEntitiesList.get(this.centerList.indexOf(tmp)).add(entity);
-	        }
-	        //this.clusterEntitiesList.sort(comparing(List::size, reverseOrder()));
-	        if (this.assignAgentsFlag) {
-	            List<StandardEntity> fireBrigadeList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE));
-	            List<StandardEntity> policeForceList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE));
-	            List<StandardEntity> ambulanceTeamList = new ArrayList<>(this.worldInfo.getEntitiesOfType(StandardEntityURN.AMBULANCE_TEAM));
-	            this.assignAgents(this.worldInfo, fireBrigadeList);
-	            this.assignAgents(this.worldInfo, policeForceList);
-	            this.assignAgents(this.worldInfo, ambulanceTeamList);
+	        while(this.allDistanceGraph.size()>0){
+	        	this.clusterEntitiesList.put(this.centerList.size(),new ArrayList<>());
+	        	this.clusterEntitiesList.get(this.centerList.size()).add(this.allDistanceGraph.get(0).e2);
+	        	
+	        	this.centerList.add(this.allDistanceGraph.get(0).e1);
+	        	this.centerIDs.add(this.allDistanceGraph.get(0).e1.getID());
+
+	        	EntityID e1ID = this.allDistanceGraph.get(0).e1.getID();
+	        	EntityID e2ID = this.allDistanceGraph.get(0).e2.getID();
+	        	this.allDistanceGraph.remove(0);
+	        	
+	        	/** first merge */
+	        	//check point
+	        	for (int i = 0;i < this.allDistanceGraph.size() ;i++ ) {
+	        		if (this.allDistanceGraph.get(i).e1.getID().equals(e1ID) || this.allDistanceGraph.get(i).e2.getID().equals(e1ID) ||this.allDistanceGraph.get(i).e1.getID().equals(e2ID) || this.allDistanceGraph.get(i).e2.getID().equals(e2ID) ) {
+	        			//check is already exist
+	        			if (!this.clusterEntitiesList.get(this.centerList.size()-1).contains(this.allDistanceGraph.get(i).e1)) 
+	        				this.clusterEntitiesList.get(this.centerList.size()-1).add(this.allDistanceGraph.get(i).e1);
+	        			if (!this.clusterEntitiesList.get(this.centerList.size()-1).contains(this.allDistanceGraph.get(i).e2)) 
+	        				this.clusterEntitiesList.get(this.centerList.size()-1).add(this.allDistanceGraph.get(i).e2);
+	        				// if (this.allDistanceGraph.get(i).e1.getID().equals(e1ID) || this.allDistanceGraph.get(i).e1.getID().equals(e2ID)) 
+	        				// 	this.centerIDs.remove(centerIDs.indexOf(this.allDistanceGraph.get(i).e1.getID()));
+	        				this.allDistanceGraph.remove(i);
+	        		}
+	        	}
 	        }
 
-	        this.centerIDs = new ArrayList<>();
-	        for(int i = 0; i < this.centerList.size(); i++) {
-	            this.centerIDs.add(i, this.centerList.get(i).getID());
+	        /** 检验第一阶段merge输出点 check and print cluster groups*/
+	        // System.out.println("----------------- "+this.shortestPathGraph.size()+" buildings in total and after kmeans here are "+centerList.size()+" "+centerIDs.size()+" cluster groups and  "+ agentSize +" firebridges-------------------------");
+	        // for (int i = 0;i <clusterEntitiesList.size() ; i++) {
+	        // 	System.out.println("cluster ID is "+i+"    and the center is "+centerList.get(i)+"      and size of this cluster is "+clusterEntitiesList.get(i).size());
+	        // 	for (StandardEntity teme :clusterEntitiesList.get(i) ) System.out.println(teme);
+	        // }
+
+
+	        int mergeRange = 8,pace = 3;
+	        StandardEntity stdCenter = centerList.get(0);
+	        List<node> singleDistance = new ArrayList<>();
+	        while(centerList.size() > this.agentSize){
+	        	singleDistance.clear();
+	        	Pair<Integer,Integer> firstLocation = this.worldInfo.getLocation(centerList.get(0));
+	    	    for (int i = 0; i < centerList.size(); i+=pace) {
+	    	    	if (i != centerList.indexOf(stdCenter)) {
+	    	    		Pair<Integer,Integer> secondLocation = this.worldInfo.getLocation(centerList.get(i));
+	       		 		singleDistance.add(new node(stdCenter,centerList.get(i),this.getDistance(firstLocation.first(),firstLocation.second(),secondLocation.first(),secondLocation.second())));	
+	        		}
+	        	}
+	       	 	
+	       	 	this.sortListByDistance(singleDistance);
+	       	 	
+	       	 	for (int i = 0;i < Math.min(mergeRange,singleDistance.size()) ;i++ ) {
+	        		//merge  second merge  
+	        		this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).add(singleDistance.get(0).e2);
+	        		if (this.centerList.indexOf(singleDistance.get(0).e2) >= 0) {
+	        			for (StandardEntity teme : this.clusterEntitiesList.get(this.centerList.indexOf(singleDistance.get(0).e2))) {
+	        				if (!this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).contains(teme)) {
+	        					this.clusterEntitiesList.get(this.centerList.indexOf(stdCenter)).add(teme);
+	        				}
+	        			}
+	        			// clusterEntitiesList.get(centerList.indexOf(stdCenter)).add(teme);
+	        			
+	        			//remove => 从clusterEntityList、centerList、centerID 
+	        			this.clusterEntitiesList.remove(singleDistance.get(0).e2);
+	        			this.centerIDs.remove(this.centerList.indexOf(singleDistance.get(0).e2));
+	        			this.centerList.remove(this.centerList.indexOf(singleDistance.get(0).e2));
+
+	        			singleDistance.remove(0);
+	        		}
+	        	}
+	        	//transform stdCenter=>the farthest building
+	        	stdCenter = singleDistance.get(singleDistance.size()-1).e2;
 	        }
-	        for (int index = 0; index < this.clusterSize; index++) {
-	            List<StandardEntity> entities = this.clusterEntitiesList.get(index);
-	            List<EntityID> list = new ArrayList<>(entities.size());
-	            for(int i = 0; i < entities.size(); i++) {
-	                list.add(i, entities.get(i).getID());
-	            }
-	            this.clusterEntityIDsList.add(index, list);
-	        }
+	        /** 检验第二阶段merge输出点  */
+			// System.out.println("----------------- "+this.shortestPathGraph.size()+" buildings in total and after kmeans here are "+centerList.size()+" "+centerIDs.size()+" cluster groups and  "+ agentSize +" firebridges-------------------------");
+	    	// for (int i = 0; i < centerList.size();i++ ) {
+	    	// 	System.out.println(i+"  "+centerList.get(i)+"  "+clusterEntitiesList.get(i).size());
+	    	// 	for (StandardEntity teme:clusterEntitiesList.get(i)) System.out.println(teme);
+	    	// }
 	    }
 
+	    
+	    		
+
 	    private void assignAgents(WorldInfo world, List<StandardEntity> agentList) {
+	    	System.out.println("assing agent connect------");
 	        int clusterIndex = 0;
 	        while (agentList.size() > 0) {
 	            StandardEntity center = this.centerList.get(clusterIndex);
@@ -556,4 +655,15 @@ public class SampleKMeans extends StaticClustering{
 	    }
 	
 
+}
+
+class node{
+	StandardEntity e1,e2;
+	double distance;
+	public node(){}
+	public node(StandardEntity e1,StandardEntity e2,double distance){
+		this.e1 = e1;
+		this.e2 = e2;
+		this.distance = distance;
+	}
 }
