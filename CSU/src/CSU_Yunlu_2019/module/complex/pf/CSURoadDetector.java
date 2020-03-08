@@ -144,9 +144,8 @@ private double getDistance(Human human,Road road) {
 		if(blockade.getShape().contains(human.getX(), human.getY())) {
 			return 0;
 		}
-		List<Line2D> lines = GeometryTools2D.pointsToLines(GeometryTools2D.vertexArrayToPoints(blockade.getApexes()), true);
-		for(Line2D line : lines) {
-			rescuecore2.misc.geometry.Point2D closest = GeometryTools2D.getClosestPointOnSegment(line, basePoint);
+		List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
+		for(Point2D closest: Points) {
 	        double d = GeometryTools2D.getDistance(basePoint, closest);
 	        if (d < nearest) {
 	            nearest = d;
@@ -184,55 +183,55 @@ private double getDistance(Human human,Road road) {
 	}
 
 	/**
-	* @Description: 清除refuge旁边的障碍（如果存在），防止火警无法及时补水
+	* @Description: 最近的警察去refuge（如果存在），防止FB无法及时补水
 	* @Author: Bochun-Yue
-	* @Date: 2/25/20
+	* @Date: 3/8/20
 	*/
 
-	boolean initflag = true;
+	boolean neareat_flag = true;
+	boolean search_flag = false;
+	boolean arrive_flag = false;
+	StandardEntity nearest_refuge = null;
 	private RoadDetector GetToNearestRefuge(EntityID positionID) {
-		double min = Double.MAX_VALUE;
-		EntityID TargetRefugeID=null;
 		//去最近的refuge
+		double min = Double.MAX_VALUE;
 		for(StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
-			double minDistance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),worldInfo.getLocation(SE).first() ,worldInfo.getLocation(SE).second());
-			if(minDistance < min) {
-				min=minDistance;
-				TargetRefugeID = SE.getID();
+			Refuge refuge = (Refuge) SE;
+			double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),refuge.getX(),refuge.getY());
+			if(distance < min) {
+				nearest_refuge = SE;
+				min = distance;
 			}
 		}
-		if(TargetRefugeID!=null) {
-			StandardEntity entity = worldInfo.getEntity(TargetRefugeID);
-			Refuge refuge = (Refuge) entity;
-			if(positionID.getValue()==refuge.getID().getValue()) {
-				initflag=false;
+		if(nearest_refuge != null) {
+			Refuge refuge = (Refuge) nearest_refuge;
+			if(!search_flag) {
+				for(StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+					PoliceForce police = (PoliceForce) se;
+					double dist_me = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), refuge.getX(), refuge.getY());
+					double dist_another = this.getDistance(police.getX(), police.getY(), refuge.getX(), refuge.getY());
+					if(dist_another < dist_me) {
+						neareat_flag = false;
+						search_flag = true;
+						break;
+					}
+				}
+				search_flag = true;
+			}
+			if(positionID.getValue() == refuge.getID().getValue()) {
+				arrive_flag = true;
 				return null;
-			}else {
-				return getPathTo(positionID,refuge.getID());
+			}
+			if(this.neareat_flag) {
+//				System.out.println("----------------------- refugeID:"+refuge.getID().getValue()+"---------------------------");
+//				System.out.println("--------------------------警察ID："+this.agentInfo.getID().getValue()+"-----------------------");
+//				System.out.println("--------------------------警察位置：（"+this.agentInfo.getX()+","+this.agentInfo.getY()+")----------------------");
+//				System.out.println("--------------------------去refuge-----------------------");
+				return this.getPathTo(positionID,nearest_refuge.getID());
 			}
 		}
 		return null;
 	}
-	
-	
-	private void get_unpassable_Road() {
-		for(StandardEntity SE:worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-			Road road = (Road) SE;
-			boolean building_flag = false;
-			for(EntityID neighbour : road.getNeighbours()) {
-				StandardEntity entity = worldInfo.getEntity(neighbour);
-				if(entity instanceof Building) {
-					building_flag = true;
-				}
-			}
-			if(building_flag) continue;
-			
-			if(!this.isRoadPassable(road)) {
-				unpassable_Road.add(road.getID());
-			}
-		}
-	}
-	
 	
 	/**
 	* @Description: 具有优先级路线的RoadDetector
@@ -245,25 +244,26 @@ private double getDistance(Human human,Road road) {
     {    	
     	EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
-		//先看StuckedAgentOrRefuge_BlockedRoad,优先级最高
-		if(!this.StuckedAgentOrRefuge_BlockedRoad.isEmpty()) {
-			return this.getRoadDetector(positionID, this.StuckedAgentOrRefuge_BlockedRoad);
-		}	
-		//如果目标存在仍然继续
+
+		if(!arrive_flag) this.GetToNearestRefuge(positionID);
+		if(nearest_refuge !=null && this.result != null) {
+			if(nearest_refuge.getID().getValue()==this.result.getValue()) {
+				return this;
+			}
+		}		
+		
 		if(this.result != null&&this.StuckedAgentOrRefuge_BlockedRoad.contains(this.result)||this.result != null&&this.priorityRoads.contains(this.result)){
 			return this;
 		}	
-		//然后去refuge
-		if(initflag) this.GetToNearestRefuge(positionID);
-		//最后看priorityRoads，优先级其次
+		
+		if(!this.StuckedAgentOrRefuge_BlockedRoad.isEmpty()) {
+			return this.getRoadDetector(positionID, this.StuckedAgentOrRefuge_BlockedRoad);
+		}	
+		
 		if(!this.priorityRoads.isEmpty()){
 			return getRoadDetector(positionID,this.priorityRoads);
 		}
-			
-		this.get_unpassable_Road();
-		if(!unpassable_Road.isEmpty()) {
-			return getRoadDetector(positionID,this.unpassable_Road);
-		}
+		
 		
 		if (this.result == null)	
         { 	
