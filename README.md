@@ -334,4 +334,4 @@ XJ:写allocator代码，尝试随机分配给警察target以解决聚清理障�
 2020年3日9日
 
 CXX：阅读项目最近的修改情况，并调试地图。<br>
-YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡之后的行动<br>
+YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡之后的行动<br>CRF：测试Kmeans，调整cluster分布不均匀的情况。<br>
