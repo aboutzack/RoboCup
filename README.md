@@ -329,9 +329,10 @@ XJ:调试警察聚集清理障碍的问题<br>
 
 CRF：重写kmeans，测试kmeans运行时的各种空指针的情况。<br>
 CGY:写Detector<br>
-XJ:写allocator代码，尝试随机分配给警察target以解决聚清理障碍的问题，在kobe图表现良好，SydneyS1则不行
+XJ:写allocator代码，尝试随机分配给警察target以解决聚清理障碍的问题，在kobe图表现良好，SydneyS1则不行<br>
+GYJ:写search，将未搜索的建筑分级，按优先级高低抢占式选择目标<br>
 
 2020年3日9日
 
 CXX：阅读项目最近的修改情况，并调试地图。<br>
-YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡之后的行动<br>CRF：测试Kmeans，调整cluster分布不均匀的情况。<br>
+YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡之后的行动<br>CRF：测试Kmeans，调整cluster分布不均匀的情况。<br>GYJ:写search<br>
