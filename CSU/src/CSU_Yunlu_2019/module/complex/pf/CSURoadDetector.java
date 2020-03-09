@@ -185,49 +185,50 @@ private double getDistance(Human human,Road road) {
 	/**
 	* @Description: 最近的警察去refuge（如果存在），防止FB无法及时补水
 	* @Author: Bochun-Yue
-	* @Date: 3/8/20
+	* @Date: 3/9/20
 	*/
 
-	boolean neareat_flag = true;
 	boolean search_flag = false;
 	boolean arrive_flag = false;
 	StandardEntity nearest_refuge = null;
-	private RoadDetector GetToNearestRefuge(EntityID positionID) {
-		//去最近的refuge
-		double min = Double.MAX_VALUE;
-		for(StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
-			Refuge refuge = (Refuge) SE;
-			double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),refuge.getX(),refuge.getY());
-			if(distance < min) {
-				nearest_refuge = SE;
-				min = distance;
-			}
-		}
-		if(nearest_refuge != null) {
-			Refuge refuge = (Refuge) nearest_refuge;
-			if(!search_flag) {
+	private void Find_Refuge() {
+		//检测离每个refuge最近的警察
+		if(!this.search_flag) {
+			for(StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
+				boolean nearest_flag = true;
+				Refuge refuge = (Refuge) SE;
+				double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),refuge.getX(),refuge.getY());
 				for(StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
 					PoliceForce police = (PoliceForce) se;
-					double dist_me = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), refuge.getX(), refuge.getY());
-					double dist_another = this.getDistance(police.getX(), police.getY(), refuge.getX(), refuge.getY());
-					if(dist_another < dist_me) {
-						neareat_flag = false;
-						search_flag = true;
+					double dist = this.getDistance(police.getX(),police.getY(),refuge.getX(),refuge.getY());
+					if(dist < distance) {
+						nearest_flag = false;
 						break;
 					}
 				}
-				search_flag = true;
+				if(nearest_flag) {
+					this.nearest_refuge = SE;
+					break;
+				}else {
+					continue;
+				}
 			}
-			if(positionID.getValue() == refuge.getID().getValue()) {
-				arrive_flag = true;
-				return null;
-			}
-			if(this.neareat_flag) {
-//				System.out.println("----------------------- refugeID:"+refuge.getID().getValue()+"---------------------------");
-//				System.out.println("--------------------------警察ID："+this.agentInfo.getID().getValue()+"-----------------------");
-//				System.out.println("--------------------------警察位置：（"+this.agentInfo.getX()+","+this.agentInfo.getY()+")----------------------");
-//				System.out.println("--------------------------去refuge-----------------------");
-				return this.getPathTo(positionID,nearest_refuge.getID());
+		}
+		this.search_flag=true;
+	}
+	
+	private RoadDetector Get_To_Refuge(EntityID positionID) {
+		if(!arrive_flag&&this.agentInfo.getTime()>10) {
+			this.Find_Refuge();
+			if(this.nearest_refuge!=null) {
+				Refuge refuge = (Refuge) nearest_refuge;
+				if(this.agentInfo.getPosition().getValue()==refuge.getID().getValue()) {
+					this.arrive_flag = true;
+					return null;
+				}
+				else {
+					return this.getPathTo(positionID, refuge.getID());
+				}
 			}
 		}
 		return null;
@@ -244,9 +245,10 @@ private double getDistance(Human human,Road road) {
     {    	
     	EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
+		
+		this.Get_To_Refuge(positionID);
 
-		if(!arrive_flag) this.GetToNearestRefuge(positionID);
-		if(nearest_refuge !=null && this.result != null) {
+		if(nearest_refuge !=null && this.result != null && !this.arrive_flag) {
 			if(nearest_refuge.getID().getValue()==this.result.getValue()) {
 				return this;
 			}
@@ -264,25 +266,18 @@ private double getDistance(Human human,Road road) {
 			return getRoadDetector(positionID,this.priorityRoads);
 		}
 		
+		if(this.result != null) {
+			Road road = (Road)this.worldInfo.getEntity(result);
+			if(this.isRoadPassable(road)) {
+				this.result=null;
+				return this;
+			}
+		}
+		
 		
 		if (this.result == null)	
         { 	
-			//去最找最近的火警
-            double min=Double.MAX_VALUE;
-            StandardEntity target = null;
-            for(StandardEntity SE:worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE)) {
-            	double minDistance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),worldInfo.getLocation(SE).first() ,worldInfo.getLocation(SE).second());
-            	if(minDistance > min) {
-            		min = minDistance;
-            		target = SE;
-            	}
-            }
-            if( target != null) {	
-            	FireBrigade fb = (FireBrigade) target;
-            	EntityID targetPosition = fb.getPosition();
-            	return getPathTo(positionID,targetPosition);
-            }
-            			
+			
         }
         return this;
     }
