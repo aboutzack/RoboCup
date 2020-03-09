@@ -1,6 +1,8 @@
 package CSU_Yunlu_2019.module.algorithm.fb;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -36,6 +38,7 @@ public class CSUFireClustering extends DynamicClustering {
     private WorldInfo worldInfo;
     private ScenarioInfo scenarioInfo;
     private AgentInfo agentInfo;
+    private CSUWorldHelper worldHelper;
 
     public CSUFireClustering(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -60,6 +63,7 @@ public class CSUFireClustering extends DynamicClustering {
                 this.pathPlanning = moduleManager.getModule("PathPlanning.Default", "adf.sample.module.algorithm.SamplePathPlanning");
                 break;
         }
+        worldHelper = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
     }
 
     @Override
@@ -132,7 +136,7 @@ public class CSUFireClustering extends DynamicClustering {
                 cluster = getCluster(building.getID());
                 //还未分配cluster
                 if (cluster == null) {
-                    cluster = new FireCluster(agentInfo, worldInfo, scenarioInfo);
+                    cluster = new FireCluster(worldHelper);
                     cluster.add(building);
 
                     //checking neighbour clusters

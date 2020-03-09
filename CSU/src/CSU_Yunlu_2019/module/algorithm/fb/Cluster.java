@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
-* @Description: cluster
-* @Author: Guanyu-Cai
-* @Date: 3/3/20
-*/
+ * @Description: 改进自csu_2016和mrl_2019
+ * @Author: Guanyu-Cai
+ * @Date: 3/3/20
+ */
 public abstract class Cluster {
     //cluster的唯一标识
     protected int id;
@@ -23,22 +23,49 @@ public abstract class Cluster {
     //暂时存储的删除的entities
     protected Set<StandardEntity> removedEntities;
     //cluster内所有房屋
-    private Set<Building> buildings;
+    protected Set<Building> buildings;
     //cluster的边界上的entities
     protected Set<StandardEntity> borderEntities;
     //凸包
     protected IConvexHull convexHull;
+    //用于判断火势蔓延方向
+    protected ConvexObject convexObject;
     //cluster的中心点
     protected Point center;
+    //Enlarged polygon of this cluster's convex hull polygon(scale is 1.1).
+    protected Polygon bigBorderPolygon;
+
+    //Narrowed polygon of this cluster's convex hull polygon(scale is 0.9).
+    protected Polygon smallBorderPolygon;
+    //cluster的价值
+    protected double value;
+
+    //中心是否在多边形之外
+    protected boolean isOverCenter;
+    //是否在地图边缘
+    protected boolean isEdge;
+    //value是否正在变小
+    protected boolean isDying;
+    //是否可控
+    protected boolean controllable;
 
     public Cluster() {
         id = -1;
         entities = new HashSet<>();
         newEntities = new HashSet<>();
         removedEntities = new HashSet<>();
-        borderEntities = new HashSet<>();
         buildings = new HashSet<>();
+        borderEntities = new HashSet<>();
         convexHull = new CompositeConvexHull();
+        convexObject = new ConvexObject();
+        center = new Point();
+        bigBorderPolygon = new Polygon();
+        smallBorderPolygon = new Polygon();
+        value = 0;
+        isOverCenter = false;
+        isEdge = false;
+        isDying = false;
+        controllable = false;
     }
 
     public void addAll(Set<StandardEntity> entities) {
@@ -75,6 +102,42 @@ public abstract class Cluster {
             buildings.remove((Building) entity);
         }
         removedEntities.add(entity);
+    }
+
+    /**
+     * Check whether this cluster's convex hull polygon contains the
+     * ConvexObject's CENTER_POINT.
+     */
+    public void checkForOverCenter(Point targetPoint) {
+        Polygon convexPolygon = this.convexHull.getConvexPolygon();
+        Rectangle convexPolygonBound = convexPolygon.getBounds();
+        int convexCenterPoint_x = (int) convexPolygonBound.getCenterX();
+        int convexCenterPoint_y = (int) convexPolygonBound.getCenterY();
+        Point convexCenterPoint = new Point(convexCenterPoint_x, convexCenterPoint_y);
+
+        this.convexObject.CENTER_POINT = targetPoint;
+        this.convexObject.CONVEX_POINT = convexCenterPoint;
+
+        int[] xs = this.convexHull.getConvexPolygon().xpoints;
+        int[] ys = this.convexHull.getConvexPolygon().ypoints;
+
+        double x1, y1, x2, y2, total_1, total_2;
+
+        for (int i = 0; i < ys.length; i++) {
+            Point point = new Point(xs[i], ys[i]);
+            x1 = (convexCenterPoint.getX() - targetPoint.getX()) / 1000;
+            y1 = (convexCenterPoint.getY() - targetPoint.getY()) / 1000;
+
+            x2 = (point.getX() - targetPoint.getX()) / 1000;
+            y2 = (point.getY() - targetPoint.getY()) / 1000;
+
+            total_1 = x1 * x2;
+            total_2 = y1 * y2;
+            if (total_1 <= 0 && total_2 <= 0 /*or total_1 + total_2 <= 0*/) {
+                this.isOverCenter = true;
+                break;
+            }
+        }
     }
 
     public int getId() {
@@ -162,5 +225,15 @@ public abstract class Cluster {
     public void eat(Cluster cluster) {
         entities.addAll(cluster.getEntities());
         buildings.addAll(cluster.getBuildings());
+        removedEntities.addAll(cluster.getRemovedEntities());
+        newEntities.addAll(cluster.getNewEntities());
+    }
+
+    public ConvexObject getConvexObject() {
+        return convexObject;
+    }
+
+    public boolean isDying() {
+        return isDying;
     }
 }

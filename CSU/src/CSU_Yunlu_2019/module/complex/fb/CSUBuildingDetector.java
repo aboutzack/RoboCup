@@ -1,7 +1,17 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.module.algorithm.fb.CSUFireClustering;
+import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
+import CSU_Yunlu_2019.module.complex.fb.clusterSelection.ClusterSelectorType;
+import CSU_Yunlu_2019.module.complex.fb.clusterSelection.DistanceBasedClusterSelector;
+import CSU_Yunlu_2019.module.complex.fb.clusterSelection.IFireBrigadeClusterSelector;
+import CSU_Yunlu_2019.module.complex.fb.targetSelection.DirectionBasedTargetSelector;
+import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
+import CSU_Yunlu_2019.module.complex.fb.targetSelection.IFireBrigadeTargetSelector;
+import CSU_Yunlu_2019.module.complex.fb.targetSelection.TargetSelectorType;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
+import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.StandardMessage;
@@ -26,19 +36,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class CSUBuildingDetector extends BuildingDetector{
+public class CSUBuildingDetector extends BuildingDetector {
     private EntityID result;
 
     private Clustering clustering;
+    private CSUFireBrigadeWorld world;
 
     private Map<EntityID, CSUBuilding> sentBuildingMap;
-    private ClusteringType clusteringType;
+    private ClusterSelectorType clusterSelectorType = ClusterSelectorType.DISTANCE_BASED;
+    private IFireBrigadeClusterSelector clusterSelector;
+    private TargetSelectorType targetSelectorType = TargetSelectorType.DIRECTION_BASED;
+    private IFireBrigadeTargetSelector targetSelector;
 
-    public CSUBuildingDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
-    {
+    public CSUBuildingDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
-        switch (si.getMode())
-        {
+        switch (si.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
@@ -49,22 +61,18 @@ public class CSUBuildingDetector extends BuildingDetector{
                 this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
         }
+        this.world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+        world.setFireClustering((CSUFireClustering) clustering);
         registerModule(this.clustering);
+        registerModule(world);
         this.sentBuildingMap = new HashMap<>();
-        if (clustering instanceof CSUFireClustering) {
-            clusteringType = ClusteringType.BURNING_BUILDINGS_BASED;
-        } else {
-            clusteringType = ClusteringType.ALL_ENTITIES_BASED;
-        }
     }
 
 
     @Override
-    public BuildingDetector updateInfo(MessageManager messageManager)
-    {
+    public BuildingDetector updateInfo(MessageManager messageManager) {
         super.updateInfo(messageManager);
-        if (this.getCountUpdateInfo() >= 2)
-        {
+        if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
 
@@ -75,9 +83,9 @@ public class CSUBuildingDetector extends BuildingDetector{
     }
 
     /**
-    * @Description: 根据changedEntities的信息进行通讯等操作
-    * @Date: 2/28/20
-    */
+     * @Description: 根据changedEntities的信息进行通讯等操作
+     * @Date: 2/28/20
+     */
     private void preProcessChangedEntities(MessageManager messageManager) {
         worldInfo.getChanged().getChangedEntities().forEach(changedId -> {
             StandardEntity entity = worldInfo.getEntity(changedId);
@@ -105,6 +113,7 @@ public class CSUBuildingDetector extends BuildingDetector{
 
     /**
      * 更新信息
+     *
      * @param messageManager
      */
     private void reflectMessage(MessageManager messageManager) {
@@ -119,55 +128,62 @@ public class CSUBuildingDetector extends BuildingDetector{
     }
 
     @Override
-    public BuildingDetector calc()
-    {
-        IFireBrigadeTargetSelector targetSelector;
-        if (clusteringType == ClusteringType.ALL_ENTITIES_BASED) {
-            targetSelector = new DefaultTargetSelector(agentInfo, worldInfo, scenarioInfo, clustering);
-            this.result = targetSelector.calc();
-        } else if (clusteringType == ClusteringType.BURNING_BUILDINGS_BASED) {
-            targetSelector = new OptimalTargetSelector(agentInfo, worldInfo, scenarioInfo, clustering);
-            this.result = targetSelector.calc();
+    public BuildingDetector calc() {
+        setClusterSelector();
+        setTargetSelector();
+        FireCluster targetCluster = clusterSelector.selectCluster();
+        if (targetCluster != null) {
+            FireBrigadeTarget fireBrigadeTarget = targetSelector.selectTarget(targetCluster);
+            this.result = fireBrigadeTarget.getCsuBuilding().getId();
+        } else {
+            // TODO: 3/9/20 没有着火房屋时，search重新根据距离分配cluster，防止search时大范围移动?
+            this.result = null;
         }
         return this;
     }
 
+    private void setClusterSelector() {
+        switch (clusterSelectorType) {
+            case DISTANCE_BASED:
+                clusterSelector = new DistanceBasedClusterSelector(world);
+        }
+    }
 
+    private void setTargetSelector() {
+        switch (targetSelectorType) {
+            case DIRECTION_BASED:
+                targetSelector = new DirectionBasedTargetSelector(world);
+                break;
+        }
+    }
 
     @Override
-    public EntityID getTarget()
-    {
+    public EntityID getTarget() {
         return this.result;
     }
 
     @Override
-    public BuildingDetector precompute(PrecomputeData precomputeData)
-    {
+    public BuildingDetector precompute(PrecomputeData precomputeData) {
         super.precompute(precomputeData);
-        if (this.getCountPrecompute() >= 2)
-        {
+        if (this.getCountPrecompute() >= 2) {
             return this;
         }
         return this;
     }
 
     @Override
-    public BuildingDetector resume(PrecomputeData precomputeData)
-    {
+    public BuildingDetector resume(PrecomputeData precomputeData) {
         super.resume(precomputeData);
-        if (this.getCountPrecompute() >= 2)
-        {
+        if (this.getCountPrecompute() >= 2) {
             return this;
         }
         return this;
     }
 
     @Override
-    public BuildingDetector preparate()
-    {
+    public BuildingDetector preparate() {
         super.preparate();
-        if (this.getCountPrecompute() >= 2)
-        {
+        if (this.getCountPrecompute() >= 2) {
             return this;
         }
         return this;

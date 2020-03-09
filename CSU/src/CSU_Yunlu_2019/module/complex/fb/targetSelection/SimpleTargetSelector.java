@@ -1,5 +1,8 @@
-package CSU_Yunlu_2019.module.complex.fb;
+package CSU_Yunlu_2019.module.complex.fb.targetSelection;
 
+import CSU_Yunlu_2019.module.algorithm.fb.Cluster;
+import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
+import CSU_Yunlu_2019.world.object.CSUBuilding;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
@@ -12,12 +15,8 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
 
-/**
- * @description: all entities cluster based
- * @author: Guanyu-Cai
- * @Date: 03/05/2020
- */
-public class DefaultTargetSelector implements IFireBrigadeTargetSelector{
+@Deprecated
+public class SimpleTargetSelector extends TargetSelector{
     private AgentInfo agentInfo;
     private WorldInfo worldInfo;
     private ScenarioInfo scenarioInfo;
@@ -25,14 +24,29 @@ public class DefaultTargetSelector implements IFireBrigadeTargetSelector{
     private List<Building> buildingsList = new ArrayList<>();
     private List<Building> convexBuildings;
 
-    public DefaultTargetSelector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, Clustering clustering) {
-        this.agentInfo = ai;
-        this.worldInfo = wi;
-        this.scenarioInfo = si;
+    public SimpleTargetSelector(CSUFireBrigadeWorld world, Clustering clustering) {
+        super(world);
+        this.agentInfo = world.getAgentInfo();
+        this.worldInfo = world.getWorldInfo();
+        this.scenarioInfo = world.getScenarioInfo();
         this.clustering = clustering;
     }
 
     @Override
+    public FireBrigadeTarget selectTarget(Cluster targetCluster) {
+        EntityID entityID;
+        entityID = this.calcTargetInCluster();
+        if (entityID == null) {
+            entityID = this.calcTargetInWorld();
+        }
+        if (entityID != null) {
+            CSUBuilding csuBuilding = new CSUBuilding(worldInfo.getEntity(entityID), null);
+            return new FireBrigadeTarget(null, csuBuilding);
+        } else {
+            return null;
+        }
+    }
+
     public EntityID calc() {
         EntityID result;
         result = this.calcTargetInCluster();
