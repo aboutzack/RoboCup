@@ -330,3 +330,7 @@ XJ:调试警察聚集清理障碍的问题<br>
 CRF：重写kmeans，测试kmeans运行时的各种空指针的情况。<br>
 CGY:写Detector<br>
 XJ:写allocator代码，尝试随机分配给警察target以解决聚清理障碍的问题，在kobe图表现良好，SydneyS1则不行
+
+2020年3日9日
+
+CXX：阅读项目最近的修改情况，并调试地图。
