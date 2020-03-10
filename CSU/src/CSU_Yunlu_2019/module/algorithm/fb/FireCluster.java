@@ -64,22 +64,19 @@ public class FireCluster extends Cluster {
     }
 
     private void updateCenter() {
-        int sumX = 0;
-        int sumY = 0;
-        for (int x : convexHull.getConvexPolygon().xpoints) {
-            sumX += x;
-        }
-
-        for (int y : convexHull.getConvexPolygon().ypoints) {
-            sumY += y;
-        }
-
-        if (convexHull.getConvexPolygon().npoints > 0) {
-            center = new Point(sumX / convexHull.getConvexPolygon().npoints, sumY / convexHull.getConvexPolygon().npoints);
+        if (convexObject.getConvexHullPolygon().npoints > 0) {
+            int sumX = 0;
+            int sumY = 0;
+            for (int x : convexObject.getConvexHullPolygon().xpoints) {
+                sumX += x;
+            }
+            for (int y : convexObject.getConvexHullPolygon().ypoints) {
+                sumY += y;
+            }
+            center = new Point(sumX / convexObject.getConvexHullPolygon().npoints, sumY / convexObject.getConvexHullPolygon().npoints);
         } else {
             center = new Point(0, 0);
         }
-
     }
 
     /**
