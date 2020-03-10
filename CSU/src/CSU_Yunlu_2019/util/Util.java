@@ -476,4 +476,15 @@ public class Util {
 //
 //        return isExist;
 //    }
+
+	public static int getdistance(Pair<Integer, Integer> position1, Pair<Integer, Integer> position2){
+		float x1 = position1.first();
+		float y1 = position1.second();
+		float x2 = position2.first();
+		float y2 = position2.second();
+		float dx = x1 - x2;
+		float dy = y1 - y2;
+		return (int) Math.sqrt(dx * dx + dy * dy);
+	}
+
 }
