@@ -337,3 +337,9 @@ GYJ:写search，将未搜索的建筑分级，按优先级高低抢占式选择�
 CXX：阅读项目最近的修改情况，并调试地图。<br>
 YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡之后的行动<br>CRF：测试Kmeans，调整cluster分布不均匀的情况。<br>GYJ:写search<br>
 CGY:结合csu_2016和mrl代码，初步完成WorldHelper，引入16年的许多依赖，实现16年的directionBasedTargetSelector<br>
+
+2020年3月10日
+GYJ：测试,完善search<br>
+
+20202年3月11日
+GYJ：调试发布search<br>
