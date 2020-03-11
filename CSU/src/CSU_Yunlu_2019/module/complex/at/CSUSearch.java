@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.complex.at;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
+import adf.agent.communication.standard.bundle.information.MessageBuilding;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -30,10 +31,10 @@ public class CSUSearch extends Search {
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
 
-	//todo:平民列表还没有考虑移出(选为target时就移出)
+	//todo 防止多个at选中同一个building
 	private int voiceRange;//声音传播距离
-	private Collection<StandardEntity> knownCivilians;//所有已知的平民
-	//private Set<EntityID> knownHeardCivilians;//已知位置的呼救平民
+	private Collection<StandardEntity> knownCivilians;//所有已知的平民(选为target时就移出)
+	//private Set<EntityID> knownHeardCivilians;//已知位置的呼救平民(选为target时就移出)
 	private Set<EntityID> heardCivilians;//未知位置的呼救平民
 	private Set<EntityID> searchedBuildings;//已经到访过的建筑（永久）
 	private Set<EntityID> optimalBuildings;//最优访问的建筑(已知有人的建筑)
@@ -49,6 +50,7 @@ public class CSUSearch extends Search {
 	private int hangUpTime = 0;
 	//private int roudNum = 0;//回合数
 	//private EntityID lastresult;//上一次的目标
+	private MessageManager messageManager;
 
 	private EntityID result;//寻路结果
 
@@ -147,8 +149,9 @@ public class CSUSearch extends Search {
 
 		this.updateSearchedBuildings();
 		this.updateUnsearchedBuildings();
-		this.updateOrdinartBuildings();
+		this.updateSecondaryBuildings();
 		this.updateOptimalBuildings();
+		this.messageManager = messageManager;
 		if(CSUConstants.DEBUG_AT_SEARCH && false){
 			int i = 0;
 			for (EntityID b:unsearchedBuildings){
@@ -167,6 +170,7 @@ public class CSUSearch extends Search {
 
 	@Override
 	public Search calc() {
+		boolean targetRepeat = false;
 		if (CSUConstants.DEBUG_AT_SEARCH) System.out.println("ATSearchID:"+agentInfo.getID());
 		//开局前三秒不能行动，生成地形
 		if (agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()) {
@@ -177,6 +181,51 @@ public class CSUSearch extends Search {
 			hangUpTime = 0;
 			Iterator it = hangUpBuildings.iterator();
 			if(it.hasNext()) unsearchedBuildings.add((EntityID) it.next());
+		}
+		//防止多个at选择同一个建筑
+		if(this.result != null){
+			Building building = (Building)this.worldInfo.getEntity(this.result);
+			int buriedHumanNum = worldInfo.getBuriedHumans(building).size();
+			int rescuingATNum = 0;
+			Set<Entity> entities = new HashSet<Entity>(worldInfo.getEntitiesOfType(AMBULANCE_TEAM));
+			for(Entity entity : entities){
+				AmbulanceTeam at = (AmbulanceTeam)entity;
+				if(worldInfo.getEntity(at.getPosition()) == worldInfo.getEntity(this.result)) rescuingATNum++;
+			}
+			if(rescuingATNum >= buriedHumanNum && rescuingATNum != 0) targetRepeat = true;
+			if(targetRepeat){
+				EntityID lastTarget = this.result;
+				optimalBuildings.remove(this.result);
+				secondaryBuildings.remove(this.result);
+				unsearchedBuildings.remove(this.result);
+				if(calcOptimalTarget()){
+					if(CSUConstants.DEBUG_AT_SEARCH){
+						targetTime = 0;
+						building = (Building) worldInfo.getEntity(result);
+						optimalBuildings.add(lastTarget);
+						System.out.println("重复目标换为最优目标:"+building.getID());
+					}
+				}else if(calcSecondaryTarget()){
+					if(CSUConstants.DEBUG_AT_SEARCH){
+						targetTime = 0;
+						building = (Building) worldInfo.getEntity(result);
+						secondaryBuildings.add(lastTarget);
+						System.out.println("重复目标换为次优目标:"+building.getID());
+					}
+				}else if(calcUnsearchedTarget()){
+					targetTime = 0;
+					if (CSUConstants.DEBUG_AT_SEARCH){
+						building = (Building) worldInfo.getEntity(result);
+						unsearchedBuildings.add(lastTarget);
+						System.out.println("重复目标换为普通目标:"+building.getID());
+					}
+				}else{
+					if(CSUConstants.DEBUG_AT_SEARCH){
+						System.out.println("当前无合适替换重复目标");
+					}
+				}
+				return this;
+			}
 		}
 		//最高级抢占次级需要
 		if(searchedBuildings.contains(this.result) || this.result == null){
@@ -334,13 +383,21 @@ public class CSUSearch extends Search {
 //			Collection<EntityID> toRemove = new HashSet<>(optimalBuildings);
 //			this.reset();
 //			unsearchedBuildings.removeAll(toRemove);
+				for (EntityID id : optimalBuildings){
+					if(worldInfo.getEntity(id) instanceof Building){
+						Building building = (Building) worldInfo.getEntity(id);
+						messageManager.addMessage(new MessageBuilding(false,building));
+					}
+
+				}
+
 				return false;
 			}
 		}
 		return false;
 	}
 
-	//todo:次级目标:获取声音范围内的building加入列表,逐个搜索直到搜到人，对比entityid，是则清空建筑列表
+	//次级目标:获取声音范围内的building加入列表
 	private boolean calcSecondaryTarget(){
 		//this.result = null;
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
@@ -364,6 +421,13 @@ public class CSUSearch extends Search {
 //				this.reset();
 //				unsearchedBuildings.removeAll(toRemove);
 //				return false;
+				for (EntityID id : optimalBuildings){
+					if(worldInfo.getEntity(id) instanceof Building){
+						Building building = (Building) worldInfo.getEntity(id);
+						messageManager.addMessage(new MessageBuilding(false,building));
+					}
+
+				}
 			}
 		}
 		return false;
@@ -542,19 +606,21 @@ public class CSUSearch extends Search {
 		for (EntityID civID : civlianIDs) {
 			if (worldInfo.getEntity(agentInfo.getID()) instanceof Building){
 				Building building = (Building) worldInfo.getEntity(civID);
-				if(!searchedBuildings.contains(building) && !searchedBuildings.contains(building)){
-					searchedBuildings.add(building.getID());
+				if(!searchedBuildings.contains(building)){
+					optimalBuildings.add(building.getID());
+					unsearchedBuildings.remove(building.getID());
 				}
 			}
 		}
 	}
 
-	//todo:其次是听到声音范围的建筑
-	private void updateOrdinartBuildings(){
+	//听力范围的建筑
+	private void updateSecondaryBuildings(){
 		if(!heardCivilians.isEmpty()){
 			for (EntityID entityID: unsearchedBuildings){
 				if(getDistanceFrom(entityID) <= voiceRange){
 					secondaryBuildings.add(entityID);
+					unsearchedBuildings.add(entityID);
 				}
 			}
 		}
