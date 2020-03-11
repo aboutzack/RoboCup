@@ -339,7 +339,9 @@ YBC：修改detector的refuge选择，接着修改警察的判stuck以及被卡�
 CGY:结合csu_2016和mrl代码，初步完成WorldHelper，引入16年的许多依赖，实现16年的directionBasedTargetSelector<br>
 
 2020年3月10日
+
 GYJ：测试,完善search<br>
 
 20202年3月11日
-GYJ：调试发布search<br>
+
+GYJ：调试发布search<br>CRF：结合ActionFireFighting思考灭火位置策略。<br>
