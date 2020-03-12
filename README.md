@@ -346,3 +346,6 @@ GYJ：测试,完善search<br>
 
 GYJ：调试发布search<br>CRF：结合ActionFireFighting思考灭火位置策略。<br>
 CGY:写stuckHelper和修改astar<br>
+
+2020年3月12日
+CGY:写stuckHelper,修复bug<br>
