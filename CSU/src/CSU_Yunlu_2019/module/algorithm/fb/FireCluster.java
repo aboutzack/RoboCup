@@ -38,23 +38,11 @@ public class FireCluster extends Cluster {
 
     @Override
     public void updateConvexHull() {
-        // TODO: 3/4/20 直接重新算快还是一个个算快
-        //根据本回合删除的entities更新convexHull
-        for (StandardEntity entity : removedEntities) {
-            if (entity instanceof Building) {
-                Building building = (Building) entity;
-                for (int i = 0; i < building.getApexList().length; i += 2) {
-                    convexHull.removePoint(building.getApexList()[i], building.getApexList()[i + 1]);
-                }
-            }
-        }
-        //根据本回合新增的entities更新convexHull
-        for (StandardEntity entity : newEntities) {
-            if (entity instanceof Building) {
-                Building building = (Building) entity;
-                for (int i = 0; i < building.getApexList().length; i += 2) {
-                    convexHull.addPoint(building.getApexList()[i], building.getApexList()[i + 1]);
-                }
+        //重新计算convexHull
+        convexHull = new CompositeConvexHull();
+        for (Building building : buildings) {
+            for (int i = 0; i < building.getApexList().length; i += 2) {
+                convexHull.addPoint(building.getApexList()[i], building.getApexList()[i + 1]);
             }
         }
         this.convexObject.setConvexHullPolygon(convexHull.getConvexPolygon());

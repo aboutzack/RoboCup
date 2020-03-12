@@ -167,7 +167,7 @@ public class CSUFireClustering extends DynamicClustering {
                 if (cluster != null) {
                     cluster.remove(building);
                     entityClusterMap.remove(building.getID());//edited by sajjad, 2 lines shifted up
-                    if (cluster.entities.isEmpty()) {
+                    if (cluster.getBuildings().isEmpty()) {
                         clusters.remove(cluster);
                     }
                 }

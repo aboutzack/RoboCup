@@ -145,13 +145,9 @@ public class CompositeConvexHull implements IConvexHull {
             addedPoints.clear();
             removedPoints.clear();
 
-            if (points.size() > 0) {
-                List<Point2D> point2ds = convertPoints(points);
-                Polygon2D polygon2d = jarvisMarchCalculator.convexHull(point2ds);
-                returnValue = convertPolygon2d(polygon2d);
-            }else {
-                returnValue = new Polygon();
-            }
+            List<Point2D> point2ds = convertPoints(points);
+            Polygon2D polygon2d = jarvisMarchCalculator.convexHull(point2ds);
+            returnValue = convertPolygon2d(polygon2d);
         }
 
         return returnValue;
