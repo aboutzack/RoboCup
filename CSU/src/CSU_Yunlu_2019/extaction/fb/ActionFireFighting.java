@@ -20,6 +20,8 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
+
+import javax.swing.text.Position;
 import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
@@ -176,6 +178,16 @@ public class ActionFireFighting extends ExtAction
         return this;
     }
 
+    /** 判断是否需要refill水（需要refill就换水），是否需要休息（需要休息就换水），该火警是否为空（为空就换水）
+     * 调用了needRefill->calcRefill  needRest->calcRefugeAction
+     * both : calcExtinguish    updateWater
+     *
+     * fb每个智能体可以具有的动作为：
+     *     动作类：refill、getMoveAction
+     *     计算类：calcRefugeAction、calcHydrantAction、calcRefugeAndHydrantAction、calcExtinguish
+     *
+     * */
+
     @Override
     public ExtAction calc()
     {
@@ -213,15 +225,19 @@ public class ActionFireFighting extends ExtAction
         return this;
     }
 
+    /** target为空 */
     private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
     {/*System.out.println("\n********fireExtinguish00000*******\n");*/
     	EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
-        
+
+        //当前位置的距离小于最大的灭火距离就灭火
         if(this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)) < this.maxExtinguishDistance) {
-		//System.out.println("\n********fireExtinguish11111*******\n");
+            //System.out.println(this.agentInfo.getID()+" is extinguishing and the distance is "+this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)));
+		    //System.out.println("\n********fireExtinguish11111*******\n");
         	return new ActionExtinguish(target, this.maxExtinguishPower);
         }
+
 
         //跑出火区
         StandardEntity standardEntity = this.worldInfo.getEntity(agentPosition);
@@ -240,9 +256,12 @@ public class ActionFireFighting extends ExtAction
             }
         }
 
-        //如果人就在避难所
+
+
+        //如果火警在避难所
         if (StandardEntityURN.REFUGE == positionEntity.getStandardURN())
         {
+//            System.out.println(agent.getID()+" is in a refuge=========");
             if(agent.getWater() < 0.9*maxExtinguishPower){
                 return new ActionRefill();
             }
@@ -251,6 +270,19 @@ public class ActionFireFighting extends ExtAction
             {
                 return action;
             }
+        }
+
+        //如果火警在道路上且target为null
+        if (StandardEntityURN.ROAD == positionEntity.getStandardURN()) {
+//            System.out.println(agent.getID()+" is on a road and its target is "+this.target);
+            if (this.target == null){
+                return new ActionRefill();
+            }
+        }
+
+        //如果在blockade中
+        if (StandardEntityURN.BLOCKADE == positionEntity.getStandardURN()){
+//            System.out.println(agent+"--------------");
         }
 
 //        List<StandardEntity> neighbourBuilding = new ArrayList<>();
@@ -280,15 +312,36 @@ public class ActionFireFighting extends ExtAction
                     }
                 }
             }
-
         }
 
-        if(isInBlockade(agent) && dangerBuilding.size() > 0){
-            FierynessSorter fierynessSorter = new FierynessSorter();
-            Collections.sort(dangerBuilding, fierynessSorter);   //未测试
-	    //System.out.println("\n********fireExtinguish22222*******\n");
-            return new ActionExtinguish(dangerBuilding.get(0).getID(), this.calcExtinguishTargetWater(dangerBuilding.get(0).getID()));
+        //如果火警在建筑物内
+        if (StandardEntityURN.BUILDING == positionEntity.getStandardURN()){
+            //System.out.println(agent.getID()+" is in a building ~~~~~~~~~~~~~~");
+            if (burningBuilding.size() > 0){
+                FierynessSorter fierynessSorter = new FierynessSorter();
+                Collections.sort(burningBuilding, fierynessSorter);
+                Action action = this.getMoveAction(pathPlanning,agentPosition,burningBuilding.get(0).getID());
+                if (action != null)
+                {
+                    return action;
+                }
+            }
+            return new ActionRefill();
         }
+
+        //如果agent被阻挡
+        if (isInBlockade(agent)){
+//            System.out.println(agent+" is being blocked");
+            //给pf 发送信息
+            if (dangerBuilding.size() > 0){
+                FierynessSorter fierynessSorter = new FierynessSorter();
+                Collections.sort(dangerBuilding, fierynessSorter);   //未测试
+                //System.out.println("\n********fireExtinguish22222*******\n");
+                return new ActionExtinguish(dangerBuilding.get(0).getID(), this.calcExtinguishTargetWater(dangerBuilding.get(0).getID()));
+            }
+        }
+
+        //有正在燃烧的建筑物
         if (burningBuilding.size() > 0)
         {
             FierynessSorter fierynessSorter = new FierynessSorter();
@@ -325,6 +378,7 @@ public class ActionFireFighting extends ExtAction
         return null;
     }
 
+    /** 判断是否需要水 加水 */
     private boolean needRefill(FireBrigade agent, boolean refillFlag)
     {
         if (refillFlag)
@@ -334,30 +388,6 @@ public class ActionFireFighting extends ExtAction
         }
         return agent.getWater() <= this.refillRequest;
     }
-
-    private boolean needRest(Human agent)
-    {
-        int hp = agent.getHP();
-        int damage = agent.getDamage();
-        if (hp == 0 || damage == 0)
-        {
-            return false;
-        }
-        int activeTime = (hp / damage) + ((hp % damage) != 0 ? 1 : 0);
-        if (this.kernelTime == -1)
-        {
-            try
-            {
-                this.kernelTime = this.scenarioInfo.getKernelTimesteps();
-            }
-            catch (NoSuchConfigOptionException e)
-            {
-                this.kernelTime = -1;
-            }
-        }
-        return damage >= this.thresholdRest || (activeTime + this.agentInfo.getTime()) < this.kernelTime;
-    }
-
     private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
     {
         StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
@@ -394,6 +424,32 @@ public class ActionFireFighting extends ExtAction
 //        }
 //        return null;
     }
+
+    /** 判断是否需要休息 */
+    private boolean needRest(Human agent)
+    {
+        int hp = agent.getHP();
+        int damage = agent.getDamage();
+        if (hp == 0 || damage == 0)
+        {
+            return false;
+        }
+        int activeTime = (hp / damage) + ((hp % damage) != 0 ? 1 : 0);
+        if (this.kernelTime == -1)
+        {
+            try
+            {
+                this.kernelTime = this.scenarioInfo.getKernelTimesteps();
+            }
+            catch (NoSuchConfigOptionException e)
+            {
+                this.kernelTime = -1;
+            }
+        }
+        return damage >= this.thresholdRest || (activeTime + this.agentInfo.getTime()) < this.kernelTime;
+    }
+
+
 
     private Action calcRefugeAndHydrantAction(Human human, PathPlanning pathPlanning, EntityID target)
     {
@@ -640,7 +696,6 @@ public class ActionFireFighting extends ExtAction
             this.fireBrigadesWaterMap.put(entity.getID(), fireBrigade.getWater());
         }
     }
-
 }
 
 
