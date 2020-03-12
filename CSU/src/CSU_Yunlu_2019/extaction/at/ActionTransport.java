@@ -37,9 +37,13 @@ public class ActionTransport extends ExtAction {
 	private int thresholdRest;
 	private int kernelTime;
 	private EntityID target;
-
-	private DebugLog logger;
 	private StuckAvoid stuckAvoid;
+	//----------------------该类的作用就是确定一个最优的行动存进result-----------------------------
+	//----------------------------------------------------------------------------------------
+	//(父变量)Action result;//目标行动
+	//----------------------------------------------------------------------------------------
+	//private DebugLog logger;
+
 
 	public ActionTransport(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
 						   ModuleManager moduleManager, DevelopData developData) {
@@ -61,10 +65,11 @@ public class ActionTransport extends ExtAction {
 			break;
 		}
 
-		logger = new DebugLog(agentInfo);
+		//logger = new DebugLog(agentInfo);
 		stuckAvoid = new StuckAvoid(agentInfo, worldInfo);
 	}
 
+	//预计算执行的方法
 	public ExtAction precompute(PrecomputeData precomputeData) {
 		super.precompute(precomputeData);
 		if (this.getCountPrecompute() >= 2) {
@@ -116,9 +121,9 @@ public class ActionTransport extends ExtAction {
 		return this;
 	}
 
-	@Override
-	public ExtAction setTarget(EntityID target) {// 设置目标，通过传入的target来进行设置目标
-		this.target = null;
+	@Override// 设置目标，通过HumanDetector传入的target来进行设置目标
+	public ExtAction setTarget(EntityID target) {
+		this.target = null;//？？？
 		if (target != null) {
 			StandardEntity entity = this.worldInfo.getEntity(target);
 			if (entity instanceof Human || entity instanceof Area) {
@@ -129,31 +134,33 @@ public class ActionTransport extends ExtAction {
 		return this;
 	}
 
-	@Override
+	@Override//todo:没读完
 	public ExtAction calc() {// 整个执行策略
 		this.result = null;
-		AmbulanceTeam agent = (AmbulanceTeam) this.agentInfo.me();
+		AmbulanceTeam me = (AmbulanceTeam) this.agentInfo.me();
 		Human transportHuman = this.agentInfo.someoneOnBoard();
 
+		//如果背着人
 		if (transportHuman != null) {
-			this.result = this.calcUnload(agent, this.pathPlanning, transportHuman, this.target);// -------放下市民
+			//计算是否要放下市民
+			this.result = this.calcUnload(me, this.pathPlanning, transportHuman, this.target);
 		}
-
-		if ((this.result == null) && this.needRest(agent)) {
+		if ((this.result == null) && this.needRest(me)) {
 			EntityID areaID = this.convertArea(this.target);
 			ArrayList<EntityID> targets = new ArrayList<>();
 			if (areaID != null) {
 				targets.add(areaID);
 			}
-			this.result = this.calcRefugeAction(agent, this.pathPlanning, targets, false);
+			//在新target里找refuge
+			this.result = this.calcRefugeAction(me, this.pathPlanning, targets, false);
 		}
-
+		//targets里没找到refuge||target不为空
 		if ((this.result == null) && this.target != null) {
-			this.result = this.calcRescue(agent, this.pathPlanning, this.target);
+			this.result = this.calcRescue(me, this.pathPlanning, this.target);
 		}
 		
 		if (((this.result instanceof ActionMove) || (transportHuman != null) ) &&
-			stuckAvoid.check(agent.getPosition())) {
+			stuckAvoid.check(me.getPosition())) {
 			this.result = stuckAvoid.avoidStuck(this.pathPlanning);
 			if (this.result != null)
 				return this;
@@ -162,6 +169,7 @@ public class ActionTransport extends ExtAction {
 		return this;
 	}
 
+	//todo:没读完
 	// 这边是是否会在途中死亡的救援-----------------可以用的-------------------------------
 	protected boolean willDiedWhenRscued(Human human) {
 		//System.out.println("human.isBuriednessDefined():" + human.isBuriednessDefined());
@@ -177,6 +185,7 @@ public class ActionTransport extends ExtAction {
 		return false;
 	}
 
+	//todo:估计死亡时间(没读完)
 	public int estimatedDeathTime(int hp, double dmg, int updatetime) {
 		int agenttime = 1000;
 		int count = agenttime - updatetime;
@@ -204,30 +213,37 @@ public class ActionTransport extends ExtAction {
 		return 1000;
 	}
 
-	// cywEnd
-	// -------------------------这边是可以采用的
-	// ---------------------------------------------------------------------------------
-	private Action calcRescue(AmbulanceTeam agent, PathPlanning pathPlanning, EntityID targetID) {// ------------救援挖
-		StandardEntity targetEntity = this.worldInfo.getEntity(targetID);
+	//根据目标位置类型和目标状态确定下一步行动是挖掘废墟，背人走还是只移动
+	private Action calcRescue(AmbulanceTeam agent, PathPlanning pathPlanning, EntityID target) {
+		StandardEntity targetEntity = this.worldInfo.getEntity(target);
 		if (targetEntity == null) {
 			return null;
 		}
+		//获取agent位置
 		EntityID agentPosition = agent.getPosition();
+		//如果target是人
 		if (targetEntity instanceof Human) {
 			Human human = (Human) targetEntity;
+			//如果位置未知
 			if (!human.isPositionDefined()) {
 				return null;
 			}
-			if (human.isHPDefined() && human.getHP() == 0 ) {// 如果在路中就会死亡
+			// 如果在路中就会死亡
+			if (human.isHPDefined() && human.getHP() == 0 ) {
 				return null;
 			}
+			//获取人的未知
 			EntityID targetPosition = human.getPosition();
+			//如果agent走到了目标未位置
 			if (agentPosition.getValue() == targetPosition.getValue()) {
+				//如果human还被埋着，先把它挖出来
 				if (human.isBuriednessDefined() && human.getBuriedness() > 0) {
 					return new ActionRescue(human);
+					//已经挖出来了，如果是civilian，背他去refuge
 				} else if (human.getStandardURN() == CIVILIAN) {
 					return new ActionLoad(human.getID());
 				}
+				//如果还没走到目标位置，先走过去
 			} else {
 				List<EntityID> path = pathPlanning.getResult(agentPosition, targetPosition);
 				if (path != null && path.size() > 0) {
@@ -236,12 +252,14 @@ public class ActionTransport extends ExtAction {
 			}
 			return null;
 		}
+		//如果target是路障，把位置赋值给targetEntity
 		if (targetEntity.getStandardURN() == BLOCKADE) {
 			Blockade blockade = (Blockade) targetEntity;
-			if (blockade.isPositionDefined()) {
+			if (blockade.isPositionDefined()) {//如果已知位置，赋给targetEntity
 				targetEntity = this.worldInfo.getEntity(blockade.getPosition());
 			}
 		}
+		//如果target是area，直接寻路
 		if (targetEntity instanceof Area) {
 			List<EntityID> path = pathPlanning.getResult(agentPosition, targetEntity.getID());
 			if (path != null && path.size() > 0) {
@@ -251,18 +269,21 @@ public class ActionTransport extends ExtAction {
 		return null;
 	}
 
-	private Action calcUnload(AmbulanceTeam agent, PathPlanning pathPlanning, Human transportHuman, EntityID targetID) {// 这个函数的作用就是用来
+	//考虑把人放下 todo 写的巨乱无比
+	private Action calcUnload(AmbulanceTeam agent, PathPlanning pathPlanning, Human transportHuman, EntityID targetID) {
+		//如果背上没人，直接退出
 		if (transportHuman == null) {
 			return null;
 		}
+		//如果背上的人hp已经掉到了0
 		if (transportHuman.isHPDefined() && transportHuman.getHP() == 0) {
-			return new ActionUnload();// 会NULL，这边是否Defined问一问学长
+			return new ActionUnload();// 放下，会NULL，这边是否Defined问一问学长
 		}
-
 		EntityID agentPosition = agent.getPosition();
+		//获取当前位置的地形
 		StandardEntity position = this.worldInfo.getEntity(agentPosition);
 
-
+		//如果掉血速度为0
 		if (transportHuman.isDamageDefined() &&
 			position.getStandardURN() == ROAD &&
 			transportHuman.getDamage() == 0) {
@@ -270,13 +291,15 @@ public class ActionTransport extends ExtAction {
 			Human onloadhuman=(Human)this.worldInfo.getEntity(human);;
 			//System.out.println("Damage****new:"+onloadhuman.getDamage()+"DamegePor"+onloadhuman.getDamageProperty().getValue());
 			//System.out.println("Damage====old"+transportHuman.getDamage());
-			return new ActionUnload();
+			return new ActionUnload();//放下
 		}
 
+		//target不为空或者把人背到了目的地
 		if (targetID == null || transportHuman.getID().getValue() == targetID.getValue()) {
+			//如果在refuge里
 			if (position != null && position.getStandardURN() == REFUGE) {
-				return new ActionUnload();// 在救助站里面的话也继续和没血条一样
-			} else {
+				return new ActionUnload();//放下
+			} else {//否则寻路
 				pathPlanning.setFrom(agentPosition);
 				pathPlanning.setDestination(this.worldInfo.getEntityIDsOfType(REFUGE));
 				List<EntityID> path = pathPlanning.calc().getResult();
@@ -286,19 +309,19 @@ public class ActionTransport extends ExtAction {
 			}
 		}
 
+		//???
 		if (targetID == null) {
 			return null;
 		}
-
+		//获取目标地形
 		StandardEntity targetEntity = this.worldInfo.getEntity(targetID);
-
+		//如果是路障
 		if (targetEntity != null && targetEntity.getStandardURN() == BLOCKADE) {
 			Blockade blockade = (Blockade) targetEntity;
 			if (blockade.isPositionDefined()) {
 				targetEntity = this.worldInfo.getEntity(blockade.getPosition());
 			}
 		}
-
 		if (targetEntity instanceof Area) {
 			if (agentPosition.getValue() == targetID.getValue()) {
 				return new ActionUnload();
@@ -310,6 +333,7 @@ public class ActionTransport extends ExtAction {
 					return new ActionMove(path);
 				}
 			}
+			//？？？
 		} else if (targetEntity instanceof Human) {
 			Human human = (Human) targetEntity;
 			if (human.isPositionDefined()) {
@@ -324,13 +348,14 @@ public class ActionTransport extends ExtAction {
 		}
 		return null;
 	}
-
-	private boolean needRest(Human agent) {// --------只能题是否需要救援，回家,救援的是在燃烧建筑物的人，困的不会死
+	//是否需要救援 --------只能提示否需要救援，回家,救援的是在燃烧建筑物的人，困的不会死
+	private boolean needRest(Human agent) {
 		int hp = agent.getHP();
 		int damage = agent.getDamage();
 		if (hp == 0 || damage == 0) {
 			return false;
 		}
+		//计算掉血到0的时间，计算用的hp向上取整
 		int activeTime = (hp / damage) + ((hp % damage) != 0 ? 1 : 0);
 		if (this.kernelTime == -1) {
 			try {
@@ -342,6 +367,7 @@ public class ActionTransport extends ExtAction {
 		return damage >= this.thresholdRest || (activeTime + this.agentInfo.getTime()) < this.kernelTime;
 	}
 
+	//是human且在area，返回ID的位置。是area，返回原ID。是blockade，返回blockade的位置。
 	private EntityID convertArea(EntityID targetID) {// 返回ID的位置，position
 		StandardEntity entity = this.worldInfo.getEntity(targetID);
 		if (entity == null) {
@@ -366,43 +392,49 @@ public class ActionTransport extends ExtAction {
 		return null;
 	}
 
+	//找到一个refuge，agent先去它还能找到路继续去target，并返回move去该refuge（adf代码）
 	private Action calcRefugeAction(Human human, PathPlanning pathPlanning, Collection<EntityID> targets,
 			boolean isUnload) {
 		EntityID position = human.getPosition();
 		Collection<EntityID> refuges = this.worldInfo.getEntityIDsOfType(StandardEntityURN.REFUGE);
-		int size = refuges.size();
-		if (refuges.contains(position)) {
+		int size = refuges.size();//refuge的数量
+		if (refuges.contains(position)) {//如果当前agent在refuge里，有人放人，没人休息。
 			return isUnload ? new ActionUnload() : new ActionRest();
 		}
+		//不在refuge里，找路去refuge
 		List<EntityID> firstResult = null;
 		while (refuges.size() > 0) {
 			pathPlanning.setFrom(position);
 			pathPlanning.setDestination(refuges);
 			List<EntityID> path = pathPlanning.calc().getResult();
+			//找到了去refuge的路
 			if (path != null && path.size() > 0) {
-				if (firstResult == null) {
+				if (firstResult == null) {//？？？
 					firstResult = new ArrayList<>(path);
 					if (targets == null || targets.isEmpty()) {
 						break;
 					}
 				}
+				//路线终点refuge
 				EntityID refugeID = path.get(path.size() - 1);
 				pathPlanning.setFrom(refugeID);
 				pathPlanning.setDestination(targets);
-				List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();
+				List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();//计算从refuge到传入的target的路径
+				//如果存在从该refuge到当前目标的路，放心大胆地回refuge
 				if (fromRefugeToTarget != null && fromRefugeToTarget.size() > 0) {
 					return new ActionMove(path);
 				}
-				refuges.remove(refugeID);
-				// remove failed
+				refuges.remove(refugeID);//防止下次循环选中算过的refuge
+				//remove失败，跳出循环
 				if (size == refuges.size()) {
 					break;
 				}
 				size = refuges.size();
-			} else {
+			} else {//？？？没找到路直接跳出循环？？？？todo：判断写反了？
 				break;
 			}
 		}
+		//
 		return firstResult != null ? new ActionMove(firstResult) : null;
 	}
 }

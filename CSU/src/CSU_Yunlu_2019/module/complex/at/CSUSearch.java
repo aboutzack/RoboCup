@@ -25,7 +25,9 @@ import java.util.*;
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 /**
- * 同sample的Search，作用为选择一个最优的搜索目标并且返回
+ * @description: decision maker for search target
+ * @author: Yiji-Gao
+ * @Date: 03/09/2020
  */
 public class CSUSearch extends Search {
 	private PathPlanning pathPlanning;
@@ -51,10 +53,12 @@ public class CSUSearch extends Search {
 	//private int roudNum = 0;//回合数
 	//private EntityID lastresult;//上一次的目标
 	private MessageManager messageManager;
-
-	private EntityID result;//寻路结果
-
 	private Area positionArea;//当前地形
+	//----------------------该类的作用就是确定一个最优的的搜索目标存进result------------------------
+	//----------------------------------------------------------------------------------------
+	private EntityID result;//目标搜索建筑
+	//----------------------------------------------------------------------------------------
+
 
 	public CSUSearch(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
 					 DevelopData developData) {
