@@ -44,6 +44,8 @@ public class ActionExtMove extends ExtAction {
     private final int STUCK_THRESHOLD = 2000;//threshold of stuck
     private CSUWorldHelper world;
     private StuckHelper stuckHelper;
+    private boolean stuck = false;//每回合只更新一次
+    private int lastStuckUpdateTime = -1;
 
 
     public ActionExtMove(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
@@ -263,23 +265,32 @@ public class ActionExtMove extends ExtAction {
      * @Date: 2/16/20
      */
     public boolean isStuck(List<EntityID> path) {
-        if (lastMoveTime < scenarioInfo.getKernelAgentsIgnoreuntil()) {
-            return false;
-        }
-        if (path.size() > 0) {
-            EntityID target = path.get(path.size() - 1);
-            if (target.equals(agentInfo.getPosition())) {
+        if (lastStuckUpdateTime == agentInfo.getTime()) {
+            return stuck;
+        }else {
+            lastStuckUpdateTime = agentInfo.getTime();
+            if (lastMoveTime < scenarioInfo.getKernelAgentsIgnoreuntil()) {
+                stuck = false;
                 return false;
             }
-        }
-        Point position = new Point(selfLocation.first(), selfLocation.second());
-        int moveDistance = CSUSelectorTargetByDis.getDistance.distance(position, lastPosition);
-        lastPosition = position;
-        Collection<Blockade> blockadesInRange = world.getBlockadesInRange(STUCK_THRESHOLD);
-        if (moveDistance <= STUCK_THRESHOLD && blockadesInRange != null && !blockadesInRange.isEmpty()) {
-            return true;
-        } else {
-            return false;
+            if (path.size() > 0) {
+                EntityID target = path.get(path.size() - 1);
+                if (target.equals(agentInfo.getPosition())) {
+                    stuck = false;
+                    return false;
+                }
+            }
+            Point position = new Point(selfLocation.first(), selfLocation.second());
+            int moveDistance = CSUSelectorTargetByDis.getDistance.distance(position, lastPosition);
+            lastPosition = position;
+            Collection<Blockade> blockadesInRange = world.getBlockadesInRange(STUCK_THRESHOLD);
+            if (moveDistance <= STUCK_THRESHOLD && blockadesInRange != null && !blockadesInRange.isEmpty()) {
+                stuck = true;
+                return true;
+            } else {
+                stuck = false;
+                return false;
+            }
         }
     }
 }

@@ -2,8 +2,8 @@ package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUDistanceSorter;
-import CSU_Yunlu_2019.util.ambulancehelper.CSUSelectorTargetByDis;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUHurtHumanClassifier;
+import CSU_Yunlu_2019.util.ambulancehelper.CSUSelectorTargetByDis;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
@@ -25,9 +25,7 @@ import rescuecore2.worldmodel.EntityID;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 同mrl
- */
+
 public class CSUHumanDetector extends HumanDetector {
 
     private EntityID result;

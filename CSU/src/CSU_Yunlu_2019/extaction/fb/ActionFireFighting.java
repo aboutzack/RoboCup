@@ -20,11 +20,10 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
-
-import javax.swing.text.Position;
 import java.util.*;
 
-import static rescuecore2.standard.entities.StandardEntityURN.*;
+import static rescuecore2.standard.entities.StandardEntityURN.HYDRANT;
+import static rescuecore2.standard.entities.StandardEntityURN.REFUGE;
 
 public class ActionFireFighting extends ExtAction
 {
@@ -43,12 +42,13 @@ public class ActionFireFighting extends ExtAction
     private List<Building> fireBuildings;       //燃烧的建筑物
     private int areaConstant = 10;                   //面积的系数
     private int temperatureConstant = 15;            //温度的系数
-    private Map<EntityID,Integer> fireBrigadesWaterMap = new HashMap<>();   //每个消防员与其相应水量的键值对
+    private Map<EntityID, Integer> fireBrigadesWaterMap = new HashMap<>();   //每个消防员与其相应水量的键值对
 
-    public ActionFireFighting(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData)
-    {
+    private ExtAction actionExtMove;
+
+    public ActionFireFighting(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData) {
         super(agentInfo, worldInfo, scenarioInfo, moduleManager, developData);
-	this.fireBuildings = new ArrayList<>(); 
+        this.fireBuildings = new ArrayList<>();
         this.maxExtinguishDistance = scenarioInfo.getFireExtinguishMaxDistance();
         this.maxExtinguishPower = scenarioInfo.getFireExtinguishMaxSum();
         this.thresholdRest = developData.getInteger("ActionFireFighting.rest", 100);
@@ -61,17 +61,20 @@ public class ActionFireFighting extends ExtAction
         this.target = null;
 
 
-        switch  (scenarioInfo.getMode()) {
-	            case PRECOMPUTATION_PHASE:
-	                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-	                break;
-	            case PRECOMPUTED:
-	                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-	                break;
-	            case NON_PRECOMPUTE:
-	                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
-	                break;
-	        }
+        switch (scenarioInfo.getMode()) {
+            case PRECOMPUTATION_PHASE:
+                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
+                break;
+            case PRECOMPUTED:
+                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
+                break;
+            case NON_PRECOMPUTE:
+                this.pathPlanning = moduleManager.getModule("ActionFireFighting.PathPlanning", "adf.sample.module.algorithm.SamplePathPlanning");
+                this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
+                break;
+        }
     }
 
     @Override
@@ -83,8 +86,8 @@ public class ActionFireFighting extends ExtAction
             return this;
         }
         this.pathPlanning.precompute(precomputeData);
-        try
-        {
+        this.actionExtMove.precompute(precomputeData);
+        try {
             this.kernelTime = this.scenarioInfo.getKernelTimesteps();
         }
         catch (NoSuchConfigOptionException e)
@@ -123,8 +126,8 @@ public class ActionFireFighting extends ExtAction
             return this;
         }
         this.pathPlanning.preparate();
-        try
-        {
+        this.actionExtMove.preparate();
+        try {
             this.kernelTime = this.scenarioInfo.getKernelTimesteps();
         }
         catch (NoSuchConfigOptionException e)
@@ -143,6 +146,7 @@ public class ActionFireFighting extends ExtAction
             return this;
         }
         this.pathPlanning.updateInfo(messageManager);
+        this.actionExtMove.updateInfo(messageManager);
         //更新unSearchBuildings和fireBuildings
         List<Building> tempBuildings = new ArrayList<>();   //用来暂存着火的建筑
         for(EntityID id : this.worldInfo.getChanged().getChangedEntities()){
@@ -216,8 +220,7 @@ public class ActionFireFighting extends ExtAction
             }
         }
 
-        if (this.target == null)
-        {
+        if (this.target == null) {
             this.updateWater();
             return this;
         }
@@ -225,10 +228,8 @@ public class ActionFireFighting extends ExtAction
         return this;
     }
 
-    /** target为空 */
-    private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
-    {/*System.out.println("\n********fireExtinguish00000*******\n");*/
-    	EntityID agentPosition = agent.getPosition();
+    private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {/*System.out.println("\n********fireExtinguish00000*******\n");*/
+        EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
 
         //当前位置的距离小于最大的灭火距离就灭火
@@ -238,10 +239,9 @@ public class ActionFireFighting extends ExtAction
         	return new ActionExtinguish(target, this.maxExtinguishPower);
         }
 
-
         //跑出火区
         StandardEntity standardEntity = this.worldInfo.getEntity(agentPosition);
-        if(standardEntity instanceof Building && ((Building) standardEntity).isOnFire()) {
+        if (standardEntity instanceof Building && ((Building) standardEntity).isOnFire()) {
             List<StandardEntity> noBuilding = new ArrayList<>();
             for (StandardEntity en : this.worldInfo.getAllEntities()) {
                 if (!(en instanceof Building)) {
@@ -312,21 +312,7 @@ public class ActionFireFighting extends ExtAction
                     }
                 }
             }
-        }
 
-        //如果火警在建筑物内
-        if (StandardEntityURN.BUILDING == positionEntity.getStandardURN()){
-            //System.out.println(agent.getID()+" is in a building ~~~~~~~~~~~~~~");
-            if (burningBuilding.size() > 0){
-                FierynessSorter fierynessSorter = new FierynessSorter();
-                Collections.sort(burningBuilding, fierynessSorter);
-                Action action = this.getMoveAction(pathPlanning,agentPosition,burningBuilding.get(0).getID());
-                if (action != null)
-                {
-                    return action;
-                }
-            }
-            return new ActionRefill();
         }
 
         //如果agent被阻挡
@@ -358,22 +344,31 @@ public class ActionFireFighting extends ExtAction
         return this.getMoveAction(pathPlanning, agentPosition, target);
     }
 
-    private Action getMoveAction(PathPlanning pathPlanning, EntityID from, EntityID target)
-    {
+    private Action getMoveAction(PathPlanning pathPlanning, EntityID from, EntityID target) {
         pathPlanning.setFrom(from);
         pathPlanning.setDestination(target);
         List<EntityID> path = pathPlanning.calc().getResult();
-        if (path != null && path.size() > 0)
-        {
+        return getMoveAction(path);
+    }
+
+    /**
+     * 调用actionExtMove,实现判断stuck和通过stuckHelper获取路径
+     */
+    private Action getMoveAction(List<EntityID> path) {
+        if (path != null && path.size() > 0) {
             StandardEntity entity = this.worldInfo.getEntity(path.get(path.size() - 1));
-            if (entity instanceof Building)
-            {
-                if (entity.getStandardURN() != StandardEntityURN.REFUGE)
-                {
+            if (entity instanceof Building) {
+                if (entity.getStandardURN() != StandardEntityURN.REFUGE) {
                     path.remove(path.size() - 1);
                 }
             }
-            return new ActionMove(path);
+            if (!path.isEmpty()) {
+                ActionMove moveAction = (ActionMove) actionExtMove.setTarget(path.get(path.size() - 1)).calc().getAction();
+                if (moveAction != null) {
+                    return moveAction;
+                }
+            }
+            return null;
         }
         return null;
     }
@@ -475,8 +470,7 @@ public class ActionFireFighting extends ExtAction
         );
     }
 
-    private Action calcHydrantAction(Human human, PathPlanning pathPlanning, EntityID target)
-    {
+    private Action calcHydrantAction(Human human, PathPlanning pathPlanning, EntityID target) {
         Collection<EntityID> hydrants = this.worldInfo.getEntityIDsOfType(HYDRANT);
         hydrants.remove(human.getPosition());
         return this.calcSupplyAction(
@@ -488,52 +482,47 @@ public class ActionFireFighting extends ExtAction
         );
     }
 
-    private Action calcSupplyAction(Human human, PathPlanning pathPlanning, Collection<EntityID> supplyPositions, EntityID target, boolean isRefill)
-    {
+    private Action calcSupplyAction(Human human, PathPlanning pathPlanning, Collection<EntityID> supplyPositions, EntityID target, boolean isRefill) {
         EntityID position = human.getPosition();
-        int size = supplyPositions.size();
-        if (supplyPositions.contains(position))
-        {
+//        int size = supplyPositions.size();
+        if (supplyPositions.contains(position)) {
             return isRefill ? new ActionRefill() : new ActionRest();
         }
         List<EntityID> firstResult = null;
-        while (supplyPositions.size() > 0)
-        {
+        while (supplyPositions.size() > 0) {
             pathPlanning.setFrom(position);
             pathPlanning.setDestination(supplyPositions);
             List<EntityID> path = pathPlanning.calc().getResult();
-            if (path != null && path.size() > 0)
-            {
-                if (firstResult == null)
-                {
+            if (path != null && path.size() > 0) {
+                if (firstResult == null) {
                     firstResult = new ArrayList<>(path);
-                    if (target == null)
-                    {
+                    if (target == null) {
                         break;
                     }
                 }
-                EntityID supplyPositionID = path.get(path.size() - 1);
-                pathPlanning.setFrom(supplyPositionID);
-                pathPlanning.setDestination(target);
-                List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();
-                if (fromRefugeToTarget != null && fromRefugeToTarget.size() > 0)
-                {
-                    return new ActionMove(path);
+                Action action = getMoveAction(path);
+                if (action != null) {
+                    return action;
                 }
-                supplyPositions.remove(supplyPositionID);
+//                EntityID supplyPositionID = path.get(path.size() - 1);
+//                pathPlanning.setFrom(supplyPositionID);
+//                pathPlanning.setDestination(target);
+//                List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();
+//                if (fromRefugeToTarget != null && fromRefugeToTarget.size() > 0) {
+//                    return getMoveAction(path);
+//                }
+//                supplyPositions.remove(supplyPositionID);
                 //remove failed
-                if (size == supplyPositions.size())
-                {
-                    break;
-                }
-                size = supplyPositions.size();
+//                if (size == supplyPositions.size()) {
+//                    break;
+//                }
+//                size = supplyPositions.size();
             }
-            else
-            {
-                break;
-            }
+//            } else {
+//                break;
+//            }
         }
-        return firstResult != null ? new ActionMove(firstResult) : null;
+        return firstResult != null ? getMoveAction(firstResult) : null;
     }
 
     /**

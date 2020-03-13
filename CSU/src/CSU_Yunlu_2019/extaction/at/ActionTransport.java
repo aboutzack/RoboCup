@@ -26,8 +26,6 @@ import java.util.List;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
-import CSU_Yunlu_2019.module.algorithm.DebugLog;
-
 /**
  * 修改calc calcRescue calcUnload策略
  */
@@ -38,6 +36,7 @@ public class ActionTransport extends ExtAction {
 	private int kernelTime;
 	private EntityID target;
 	private StuckAvoid stuckAvoid;
+	private ExtAction actionExtMove;
 	//----------------------该类的作用就是确定一个最优的行动存进result-----------------------------
 	//----------------------------------------------------------------------------------------
 	//(父变量)Action result;//目标行动
@@ -54,14 +53,17 @@ public class ActionTransport extends ExtAction {
 		case PRECOMPUTATION_PHASE:
 			this.pathPlanning = moduleManager.getModule("ActionTransport.PathPlanning",
 					"adf.sample.module.algorithm.SamplePathPlanning");
+			this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
 			break;
 		case PRECOMPUTED:
 			this.pathPlanning = moduleManager.getModule("ActionTransport.PathPlanning",
 					"adf.sample.module.algorithm.SamplePathPlanning");
+			this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
 			break;
 		case NON_PRECOMPUTE:
 			this.pathPlanning = moduleManager.getModule("ActionTransport.PathPlanning",
 					"adf.sample.module.algorithm.SamplePathPlanning");
+			this.actionExtMove = moduleManager.getExtAction("TacticsFireBrigade.ActionExtMove", "adf.sample.extaction.ActionExtMove");
 			break;
 		}
 
@@ -247,7 +249,7 @@ public class ActionTransport extends ExtAction {
 			} else {
 				List<EntityID> path = pathPlanning.getResult(agentPosition, targetPosition);
 				if (path != null && path.size() > 0) {
-					return new ActionMove(path);
+					return getMoveAction(path);
 				}
 			}
 			return null;
@@ -263,7 +265,7 @@ public class ActionTransport extends ExtAction {
 		if (targetEntity instanceof Area) {
 			List<EntityID> path = pathPlanning.getResult(agentPosition, targetEntity.getID());
 			if (path != null && path.size() > 0) {
-				this.result = new ActionMove(path);
+				this.result = getMoveAction(path);
 			}
 		}
 		return null;
@@ -304,7 +306,7 @@ public class ActionTransport extends ExtAction {
 				pathPlanning.setDestination(this.worldInfo.getEntityIDsOfType(REFUGE));
 				List<EntityID> path = pathPlanning.calc().getResult();
 				if (path != null && path.size() > 0) {
-					return new ActionMove(path);
+					return getMoveAction(path);
 				}
 			}
 		}
@@ -330,7 +332,7 @@ public class ActionTransport extends ExtAction {
 				pathPlanning.setDestination(targetID);
 				List<EntityID> path = pathPlanning.calc().getResult();
 				if (path != null && path.size() > 0) {
-					return new ActionMove(path);
+					return getMoveAction(path);
 				}
 			}
 			//？？？
@@ -343,7 +345,7 @@ public class ActionTransport extends ExtAction {
 			pathPlanning.setDestination(this.worldInfo.getEntityIDsOfType(REFUGE));
 			List<EntityID> path = pathPlanning.calc().getResult();
 			if (path != null && path.size() > 0) {
-				return new ActionMove(path);
+				return getMoveAction(path);
 			}
 		}
 		return null;
@@ -422,7 +424,7 @@ public class ActionTransport extends ExtAction {
 				List<EntityID> fromRefugeToTarget = pathPlanning.calc().getResult();//计算从refuge到传入的target的路径
 				//如果存在从该refuge到当前目标的路，放心大胆地回refuge
 				if (fromRefugeToTarget != null && fromRefugeToTarget.size() > 0) {
-					return new ActionMove(path);
+					return getMoveAction(path);
 				}
 				refuges.remove(refugeID);//防止下次循环选中算过的refuge
 				//remove失败，跳出循环
@@ -435,6 +437,35 @@ public class ActionTransport extends ExtAction {
 			}
 		}
 		//
-		return firstResult != null ? new ActionMove(firstResult) : null;
+		return firstResult != null ? getMoveAction(firstResult) : null;
+	}
+
+	private Action getMoveAction(PathPlanning pathPlanning, EntityID from, EntityID target) {
+		pathPlanning.setFrom(from);
+		pathPlanning.setDestination(target);
+		List<EntityID> path = pathPlanning.calc().getResult();
+		return getMoveAction(path);
+	}
+
+	/**
+	 * 调用actionExtMove,实现判断stuck和通过stuckHelper获取路径
+	 */
+	private Action getMoveAction(List<EntityID> path) {
+		if (path != null && path.size() > 0) {
+			StandardEntity entity = this.worldInfo.getEntity(path.get(path.size() - 1));
+			if (entity instanceof Building) {
+				if (entity.getStandardURN() != StandardEntityURN.REFUGE) {
+					path.remove(path.size() - 1);
+				}
+			}
+			if (!path.isEmpty()) {
+				ActionMove moveAction = (ActionMove) actionExtMove.setTarget(path.get(path.size() - 1)).calc().getAction();
+				if (moveAction != null) {
+					return moveAction;
+				}
+			}
+			return null;
+		}
+		return null;
 	}
 }

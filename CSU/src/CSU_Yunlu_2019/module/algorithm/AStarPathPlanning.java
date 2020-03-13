@@ -2,8 +2,10 @@
 package CSU_Yunlu_2019.module.algorithm;
 
 import CSU_Yunlu_2019.CSUConstants;
-import CSU_Yunlu_2019.standard.CSURoadHelper;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.world.CSUWorldHelper;
+import CSU_Yunlu_2019.world.object.CSUEdge;
+import CSU_Yunlu_2019.world.object.CSURoad;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
@@ -50,8 +52,16 @@ public class AStarPathPlanning  extends PathPlanning {
     private static final double UNKNOWN = 1.2;
     private static final double IMPASSABLE = 100;
     private static final double BURNING = 100;
+
+    private CSUWorldHelper world;
+
     public AStarPathPlanning(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
+        if (agentInfo.me() instanceof FireBrigade) {
+            world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+        } else {
+            world = moduleManager.getModule("WorldHelper.Default", CSUConstants.WORLD_HELPER_DEFAULT);
+        }
         this.init();
     }
 
@@ -112,18 +122,30 @@ public class AStarPathPlanning  extends PathPlanning {
     @Override
     public PathPlanning precompute(PrecomputeData precomputeData) {
         super.precompute(precomputeData);
+        if (this.getCountPrecompute() >= 2) {
+            return this;
+        }
+        this.world.precompute(precomputeData);
         return this;
     }
 
     @Override
     public PathPlanning resume(PrecomputeData precomputeData) {
         super.resume(precomputeData);
+        if (this.getCountResume() >= 2) {
+            return this;
+        }
+        this.world.resume(precomputeData);
         return this;
     }
 
     @Override
     public PathPlanning preparate() {
         super.preparate();
+        if (this.getCountPreparate() >= 2) {
+            return this;
+        }
+        this.world.preparate();
         return this;
     }
 
@@ -133,6 +155,7 @@ public class AStarPathPlanning  extends PathPlanning {
         if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
+        this.world.updateInfo(messageManager);
         for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
             Class<? extends CommunicationMessage> messageClass = message.getClass();
             if (messageClass == MessageRoad.class) {
@@ -162,7 +185,18 @@ public class AStarPathPlanning  extends PathPlanning {
         if (lastNearestTarget != null && targets.contains(lastNearestTarget)) {
             Area target = (Area) worldInfo.getEntity(lastNearestTarget);
             planPath = new ArrayList<>(getPath(sourceArea, target));
-            result = planPath;
+            //检测第第一条edge是否可以通过
+            if (planPath != null && !planPath.isEmpty()) {
+                CSURoad selfRoad = world.getCsuRoad(agentInfo.getPosition());
+                if (selfRoad != null) {
+                    EntityID firstToRoad = previousPath.get(0);
+                    List<CSUEdge> toEdges = selfRoad.getCsuEdgesTo(firstToRoad);
+                    if (toEdges != null && !toEdges.isEmpty() && !toEdges.get(0).isBlocked()) {
+                        result = planPath;
+                    }
+                }
+                result = planPath;
+            }
         }
         if (CSUConstants.DEBUG_PATH_PLANNING) {
             System.out.println("\r<br> lastNearestTarget执行耗时 : "+(System.currentTimeMillis()-b)/1000f+" 秒 ");
@@ -179,8 +213,17 @@ public class AStarPathPlanning  extends PathPlanning {
                 lastNearestTarget = target1;
                 planPath = new ArrayList<>(getPath(sourceArea, target));
                 if (!planPath.isEmpty()) {
+                    //由于road的isPassable只是粗略判断,还需要判断路径的第一条edge是否可通
+                    CSURoad selfRoad = world.getCsuRoad(agentInfo.getPosition());
+                    if (selfRoad != null) {
+                        EntityID firstToRoad = planPath.get(0);
+                        List<CSUEdge> toEdges = selfRoad.getCsuEdgesTo(firstToRoad);
+                        if (toEdges != null && !toEdges.isEmpty() && !toEdges.get(0).isBlocked()) {
+                            result = planPath;
+                            break;
+                        }
+                    }
                     result = planPath;
-                    break;
                 }
             }
             if (CSUConstants.DEBUG_PATH_PLANNING) {
@@ -236,14 +279,13 @@ public class AStarPathPlanning  extends PathPlanning {
             //删点已经走过的路
             previousPath.removeAll(temp);
             boolean stillPassable = true;
-            //检测路点是否可通过
+            //粗略检测路点是否可通过
             for (int i = 0; i < Math.min(3, previousPath.size()); i++) {
                 EntityID id = previousPath.get(i);
                 Area area = (Area)worldInfo.getEntity(id);
                 if (area instanceof Road && area.isBlockadesDefined()){
-                    CSURoadHelper roadHelper = new CSURoadHelper((Road) area, worldInfo, scenarioInfo);
-                    roadHelper.update();
-                    if (!roadHelper.isPassable()) {
+                    CSURoad csuRoad = world.getCsuRoad(id);
+                    if (!csuRoad.isPassable()) {
                         stillPassable = false;
                         passableRoads.remove(id);
                         impassableRoads.add(id);
@@ -426,9 +468,8 @@ public class AStarPathPlanning  extends PathPlanning {
                         if (passableRoads.contains(id)) {
                             cost *= PASSABLE;
                         } else if (area.isBlockadesDefined()) {
-                            CSURoadHelper roadHelper = new CSURoadHelper((Road) entity, worldInfo, scenarioInfo);
-                            roadHelper.update();
-                            if (roadHelper.isPassable()) {//可通过
+                            CSURoad csuRoad = world.getCsuRoad(id);
+                            if (csuRoad.isPassable()) {//可通过
                                 // TODO: 2/22/20 判断是否能通过的算法表现并不好
                                 passableRoads.add(id);
                                 impassableRoads.remove(id);

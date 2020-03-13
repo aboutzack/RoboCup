@@ -54,6 +54,11 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             if (sortedBuildings != null && !sortedBuildings.isEmpty()) {
                 this.target = world.getCsuBuilding(sortedBuildings.first().first().first());
                 targetBuilding = new FireBrigadeTarget(targetCluster, this.target);
+                if (CSUConstants.DEBUG_DIRECTION_BASED_TARGET_SELECTOR) {
+                    System.out.println("clusterSize: " + targetCluster.getBuildings().size());
+                    System.out.println("allBuildings: " + targetCluster.getBuildings());
+                    System.out.println("sortedBuildings: " + sortedBuildings);
+                }
             } else {//任意取一个building
                 if (CSUConstants.DEBUG_DIRECTION_BASED_TARGET_SELECTOR) {
                     Point directionPoint = directionManager.findFarthestPointOfMap((FireCluster) targetCluster, (FireBrigade) selfHuman);
