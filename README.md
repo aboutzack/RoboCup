@@ -349,3 +349,6 @@ CGY:写stuckHelper和修改astar<br>
 
 2020年3月12日
 CGY:写stuckHelper,修复bug<br>
+
+2020年3月13日
+CGY:完成stuckHelper并适配at和fb<br>
