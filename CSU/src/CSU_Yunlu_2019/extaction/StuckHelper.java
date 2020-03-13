@@ -19,10 +19,9 @@ import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.awt.*;
 import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author: Guanyu-Cai
@@ -57,12 +56,18 @@ public class StuckHelper {
         Pair<Integer, Integer> selfLocation = world.getSelfLocation();
         Point2D locationPoint = new Point2D(selfLocation.first(), selfLocation.second());
         Point2D openPartCenter = null;
+        Point2D edgeStart = null;
+        Point2D edgeEnd = null;
+        CSUEdge targetEdge = null;
         if (selfPosition instanceof Road) {
             CSURoad csuRoad = world.getCsuRoad(selfPosition);
             for (CSUEdge csuEdge : csuRoad.getCsuEdgesTo(path.get(0))) {
                 if (!csuEdge.isBlocked()) {
                     //和目标地点相连的没有阻塞的edge的开放部分的中点
                     openPartCenter = csuEdge.getOpenPartCenter();
+                    edgeStart = csuEdge.getStart();
+                    edgeEnd = csuEdge.getEnd();
+                    targetEdge = csuEdge;
                     break;
                 }
             }
@@ -79,21 +84,93 @@ public class StuckHelper {
 //            Point2D endPoint = Util.improveLine(guideLine, CSUConstants.AGENT_SIZE).getEndPoint();
             //延长至视线末端
             Point2D endPoint = Util.clipLine(guideLine, world.getConfig().maxRayDistance).getEndPoint();
+            if (CSUConstants.DEBUG_STUCK_HELPER) {
+                System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + endPoint + " planPath(0): " + path.get(0));
+            }
             return moveToPoint(endPoint);
         } else {//guideLine被挡住
-            Set<CSULineOfSightPerception.CsuRay> raysNotHit1 = lineOfSightPerception.findRaysNotHit(locationPoint, nearBlockades);
-            Set<CSULineOfSightPerception.CsuRay> raysNotHit2 = lineOfSightPerception.findRaysNotHit(openPartCenter, nearBlockades);
-            //获取raysNotHit1和raysNotHit2的第一个交点作为escapeTarget
-            List<Point2D> intersections = Util.getIntersections(raysNotHit1, raysNotHit2);
-            if (!intersections.isEmpty()) {
-                intersections.sort(new DistanceComparator(locationPoint));
-                return moveToPoint(intersections.get(0));
+            //逃脱点有效的位置,包括当前道路和openPart相对的道路
+            Collection<CSURoad> targetValidRoads = new HashSet<>();
+            CSURoad csuRoad = world.getCsuRoad(selfPosition);
+            targetValidRoads.add(csuRoad);
+            CSURoad oppositeEdgeRoad = csuRoad.getOppositeEdgeRoad(targetEdge);
+            if (oppositeEdgeRoad != null) {
+                targetValidRoads.add(oppositeEdgeRoad);
+            }
+
+            //a large number
+            int distance = 300000;
+            Set<CSULineOfSightPerception.CsuRay> raysNotHit1 = lineOfSightPerception.findRaysNotHit(locationPoint, nearBlockades, distance);
+            Set<CSULineOfSightPerception.CsuRay> raysNotHit2 = lineOfSightPerception.findRaysNotHit(openPartCenter, nearBlockades, distance);
+            Set<CSULineOfSightPerception.CsuRay> raysNotHit3 = lineOfSightPerception.findRaysNotHit(edgeStart, nearBlockades, distance);
+            Set<CSULineOfSightPerception.CsuRay> raysNotHit4 = lineOfSightPerception.findRaysNotHit(edgeEnd, nearBlockades, distance);
+            Set<Set<CSULineOfSightPerception.CsuRay>> raysNotHits = new HashSet<>();
+            raysNotHits.add(raysNotHit2);
+            raysNotHits.add(raysNotHit3);
+            raysNotHits.add(raysNotHit4);
+            for (Set<CSULineOfSightPerception.CsuRay> next : raysNotHits) {
+                List<Point2D> validIntersections = getValidIntersections(raysNotHit1, next, targetValidRoads);
+                if (!validIntersections.isEmpty()) {
+                    validIntersections.sort(new DistanceComparator(locationPoint));
+                    if (CSUConstants.DEBUG_STUCK_HELPER) {
+                        System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + validIntersections.get(0) + " planPath(0): " + path.get(0));
+                    }
+                    return moveToPoint(validIntersections.get(0));
+                }
             }
         }
         return null;
     }
 
-    //找到距离自己面前obstacles的多边形小于0.75m的所有blockades
+    /**
+    * @Description: 获取a和b中rays相交在targetRoads范围内的交点
+    * @Author: Guanyu-Cai
+    * @Date: 3/13/20
+    */
+    private List<Point2D> getValidIntersections(Set<CSULineOfSightPerception.CsuRay> a, Set<CSULineOfSightPerception.CsuRay> b,
+                                                Collection<CSURoad> targetValidRoads) {
+        List<Point2D> intersections = Util.getSegmentIntersections(a, b);
+        if (!intersections.isEmpty()) {
+            filterIntersectionsNotInRoads(intersections, targetValidRoads);
+        }
+        return intersections;
+    }
+
+    /**
+    * @Description: 获取自己所在road和最近的road
+    * @Author: Guanyu-Cai
+    * @Date: 3/13/20
+    */
+    private Collection<CSURoad> getSelfAndNearestRoad() {
+        CSURoad csuRoad = world.getCsuRoad(world.getSelfPosition());
+        Collection<CSURoad> result = new HashSet<>();
+        result.add(csuRoad);
+        result.add(world.getNearestNeighborRoad());
+        return result;
+    }
+
+    /**
+    * @Description: 去除不在selfRoad和neighbourRoad上的交点
+    * @Author: Guanyu-Cai
+    * @Date: 3/13/20
+    */
+    private void filterIntersectionsNotInRoads(Collection<Point2D> points , Collection<CSURoad> roads) {
+        Collection<Point2D> toRemove = new HashSet<>();
+        for (Point2D point : points) {
+            boolean contain = false;
+            for (CSURoad road : roads) {
+                Polygon polygon = road.getPolygon();
+                if (polygon.contains(point.getX(), point.getY())) {
+                    contain = true;
+                    break;
+                }
+            }
+            if (!contain) {
+                toRemove.add(point);
+            }
+        }
+        points.removeAll(toRemove);
+    }
 
     private Action moveToPoint(Point2D target) {
         List<EntityID> path = new ArrayList<>();

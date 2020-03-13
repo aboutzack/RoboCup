@@ -44,6 +44,7 @@ public class CSURoad {
 	private Area pfClearArea = null;
 
 	private int lastUpdateTime = 0;
+	private Polygon polygon;
 	
 	/**
 	 * When {@link CSURoad#pfClearLines} is null, the roadCenterLine is null, too.
@@ -63,6 +64,7 @@ public class CSURoad {
 		this.csuEdges = createCsuEdges();
 		
 		this.CLEAR_WIDTH = world.getConfig().repairRad;
+		createPolygon();
 	}
 	
 	// constructor, only for test
@@ -91,7 +93,12 @@ public class CSURoad {
 			
 		}
 	}
-	
+
+	private void createPolygon() {
+		int[] apexList = selfRoad.getApexList();
+		polygon = Util.getPolygon(apexList);
+	}
+
 	/**
 	 * Create the CSUEdge objects for this road
 	 * 
@@ -971,6 +978,42 @@ public class CSURoad {
 
 	public int getLastUpdateTime() {
 		return lastUpdateTime;
+	}
+
+	public Polygon getPolygon() {
+		return polygon;
+	}
+
+	/**
+	* @Description: 获取和edge相对的一条edge
+	* @Author: Guanyu-Cai
+	* @Date: 3/13/20
+	*/
+	public CSUEdge getOppositeEdge(CSUEdge edge) {
+		if (!csuEdges.contains(edge)) {
+			return null;
+		}
+		CSUEdge result = null;
+		double maxDistance = Double.MIN_VALUE;
+		for (CSUEdge next : csuEdges) {
+			double distance = Ruler.getDistance(next.getMiddlePoint(), edge.getMiddlePoint());
+			if (distance > maxDistance) {
+				maxDistance = distance;
+				result = next;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * @Description: 获取和edge相对的edge的neighbour road
+	 * @Author: Guanyu-Cai
+	 * @Date: 3/13/20
+	 */
+	public CSURoad getOppositeEdgeRoad(CSUEdge edge) {
+		CSUEdge oppositeEdge = getOppositeEdge(edge);
+		EntityID id = oppositeEdge.getNeighbours().first();
+		return worldHelper.getCsuRoad(id);
 	}
 
 	/* --------------------------------- the following method is only for test --------------------------------- */

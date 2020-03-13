@@ -123,6 +123,31 @@ public class CSULineOfSightPerception {
 		}
 		return result;
 	}
+
+	//获取所有没有碰到障碍物的ray
+	public Set<CsuRay> findRaysNotHit(Point2D location, Collection<StandardEntity> obstacles, int distance) {
+		Collection<LineInfo> lines = getAllLines(obstacles);
+		// Cast rays
+		// CHECKSTYLE:OFF:MagicNumber
+		double dAngle = Math.PI * 2 / rayCount;
+		// CHECKSTYLE:ON:MagicNumber
+		Set<CsuRay> result = new HashSet<>();
+		for (int i = 0; i < rayCount; ++i) {
+			double angle = i * dAngle;
+			Vector2D vector = new Vector2D(Math.sin(angle), Math.cos(angle)).scale(distance);
+			Point2D distanceLocation = new Point2D(
+					location.getX() + errorThreshold * Math.sin(angle),
+					location.getY() + errorThreshold * Math.cos(angle)
+//					location.getX(),
+//					location.getY()
+			);
+			CsuRay ray = new CsuRay(new Line2D(distanceLocation, vector), lines);
+			if (ray.getLinesHit().isEmpty()) {
+				result.add(ray);
+			}
+		}
+		return result;
+	}
 	
 	public class CsuRay {
 		/** The ray itself. */

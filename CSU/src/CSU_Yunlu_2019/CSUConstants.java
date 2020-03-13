@@ -10,7 +10,7 @@ public interface CSUConstants {
     public static final boolean DEBUG_DEFAULT_WORLD_HELPER = false;
     public static final boolean DEBUG_FB_WORLD_HELPER = false;
     public static final boolean DEBUG_DIRECTION_BASED_TARGET_SELECTOR = false;
-    public static final boolean DEBUG_STUCK_HELPER = true;
+    public static final boolean DEBUG_STUCK_HELPER = false;
 
     //防止target.cfg未正确配置
     public static final String WORLD_HELPER_DEFAULT = "CSU_Yunlu_2019.world.CSUWorldHelper";

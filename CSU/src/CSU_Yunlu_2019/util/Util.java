@@ -103,12 +103,51 @@ public class Util {
 		return new Point2D(x, y);
 	}
 
-	public static List<Point2D> getIntersections(Set<CSULineOfSightPerception.CsuRay> rays1, Set<CSULineOfSightPerception.CsuRay> rays2) {
+	/**
+	* @Description: 判断两条线段是否相交
+	* @Author: Guanyu-Cai
+	* @Date: 3/13/20
+	*/
+	public static boolean isSegmentIntersecting(Line2D l1, Line2D l2) {
+		final double x1, y1, x2, y2, x3, y3, x4, y4;
+		x1 = l1.getOrigin().getX();
+		y1 = l1.getOrigin().getY();
+		x2 = l1.getEndPoint().getX();
+		y2 = l1.getEndPoint().getY();
+		x3 = l2.getOrigin().getX();
+		y3 = l2.getOrigin().getY();
+		x4 = l2.getEndPoint().getX();
+		y4 = l2.getEndPoint().getY();
+		//快速排斥实验
+		if ((Math.max(x1, x2)) < (Math.min(x3, x4)) ||
+				(Math.max(y1, y2)) < (Math.min(y3, y4)) ||
+				(Math.max(x3, x4)) < (Math.min(x1, x2)) ||
+				(Math.max(y3, y4)) < (Math.min(y1, y2))) {
+			return false;
+		}
+		//跨立实验
+		if ((((x1 - x3) * (y4 - y3) - (y1 - y3) * (x4 - x3)) *
+				((x2 - x3) * (y4 - y3) - (y2 - y3) * (x4 - x3))) > 0 ||
+				(((x3 - x1) * (y2 - y1) - (y3 - y1) * (x2 - x1)) *
+						((x4 - x1) * (y2 - y1) - (y4 - y1) * (x2 - x1))) > 0) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	* @Description: 获取线段交点(非直线)
+	* @Author: Guanyu-Cai
+	* @Date: 3/13/20
+	*/
+	public static List<Point2D> getSegmentIntersections(Set<CSULineOfSightPerception.CsuRay> rays1, Set<CSULineOfSightPerception.CsuRay> rays2) {
 		ArrayList<Point2D> result = new ArrayList<>();
 		for (CSULineOfSightPerception.CsuRay ray1 : rays1) {
 			for (CSULineOfSightPerception.CsuRay ray2 : rays2) {
-				Point2D intersection = getIntersection(ray1.getRay(), ray2.getRay());
-				result.add(intersection);
+				if (isSegmentIntersecting(ray1.getRay(), ray2.getRay())) {
+					Point2D intersection = getIntersection(ray1.getRay(), ray2.getRay());
+					result.add(intersection);
+				}
 			}
 		}
 		return result;

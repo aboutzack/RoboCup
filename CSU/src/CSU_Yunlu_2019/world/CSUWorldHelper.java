@@ -737,6 +737,36 @@ public class CSUWorldHelper extends AbstractModule {
         return result;
     }
 
+    //获取所有neighbourRoad,包括自己所在的路
+    public Collection<CSURoad> getNeighborRoads() {
+        HashSet<CSURoad> results = new HashSet<>();
+        Area selfArea = (Area) getSelfPosition();
+        List<EntityID> neighbours = selfArea.getNeighbours();
+        for (EntityID id : neighbours) {
+            CSURoad csuRoad = csuRoadMap.get(id);
+            if (csuRoad != null) {
+                results.add(csuRoad);
+            }
+        }
+        return results;
+    }
+
+    //获取最近的road
+    public CSURoad getNearestNeighborRoad() {
+        Collection<CSURoad> neighborRoads = getNeighborRoads();
+        double minDistance = Double.MAX_VALUE;
+        CSURoad nearestRoad = null;
+        for (CSURoad road : neighborRoads) {
+            Polygon polygon = road.getPolygon();
+            double distance = Ruler.getDistance(polygon, getSelfLocation());
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestRoad = road;
+            }
+        }
+        return nearestRoad;
+    }
+
     public Set<EntityID> getBurningBuildings() {
         return burningBuildings;
     }
