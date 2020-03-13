@@ -153,10 +153,10 @@ public class FbUtilities {
 		}
 		return result;
 	}
-	
+
 	/**
 	 * Get the nearest location from a list of target location.
-	 * 
+	 *
 	 * @param world
 	 *            the world model
 	 * @param locations
@@ -165,7 +165,7 @@ public class FbUtilities {
 	 *            the start point
 	 * @return the nearest target location
 	 */
-	private static EntityID getNearest(CSUWorldHelper world, List<EntityID> locations, EntityID start) {
+	public static EntityID getNearest(CSUWorldHelper world, List<EntityID> locations, EntityID start) {
 		EntityID result = null;
 		double minDistance = Double.MAX_VALUE;
 		for (EntityID next : locations) {
@@ -195,7 +195,7 @@ public class FbUtilities {
 		}
 		return targetBuilding;
 	}
-	
+
 	/**
 	 * Determines whether a target location is reachable.
 	 * 

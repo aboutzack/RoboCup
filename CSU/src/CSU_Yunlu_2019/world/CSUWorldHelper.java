@@ -24,6 +24,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
+import java.util.List;
 import java.util.*;
 
 /**
@@ -78,7 +79,7 @@ public class CSUWorldHelper extends AbstractModule {
     protected boolean communicationHigh = false;
 
     //others
-    ConfigConstants config;
+    protected ConfigConstants config;
 
     public CSUWorldHelper(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -719,6 +720,23 @@ public class CSUWorldHelper extends AbstractModule {
         return worldInfo.getObjectsInRange(x, y, range);
     }
 
+    public Collection<Blockade> getBlockadesInRange(int range) {
+        Collection<Blockade> result = new HashSet<>();
+        Collection<StandardEntity> objectsInRange = worldInfo.getObjectsInRange(agentInfo.getID(), range);
+        for (StandardEntity entity : objectsInRange) {
+            if (entity instanceof Road) {
+                CSURoad csuRoad = csuRoadMap.get(entity.getID());
+                List<CSUBlockade> csuBlockades = csuRoad.getCsuBlockades();
+                for (CSUBlockade csuBlockade : csuBlockades) {
+                    if (Ruler.getDistance(csuBlockade.getPolygon(), getSelfLocation()) <= range) {
+                        result.add(csuBlockade.getSelfBlockade());
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
     public Set<EntityID> getBurningBuildings() {
         return burningBuildings;
     }
@@ -905,5 +923,21 @@ public class CSUWorldHelper extends AbstractModule {
 
     public Collection<StandardEntity> getRoadsWithURN() {
         return worldInfo.getEntitiesOfType(StandardEntityURN.ROAD, StandardEntityURN.HYDRANT);
+    }
+
+    public List<StandardEntity> getEntities(Set<EntityID> entityIDs) {
+        List<StandardEntity> result = new ArrayList<StandardEntity>();
+        for (EntityID next : entityIDs) {
+            result.add(getEntity(next));
+        }
+        return result;
+    }
+
+    public List<StandardEntity> getEntities(List<EntityID> entityIDs) {
+        List<StandardEntity> result = new ArrayList<StandardEntity>();
+        for (EntityID next : entityIDs) {
+            result.add(getEntity(next));
+        }
+        return result;
     }
 }

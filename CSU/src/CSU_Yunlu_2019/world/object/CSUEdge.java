@@ -2,12 +2,14 @@ package CSU_Yunlu_2019.world.object;
 
 import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
+import adf.agent.info.WorldInfo;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Blockade;
 import rescuecore2.standard.entities.Edge;
+import rescuecore2.standard.entities.Road;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
@@ -17,7 +19,8 @@ import java.util.Set;
 public class CSUEdge {
 	
 	private Edge underlyingEdge;
-	
+
+	//first: neighbour second: self
 	private Pair<EntityID, EntityID> neighbours = null;
 	
 	private Point2D start, end, openPartStart, openPartEnd, middlePoint;
@@ -176,6 +179,12 @@ public class CSUEdge {
 	public Point2D getOpenPartEnd() {
 		return this.openPartEnd;
 	}
+
+	public Point2D getOpenPartCenter() {
+		double x = (openPartStart.getX() + openPartEnd.getX()) / 2;
+		double y = (openPartStart.getY() + openPartEnd.getY()) / 2;
+		return new Point2D(x, y);
+	}
 	
 	public Edge getUnderlyingEdge() {
 		return this.underlyingEdge;
@@ -188,5 +197,14 @@ public class CSUEdge {
 	private double getLength(Line2D line) {
 		return Math.hypot(line.getOrigin().getX() - line.getEndPoint().getX(), 
 				line.getOrigin().getY() - line.getEndPoint().getY());
+	}
+
+	public CSUEdge getOtherSideEdge(WorldInfo world) {
+		Area neighbour = (Area) world.getEntity(getNeighbours().second());
+		if (neighbour instanceof Road) {
+			CSURoad roadNeighbour = worldHelper.getCsuRoad(neighbour.getID());
+			return roadNeighbour.getCsuEdgeInPoint(getMiddlePoint());
+		}
+		return null;
 	}
 }

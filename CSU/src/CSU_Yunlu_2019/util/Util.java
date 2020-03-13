@@ -1,23 +1,16 @@
 package CSU_Yunlu_2019.util;
 
-import java.awt.Polygon;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.LinkedList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import CSU_Yunlu_2019.standard.Ruler;
-
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.worldmodel.EntityID;
+
+import java.awt.*;
+import java.io.*;
+import java.util.List;
+import java.util.*;
 
 public class Util {
 
@@ -62,10 +55,14 @@ public class Util {
 	
 	/** Determines whether target polygon has intersect with target line.*/
 	public static boolean hasIntersectLine(Polygon polygon, Line2D line) {
-		List<Line2D> polygonLines = getLine2DOfPolygon(polygon);
-		for (Line2D polygonLine : polygonLines) {
-			Point2D intersect = getIntersection(polygonLine, line);
-			if (intersect != null) {
+		List<rescuecore2.misc.geometry.Line2D> polyLines = getLines(polygon);
+		if (polygon.contains(line.getOrigin().getX(), line.getOrigin().getY()) ||
+				polygon.contains(line.getEndPoint().getX(), line.getEndPoint().getY())) {
+			return true;
+		}
+		for (rescuecore2.misc.geometry.Line2D ln : polyLines) {
+			rescuecore2.misc.geometry.Point2D intersectPoint = GeometryTools2D.getSegmentIntersectionPoint(line, ln);
+			if (/*contains(ln, intersectPoint, 5)*/ intersectPoint != null) {
 				return true;
 			}
 		}
@@ -202,7 +199,7 @@ public class Util {
     /**
      * @param line
      * @param size
-     * @return 延长size？？
+     * @return 延长size
      */
     public static Line2D improveLine(Line2D line, double size) {
     	double molecular = line.getEndPoint().getY() - line.getOrigin().getY();
@@ -235,6 +232,11 @@ public class Util {
     	
     	return new Line2D(line.getOrigin(), newEndPoint);
     }
+
+	public static rescuecore2.misc.geometry.Line2D clipLine(rescuecore2.misc.geometry.Line2D line, double size) {
+		double length = Ruler.getLength(line);
+		return improveLine(line, size - length);
+	}
     
 	/**
 	 * Get all intersection points of the given polygon and line.
@@ -370,7 +372,119 @@ public class Util {
 		
 		return min < b && b < max;
 	}
-	
+
+	//作每条边的垂线,然后延长size长度,将每条线平移
+	public static Polygon scaleBySize(Polygon polygon, double size) {
+		Polygon result = new Polygon();
+		rescuecore2.misc.geometry.Point2D center = new rescuecore2.misc.geometry.Point2D(polygon.getBounds().getCenterX(), polygon.getBounds().getCenterY());
+		List<rescuecore2.misc.geometry.Line2D> polyLines = getLines(polygon);
+
+		//遍历polygon的所有lines
+		for (rescuecore2.misc.geometry.Line2D line2D : polyLines) {
+
+			//获取边到中心最近的点
+			rescuecore2.misc.geometry.Point2D p1 = closestPoint(line2D, center);
+			//获取中心到边最近的点的连线
+			rescuecore2.misc.geometry.Line2D ln = new rescuecore2.misc.geometry.Line2D(center, p1);
+			//延长size长度
+			ln = improveLine(ln, size);
+			rescuecore2.misc.geometry.Point2D p2 = ln.getEndPoint();
+			double dx = p2.getX() - p1.getX();
+			double dy = p2.getY() - p1.getY();
+
+			rescuecore2.misc.geometry.Point2D origin = new rescuecore2.misc.geometry.Point2D(
+					line2D.getOrigin().getX() + dx,
+					line2D.getOrigin().getY() + dy
+			);
+			result.addPoint((int) origin.getX(), (int) origin.getY());
+
+			rescuecore2.misc.geometry.Point2D end = new rescuecore2.misc.geometry.Point2D(
+					line2D.getEndPoint().getX() + dx,
+					line2D.getEndPoint().getY() + dy
+			);
+			result.addPoint((int) end.getX(), (int) end.getY());
+		}
+		return result;
+
+	}
+
+	public static List<rescuecore2.misc.geometry.Line2D> getLines(Polygon polygon) {
+		List<rescuecore2.misc.geometry.Line2D> lines = new ArrayList<Line2D>();
+		int count = polygon.npoints;
+		for (int i = 0; i < count; i++) {
+			int j = (i + 1) % count;
+			rescuecore2.misc.geometry.Point2D p1 = new rescuecore2.misc.geometry.Point2D(polygon.xpoints[i], polygon.ypoints[i]);
+			rescuecore2.misc.geometry.Point2D p2 = new rescuecore2.misc.geometry.Point2D(polygon.xpoints[j], polygon.ypoints[j]);
+			rescuecore2.misc.geometry.Line2D line = new rescuecore2.misc.geometry.Line2D(p1, p2);
+			lines.add(line);
+		}
+		return lines;
+	}
+
+	/**
+	 * MTN
+	 * get closest point of line from a point
+	 *
+	 * @param line  target point that we want get nearest point of it from another point
+	 * @param point a point2D
+	 * @return Point2D
+	 */
+	public static rescuecore2.misc.geometry.Point2D closestPoint(rescuecore2.misc.geometry.Line2D line, rescuecore2.misc.geometry.Point2D point) {
+		return GeometryTools2D.getClosestPoint(line, point);
+	}
+
+	public static List<rescuecore2.misc.geometry.Point2D> getPoint2DList(int[] xs, int[] ys) {
+
+		List<rescuecore2.misc.geometry.Point2D> points = new ArrayList<rescuecore2.misc.geometry.Point2D>();
+		for (int i = 0; i < xs.length; i++) {
+			points.add(new rescuecore2.misc.geometry.Point2D(xs[i], ys[i]));
+		}
+
+		return points;
+	}
+
+
+	public static class DistanceComparator implements Comparator<Pair<Point2D, Point2D>> {
+		private Point2D reference;
+
+		/**
+		 * Create a DistanceSorter.
+		 *
+		 * @param reference The reference point to measure distances from.
+		 */
+		public DistanceComparator(Point2D reference) {
+			this.reference = reference;
+		}
+
+		/**
+		 * Compares the standard entities according to distance.
+		 *
+		 * @param a First pair points to compare
+		 * @param b Second pair points to compare
+		 * @return The difference between distances.
+		 */
+
+		@Override
+		public int compare(Pair<Point2D, Point2D> a, Pair<Point2D, Point2D> b) {
+			int d1 = (int) Ruler.getDistance(reference, a.first());
+			int d2 = (int) Ruler.getDistance(reference, b.first());
+			return d1 - d2;
+		}
+	}
+
+	public static class LengthComparator implements Comparator<Line2D> {
+
+		public LengthComparator() {
+		}
+
+		@Override
+		public int compare(Line2D a, Line2D b) {
+			int l1 = (int) Ruler.getLength(a);
+			int l2 = (int) Ruler.getLength(b);
+			return l1 - l2;
+		}
+	}
+
 //	public static boolean isIntersect(Line2D p_line, Line2D q_line) {
 //		double P1Q1_x = p_line.getOrigin().getX() - q_line.getOrigin().getX();
 //		double P1Q1_y = p_line.getOrigin().getY() - q_line.getOrigin().getY();

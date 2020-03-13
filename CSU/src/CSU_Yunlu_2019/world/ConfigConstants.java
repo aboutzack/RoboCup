@@ -15,7 +15,7 @@ public final class ConfigConstants {
 	
 	/* Config value for rays.*/
 //	public float rayRate;
-//	public int maxRayDistance;
+	public int maxRayDistance;
 //	public int randomSeed;
 	
 	/** The debug flag.*/
@@ -378,6 +378,12 @@ public final class ConfigConstants {
 		/** An Agent's default think time. */
 		final int DEFAULT_THINK_TIME = 1000;
 		thinkTime = config.getIntValue(THINK_TIME_KEY, DEFAULT_THINK_TIME);
+
+		/** An Agent's default perception los max distance */
+		final String PERCEPTION_LOST_MAX_DISTANCE = "perception.los.max-distance";
+		final int DEFAULT_PERCEPTION_LOST_MAX_DISTANCE = 30000;
+		maxRayDistance = config.getIntValue(PERCEPTION_LOST_MAX_DISTANCE, DEFAULT_PERCEPTION_LOST_MAX_DISTANCE);
+
 		
 		// communication
 		final String CHANNELS_COUNT_KEY = CHANNELS_KEY_PREFIX + "count";

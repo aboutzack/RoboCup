@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.world.object;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.geom.ExpandApexes;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
@@ -41,6 +42,8 @@ public class CSURoad {
 	
 	private Pair<Line2D, Line2D> pfClearLines = null;
 	private Area pfClearArea = null;
+
+	private int lastUpdateTime = 0;
 	
 	/**
 	 * When {@link CSURoad#pfClearLines} is null, the roadCenterLine is null, too.
@@ -72,22 +75,20 @@ public class CSURoad {
 	 * Update the blockade inform.
 	 */
 	public void update() {
+		lastUpdateTime = worldHelper.getTime();
 		for (CSUEdge next : csuEdges) {
 			next.setOpenPart(next.getLine());
 			next.setBlocked(false);
 		}
 		
-		this.csuBlockades.clear();
-		
+		this.csuBlockades = createCsuBlockade();
 		if (selfRoad.isBlockadesDefined()) {
 			for (CSUEdge next : csuEdges) {
 				if (!next.isPassable())
 					continue;
-				// TODO July 9, 2014  Time: 2:57pm
 				setCsuEdgeOpenPart(next);
 			}
 			
-			this.csuBlockades = createCsuBlockade();
 		}
 	}
 	
@@ -131,67 +132,150 @@ public class CSURoad {
 
 		return result;
 	}
-	
-//	TODO July 9, 2014  Time: 2:56pm
+
 	/**
-	 * Find out the open part of passable CSUEdges
-	 * 
-	 * @param edge
-	 *            the target passable CSUEdge
-	 */
+	* @Description: 精确设置openPart和isBlocked
+	* @Author: Guanyu-Cai
+	* @Date: 3/12/20
+	*/
 	private void setCsuEdgeOpenPart(CSUEdge edge) {
-		Polygon expand = null;
-		boolean isStartBlocked = false, isEndBlocked = false;
-		
-		Point2D openPartStart = null, openPartEnd = null;
-		
-		for (CSUBlockade next : csuBlockades) {
-			if (next.getPolygon().contains(selfRoad.getX(), selfRoad.getY()))
+		//first: startPoint second: endPoint
+		List<Pair<Point2D, Point2D>> blockadePartPoints = new ArrayList<>();
+		Point2D edgeStart = edge.getStart();
+		Point2D edgeEnd = edge.getEnd();
+		//初始化为整条line
+		boolean isBlocked = false;
+		List<CSUBlockade> totalBlockades = new ArrayList<>(csuBlockades);
+		//获取edge连接的道路的所有blockades
+		CSURoad neighborRoad = worldHelper.getCsuRoad(edge.getNeighbours().first());
+		if (neighborRoad != null) {
+			List<CSUBlockade> neighborBlockades = neighborRoad.getCsuBlockades();
+			if (neighborBlockades != null) {
+				totalBlockades.addAll(neighborBlockades);
+			}
+		}
+		for (CSUBlockade blockade : totalBlockades) {
+			boolean isStartBlocked = false;
+			boolean isEndBlocked = false;
+			if (blockade.getPolygon().contains(selfRoad.getX(), selfRoad.getY())) {
 				isRoadCenterBlocked = true;
-			
-			expand = ExpandApexes.expandApexes(next.getSelfBlockade(), 10);
-			
-			if (expand.contains(edge.getStart().getX(), edge.getStart().getY())) {
+			}
+			//blockade所在多边形扩大10
+//			Polygon expand = ExpandApexes.expandApexes(blockade.getSelfBlockade(), 10);
+			Polygon expand = Util.scaleBySize(blockade.getPolygon(), 10);
+			if (expand.contains(edgeStart.getX(), edgeStart.getY())) {
 				isStartBlocked = true;
-			} else if (expand.contains(edge.getEnd().getX(), edge.getEnd().getY())) {
+			}
+			if (expand.contains(edgeEnd.getX(), edgeEnd.getY())) {
 				isEndBlocked = true;
 			}
-			
-			if (isStartBlocked && isEndBlocked)
-				continue;
 
 			Set<Point2D> intersections = Util.getIntersections(expand, edge.getLine());
 
-			if (isStartBlocked) {
-				double minDistance = Double.MAX_VALUE, distance;
-				openPartEnd = edge.getEnd();
-				for (Point2D point : intersections) {
-					distance = distance(point, openPartEnd);
-					if (distance < minDistance) {
-						minDistance = distance;
-						openPartStart = point;
-					}
-				}
-			} else if (isEndBlocked) {
-				double minDistance = Double.MAX_VALUE, distance;
-				openPartStart = edge.getStart();
-				for (Point2D point : intersections) {
-					distance = distance(point, openPartStart);
-					if (distance < minDistance) {
-						minDistance = distance;
-						openPartEnd = point;
-					}
-				}
-			}
-
-			if (openPartStart == null || openPartEnd == null || distance(openPartStart, openPartEnd) < 200) {
-				edge.setBlocked(true);
-				edge.setOpenPart(null);
+			if (isStartBlocked && isEndBlocked) {//判定为整条edge堵住
+				//确定堵住,不需要再判断
+				isBlocked = true;
+				blockadePartPoints.add(new Pair<>(edgeStart, edgeEnd));
 				break;
-			} else {
-				edge.setOpenPart(openPartStart, openPartEnd);
+			}else if (isStartBlocked) {
+				double maxDistance = Double.MIN_VALUE, distance;
+				Point2D blockadePartEnd = null;
+				for (Point2D point : intersections) {
+					distance = distance(point, edgeStart);
+					if (distance > maxDistance) {
+						maxDistance = distance;
+						blockadePartEnd = point;
+					}
+				}
+				blockadePartPoints.add(new Pair<>(edgeStart, blockadePartEnd));
+			} else if (isEndBlocked) {
+				double maxDistance = Double.MIN_VALUE, distance;
+				Point2D blockadePartStart = null;
+				for (Point2D point : intersections) {
+					distance = distance(point, edgeEnd);
+					if (distance > maxDistance) {
+						maxDistance = distance;
+						blockadePartStart = point;
+					}
+				}
+				blockadePartPoints.add(new Pair<>(blockadePartStart, edgeEnd));
+			} else {//可能是在中间堵住edge或者和edge没有接触
+				if (!intersections.isEmpty()) {
+					//两点之间是不能通过的区域
+					Pair<Point2D, Point2D> twoFarthestPoints = getTwoFarthestPoints(intersections);
+					double distanceToFirst = Ruler.getDistance(edgeStart, twoFarthestPoints.first());
+					double distanceToSecond = Ruler.getDistance(edgeStart, twoFarthestPoints.second());
+					if (distanceToFirst < distanceToSecond) {
+						blockadePartPoints.add(new Pair<>(twoFarthestPoints.first(), twoFarthestPoints.second()));
+					} else {
+						blockadePartPoints.add(new Pair<>(twoFarthestPoints.second(), twoFarthestPoints.first()));
+					}
+				}
 			}
 		}
+
+		if (isBlocked) {
+			edge.setBlocked(true);
+			edge.setOpenPart(null);
+		} else {
+			List<Line2D> openPartLines = calcOpenPart(blockadePartPoints, edgeStart, edgeEnd);
+			if (!openPartLines.isEmpty()) {
+				//将最长的设置为openPart
+				edge.setOpenPart(openPartLines.get(openPartLines.size() - 1));
+				if (Ruler.getLength(edge.getOpenPart()) <= CSUConstants.AGENT_MINIMUM_PASSING_THRESHOLD) {
+					edge.setBlocked(true);
+				}else {
+					edge.setBlocked(false);
+				}
+			}
+		}
+	}
+
+	/**
+	* @Description: 获取距离最远的两个点,暴力算法复杂度高
+	* @Author: Guanyu-Cai
+	* @Date: 3/12/20
+	*/
+	private Pair<Point2D, Point2D> getTwoFarthestPoints(Set<Point2D> points) {
+		double maxDistance = Double.MIN_VALUE;
+		Point2D p1 = null;
+		Point2D p2 = null;
+		for (Point2D p3 : points) {
+			for (Point2D p4 : points) {
+				double distance = Ruler.getDistance(p3, p4);
+				if (distance > maxDistance) {
+					maxDistance = distance;
+					p1 = p3;
+					p2 = p4;
+				}
+			}
+		}
+		return new Pair<>(p1, p2);
+	}
+
+	/**
+	 * @Description: 根据所有的blockadePart计算openPart, 显然blockadePart都是不想交的
+	 * @Author: Guanyu-Cai
+	 * @Date: 3/12/20
+	 */
+	private List<Line2D> calcOpenPart(List<Pair<Point2D, Point2D>> blockadePartPoints, Point2D edgeStart, Point2D edgeEnd) {
+		//按照和edgeStart距离从小到达排序
+		blockadePartPoints.sort(new Util.DistanceComparator(edgeStart));
+		//将edgeStart和edgeEnd视为blockade的end和start方便计算
+		blockadePartPoints.add(0, new Pair<>(null, edgeStart));
+		blockadePartPoints.add(blockadePartPoints.size(), new Pair<>(edgeEnd, null));
+		List<Line2D> openPartLines = new ArrayList<>();
+		for (int i = 0; i < blockadePartPoints.size() - 1; i++) {
+			if (Ruler.getDistance(blockadePartPoints.get(i).second(), edgeStart) < Ruler.getDistance(blockadePartPoints.get(i + 1).first(), edgeStart)) {
+				//只有当line方向是从edgeStart到edgeEnd才视为openPart
+				openPartLines.add(new Line2D(blockadePartPoints.get(i).second(), blockadePartPoints.get(i + 1).first()));
+			}
+
+		}
+		//按照openPart长度从小到大排序
+		openPartLines.sort(new Util.LengthComparator());
+
+		return openPartLines;
 	}
 
 	public Road getSelfRoad() {
@@ -311,7 +395,7 @@ public class CSURoad {
 		return new Area(polygon);
 	}
 	
-	public List<CSUEdge> getCsuEdgeTo(EntityID neighbourId) {
+	public List<CSUEdge> getCsuEdgesTo(EntityID neighbourId) {
 		List<CSUEdge> result = new ArrayList<>();
 		
 		for (CSUEdge next : csuEdges) {
@@ -380,7 +464,7 @@ public class CSURoad {
 			return false;
 		}
 	}
-	
+
 //	public boolean isPassableForPF() {
 //		if (isAllEdgePassable()) {
 //			return getPassableEdge().size() > 1;
@@ -884,8 +968,12 @@ public class CSURoad {
 	private int getLength(Line2D line) {
 		return (int) Ruler.getDistance(line.getOrigin(), line.getEndPoint());
 	}
-	
-/* --------------------------------- the following method is only for test --------------------------------- */
+
+	public int getLastUpdateTime() {
+		return lastUpdateTime;
+	}
+
+	/* --------------------------------- the following method is only for test --------------------------------- */
 	
 	public void setCsuBlockades(List<CSUBlockade> blockades) {
 		this.csuBlockades.clear();

@@ -244,6 +244,16 @@ public class Ruler {
 		return d;
 	}
 
+	public static double getLength(rescuecore2.misc.geometry.Line2D line) {
+		rescuecore2.misc.geometry.Point2D p1, p2;
+		double d;
+
+		p1 = line.getOrigin();
+		p2 = line.getEndPoint();
+		d = getDistance(p1, p2);
+		return d;
+	}
+
 	public static int getDistance(Building b1, Building b2) {
 		int min;
 		boolean first;
