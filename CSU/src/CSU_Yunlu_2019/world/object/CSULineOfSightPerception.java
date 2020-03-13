@@ -19,15 +19,17 @@ import java.util.*;
  *
  */
 public class CSULineOfSightPerception {
-	private static final int VIEW_DISTANCE = 30000;
-	private static final int RAY_COUNT = 72;
+	private int viewDistance = 30000;
+	private int rayCount = 72;
 	private static final IntersectionSorter INTERSECTION_SORTER = new IntersectionSorter();
-	
+	private int errorThreshold = 500;
+
 	private CSUWorldHelper worldHelper;
 
 	// constructor
 	public CSULineOfSightPerception(CSUWorldHelper worldHelper) {
 		this.worldHelper = worldHelper;
+		viewDistance = worldHelper.getConfig().viewDistance;
 	}
 
 	@Override
@@ -43,7 +45,7 @@ public class CSULineOfSightPerception {
 		if (location != null) {
 			int x = location.first(), y = location.second();
 			Point2D point = new Point2D(x, y);
-			Collection<StandardEntity> nearby = worldHelper.getObjectsInRange(x, y, VIEW_DISTANCE);
+			Collection<StandardEntity> nearby = worldHelper.getObjectsInRange(x, y, viewDistance);
 			Collection<StandardEntity> visible = findVisibleAreas(area, point, nearby);
 			for (StandardEntity next : visible) {
 				if (next instanceof Area) {
@@ -57,11 +59,11 @@ public class CSULineOfSightPerception {
 	private Collection<StandardEntity> findVisibleAreas(Area area, Point2D location,
                                                         Collection<StandardEntity> nearby) {
 		Collection<LineInfo> lines = getAllLines(nearby);
-		double dAngle = Math.PI * 2 / RAY_COUNT;
+		double dAngle = Math.PI * 2 / rayCount;
 		Collection<StandardEntity> result = new HashSet<StandardEntity>();
-		for (int i = 0; i < RAY_COUNT; ++i) {
+		for (int i = 0; i < rayCount; ++i) {
 			double angle = i * dAngle;
-			Vector2D vector = new Vector2D(Math.sin(angle), Math.cos(angle)).scale(VIEW_DISTANCE);
+			Vector2D vector = new Vector2D(Math.sin(angle), Math.cos(angle)).scale(viewDistance);
 			CsuRay ray = new CsuRay(new Line2D(location, vector), lines);
 			for (LineInfo hit : ray.getLinesHit()) {
 				StandardEntity e = hit.getEntity();
@@ -98,8 +100,31 @@ public class CSULineOfSightPerception {
 		}
 		return result;
 	}
+
+	//获取所有没有碰到障碍物的ray
+	public Set<CsuRay> findRaysNotHit(Point2D location, Collection<StandardEntity> obstacles) {
+		Collection<LineInfo> lines = getAllLines(obstacles);
+		// Cast rays
+		// CHECKSTYLE:OFF:MagicNumber
+		double dAngle = Math.PI * 2 / rayCount;
+		// CHECKSTYLE:ON:MagicNumber
+		Set<CsuRay> result = new HashSet<>();
+		for (int i = 0; i < rayCount; ++i) {
+			double angle = i * dAngle;
+			Vector2D vector = new Vector2D(Math.sin(angle), Math.cos(angle)).scale(viewDistance);
+			Point2D distanceLocation = new Point2D(
+					location.getX() + errorThreshold * Math.sin(angle),
+					location.getY() + errorThreshold * Math.cos(angle)
+			);
+			CsuRay ray = new CsuRay(new Line2D(distanceLocation, vector), lines);
+			if (ray.getLinesHit().isEmpty()) {
+				result.add(ray);
+			}
+		}
+		return result;
+	}
 	
-	private static class CsuRay {
+	public class CsuRay {
 		/** The ray itself. */
 		private Line2D ray;
 		/** The visible length of the ray. */

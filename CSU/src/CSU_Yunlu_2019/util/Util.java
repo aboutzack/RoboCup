@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.util;
 
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.world.object.CSULineOfSightPerception;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
@@ -68,7 +69,7 @@ public class Util {
 		}
 		return false;
 	}
-	
+
 	/** Get all boundary lines of target polygon.*/
 	public static List<Line2D> getLine2DOfPolygon(Polygon polygon) {
 		List<Line2D> allLines = new LinkedList<>();
@@ -84,22 +85,33 @@ public class Util {
 	}
 	
 	/** Get the intersection point of two line.*/
-	public static Point2D getIntersection(Line2D first, Line2D second) {
+	public static Point2D getIntersection(Line2D line1, Line2D line2) {
 		final double x1, y1, x2, y2, x3, y3, x4, y4;
-        x1 = first.getOrigin().getX();
-        y1 = first.getOrigin().getY();
-        x2 = first.getEndPoint().getX();
-        y2 = first.getEndPoint().getY();
-        x3 = first.getOrigin().getX();
-        y3 = first.getOrigin().getY();
-        x4 = first.getEndPoint().getX();
-        y4 = first.getEndPoint().getY();
-        final double x = ((x2 - x1) * (x3 * y4 - x4 * y3) - (x4 - x3) * (x1 * y2 - x2 * y1))
-                / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
-        final double y = ((y3 - y4) * (x1 * y2 - x2 * y1) - (y1 - y2) * (x3 * y4 - x4 * y3))
-                / ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+		x1 = line1.getOrigin().getX();
+		y1 = line1.getOrigin().getY();
+		x2 = line1.getEndPoint().getX();
+		y2 = line1.getEndPoint().getY();
+		x3 = line2.getOrigin().getX();
+		y3 = line2.getOrigin().getY();
+		x4 = line2.getEndPoint().getX();
+		y4 = line2.getEndPoint().getY();
+		final double x = ((x2 - x1) * (x3 * y4 - x4 * y3) - (x4 - x3) * (x1 * y2 - x2 * y1))
+				/ ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+		final double y = ((y3 - y4) * (x1 * y2 - x2 * y1) - (y1 - y2) * (x3 * y4 - x4 * y3))
+				/ ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
 
-        return new Point2D(x, y);
+		return new Point2D(x, y);
+	}
+
+	public static List<Point2D> getIntersections(Set<CSULineOfSightPerception.CsuRay> rays1, Set<CSULineOfSightPerception.CsuRay> rays2) {
+		ArrayList<Point2D> result = new ArrayList<>();
+		for (CSULineOfSightPerception.CsuRay ray1 : rays1) {
+			for (CSULineOfSightPerception.CsuRay ray2 : rays2) {
+				Point2D intersection = getIntersection(ray1.getRay(), ray2.getRay());
+				result.add(intersection);
+			}
+		}
+		return result;
 	}
 	
 	public static math.geom2d.Point2D findFarthestPoint(Polygon polygon, math.geom2d.Point2D[] points) {
