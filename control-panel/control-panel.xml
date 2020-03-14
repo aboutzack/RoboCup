@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="control-panel" default="all">
+
+
+    <property file="control-panel.properties"/>
+    <!-- Uncomment the following property if no tests compilation is needed -->
+    <!--
+    <property name="skip.tests" value="true"/>
+     -->
+
+    <!-- Compiler options -->
+
+    <property name="compiler.debug" value="on"/>
+    <property name="compiler.generate.no.warnings" value="off"/>
+    <property name="compiler.args" value=""/>
+    <property name="compiler.max.memory" value="700m"/>
+    <patternset id="ignored.files">
+        <exclude name="**/*.hprof/**"/>
+        <exclude name="**/*.pyc/**"/>
+        <exclude name="**/*.pyo/**"/>
+        <exclude name="**/*.rbc/**"/>
+        <exclude name="**/*~/**"/>
+        <exclude name="**/.DS_Store/**"/>
+        <exclude name="**/.git/**"/>
+        <exclude name="**/.hg/**"/>
+        <exclude name="**/.svn/**"/>
+        <exclude name="**/CVS/**"/>
+        <exclude name="**/RCS/**"/>
+        <exclude name="**/SCCS/**"/>
+        <exclude name="**/__pycache__/**"/>
+        <exclude name="**/_svn/**"/>
+        <exclude name="**/rcs/**"/>
+        <exclude name="**/vssver.scc/**"/>
+        <exclude name="**/vssver2.scc/**"/>
+    </patternset>
+    <patternset id="library.patterns">
+        <include name="*.egg"/>
+        <include name="*.jar"/>
+        <include name="*.ear"/>
+        <include name="*.apk"/>
+        <include name="*.swc"/>
+        <include name="*.war"/>
+        <include name="*.ane"/>
+        <include name="*.zip"/>
+    </patternset>
+    <patternset id="compiler.resources">
+        <exclude name="**/?*.java"/>
+        <exclude name="**/?*.form"/>
+        <exclude name="**/?*.class"/>
+        <exclude name="**/?*.groovy"/>
+        <exclude name="**/?*.scala"/>
+        <exclude name="**/?*.flex"/>
+        <exclude name="**/?*.kt"/>
+        <exclude name="**/?*.clj"/>
+        <exclude name="**/?*.aj"/>
+    </patternset>
+
+
+    <!-- Project Libraries -->
+
+    <path id="library.jars.classpath">
+        <fileset dir="${basedir}/jars">
+            <patternset refid="library.patterns"/>
+        </fileset>
+    </path>
+
+    <path id="library.lib.classpath">
+        <fileset dir="${basedir}/lib">
+            <patternset refid="library.patterns"/>
+        </fileset>
+    </path>
+
+
+    <!-- Application Server Libraries -->
+
+    <!-- Modules -->
+
+
+    <!-- Module control-panel -->
+
+    <dirname property="module.control-panel.basedir" file="${ant.file}"/>
+
+
+    <property name="compiler.args.control-panel" value="-encoding UTF-8 -source 8 -target 8 ${compiler.args}"/>
+
+    <property name="control-panel.output.dir" value="${module.control-panel.basedir}/out/production/control-panel"/>
+    <property name="control-panel.testoutput.dir" value="${module.control-panel.basedir}/out/test/control-panel"/>
+
+    <path id="control-panel.module.bootclasspath">
+        <!-- Paths to be included in compilation bootclasspath -->
+    </path>
+
+    <path id="control-panel.module.production.classpath">
+        <path refid="library.jars.classpath"/>
+        <path refid="library.lib.classpath"/>
+    </path>
+
+    <path id="control-panel.runtime.production.module.classpath">
+        <pathelement location="${control-panel.output.dir}"/>
+        <path refid="library.jars.classpath"/>
+        <path refid="library.lib.classpath"/>
+    </path>
+
+    <path id="control-panel.module.classpath">
+        <pathelement location="${control-panel.output.dir}"/>
+        <path refid="library.jars.classpath"/>
+        <path refid="library.lib.classpath"/>
+    </path>
+
+    <path id="control-panel.runtime.module.classpath">
+        <pathelement location="${control-panel.testoutput.dir}"/>
+        <pathelement location="${control-panel.output.dir}"/>
+        <path refid="library.jars.classpath"/>
+        <path refid="library.lib.classpath"/>
+    </path>
+
+
+    <patternset id="excluded.from.module.control-panel">
+        <patternset refid="ignored.files"/>
+    </patternset>
+
+    <patternset id="excluded.from.compilation.control-panel">
+        <patternset refid="excluded.from.module.control-panel"/>
+    </patternset>
+
+    <path id="control-panel.module.sourcepath">
+        <dirset dir="${module.control-panel.basedir}">
+            <include name="src"/>
+        </dirset>
+    </path>
+
+
+    <target name="compile.module.control-panel"
+            depends="compile.module.control-panel.production,compile.module.control-panel.tests"
+            description="Compile module control-panel"/>
+
+    <target name="compile.module.control-panel.production"
+            description="Compile module control-panel; production classes">
+        <mkdir dir="${control-panel.output.dir}"/>
+        <javac destdir="${control-panel.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}"
+               memorymaximumsize="${compiler.max.memory}" fork="true">
+            <compilerarg line="${compiler.args.control-panel}"/>
+            <bootclasspath refid="control-panel.module.bootclasspath"/>
+            <classpath refid="control-panel.module.production.classpath"/>
+            <src refid="control-panel.module.sourcepath"/>
+            <patternset refid="excluded.from.compilation.control-panel"/>
+        </javac>
+
+        <copy todir="${control-panel.output.dir}">
+            <fileset dir="${module.control-panel.basedir}/src">
+                <patternset refid="compiler.resources"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="compile.module.control-panel.tests" depends="compile.module.control-panel.production"
+            description="compile module control-panel; test classes" unless="skip.tests"/>
+
+    <target name="clean.module.control-panel" description="cleanup module">
+        <delete dir="${control-panel.output.dir}"/>
+        <delete dir="${control-panel.testoutput.dir}"/>
+    </target>
+
+    <target name="init" description="Build initialization">
+        <!-- Perform any build initialization in this target -->
+    </target>
+
+    <target name="clean" depends="clean.module.control-panel, clean.artifact.control-panel:jar"
+            description="cleanup all"/>
+
+    <target name="build.modules" depends="init, clean, compile.module.control-panel" description="build all modules"/>
+
+    <target name="init.artifacts">
+        <property name="artifacts.temp.dir" value="${basedir}/__artifacts_temp"/>
+        <property name="artifact.output.control-panel:jar" value="${basedir}/out/artifacts/control_panel_jar"/>
+        <mkdir dir="${artifacts.temp.dir}"/>
+        <property name="temp.jar.path.control-panel.jar" value="${artifacts.temp.dir}/control-panel.jar"/>
+    </target>
+
+    <target name="clean.artifact.control-panel:jar" description="clean control-panel:jar artifact output">
+        <delete dir="${artifact.output.control-panel:jar}"/>
+    </target>
+
+    <target name="artifact.control-panel:jar" depends="init.artifacts, compile.module.control-panel"
+            description="Build &#39;control-panel:jar&#39; artifact">
+        <mkdir dir="${artifact.output.control-panel:jar}"/>
+        <jar destfile="${temp.jar.path.control-panel.jar}" duplicate="preserve" filesetmanifest="mergewithoutmain">
+            <zipfileset dir="${control-panel.output.dir}"/>
+            <manifest>
+                <attribute name="Main-Class"
+                           value="ir.mrl.starter.MrlLauncher"/>
+                <attribute name="Class-Path" value="lib/dom4j.jar lib/RNAViewR.jar lib/jts-1.11.jar lib/junit-4.5.jar lib/resq-fire.jar lib/xml-0.0.6.jar lib/guava-15.0.jar lib/rescuecore.jar lib/jaxen-1.1.1.jar lib/jsi-1.0b2p1.jar lib/trove-0.1.8.jar lib/jscience-4.3.jar lib/log4j-1.2.15.jar lib/javaGeom-0.9.0.jar lib/jcommon-1.0.16.jar lib/visual-debugger-1.0.jar lib/slf4j-api-1.7.12.jar lib/jfreechart-1.0.13.jar lib/reflections-0.9.10.jar lib/javassist-3.19.0-GA.jar lib/uncommons-maths-1.2.jar lib/slf4j-log4j12-1.7.12.jar lib/commons-logging-1.1.1.jar lib/uncommons-maths-1.2.1.jar jars/gis2.jar jars/maps.jar jars/misc.jar jars/clear.jar jars/handy.jar jars/human.jar jars/kernel.jar jars/sample.jar jars/collapse.jar jars/ignition.jar jars/standard.jar jars/traffic3.jar jars/resq-fire.jar jars/rescuecore2.jar"/>
+            </manifest>
+        </jar>
+        <copy file="${temp.jar.path.control-panel.jar}"
+              tofile="${artifact.output.control-panel:jar}/control-panel.jar"/>
+        <mkdir dir="${artifact.output.control-panel:jar}/jars"/>
+        <copy file="${basedir}/jars/gis2.jar" tofile="${artifact.output.control-panel:jar}/jars/gis2.jar"/>
+        <copy file="${basedir}/jars/maps.jar" tofile="${artifact.output.control-panel:jar}/jars/maps.jar"/>
+        <copy file="${basedir}/jars/misc.jar" tofile="${artifact.output.control-panel:jar}/jars/misc.jar"/>
+        <copy file="${basedir}/jars/clear.jar" tofile="${artifact.output.control-panel:jar}/jars/clear.jar"/>
+        <copy file="${basedir}/jars/handy.jar" tofile="${artifact.output.control-panel:jar}/jars/handy.jar"/>
+        <copy file="${basedir}/jars/human.jar" tofile="${artifact.output.control-panel:jar}/jars/human.jar"/>
+        <copy file="${basedir}/jars/kernel.jar" tofile="${artifact.output.control-panel:jar}/jars/kernel.jar"/>
+        <copy file="${basedir}/jars/sample.jar" tofile="${artifact.output.control-panel:jar}/jars/sample.jar"/>
+        <copy file="${basedir}/jars/collapse.jar" tofile="${artifact.output.control-panel:jar}/jars/collapse.jar"/>
+        <copy file="${basedir}/jars/ignition.jar" tofile="${artifact.output.control-panel:jar}/jars/ignition.jar"/>
+        <copy file="${basedir}/jars/standard.jar" tofile="${artifact.output.control-panel:jar}/jars/standard.jar"/>
+        <copy file="${basedir}/jars/traffic3.jar" tofile="${artifact.output.control-panel:jar}/jars/traffic3.jar"/>
+        <copy file="${basedir}/jars/resq-fire.jar" tofile="${artifact.output.control-panel:jar}/jars/resq-fire.jar"/>
+        <copy file="${basedir}/jars/rescuecore2.jar"
+              tofile="${artifact.output.control-panel:jar}/jars/rescuecore2.jar"/>
+        <mkdir dir="${artifact.output.control-panel:jar}/lib"/>
+        <copy file="${basedir}/lib/dom4j.jar" tofile="${artifact.output.control-panel:jar}/lib/dom4j.jar"/>
+        <copy file="${basedir}/lib/jts-1.11.jar" tofile="${artifact.output.control-panel:jar}/lib/jts-1.11.jar"/>
+        <copy file="${basedir}/lib/RNAViewR.jar" tofile="${artifact.output.control-panel:jar}/lib/RNAViewR.jar"/>
+        <copy file="${basedir}/lib/junit-4.5.jar" tofile="${artifact.output.control-panel:jar}/lib/junit-4.5.jar"/>
+        <copy file="${basedir}/lib/resq-fire.jar" tofile="${artifact.output.control-panel:jar}/lib/resq-fire.jar"/>
+        <copy file="${basedir}/lib/xml-0.0.6.jar" tofile="${artifact.output.control-panel:jar}/lib/xml-0.0.6.jar"/>
+        <copy file="${basedir}/lib/guava-15.0.jar" tofile="${artifact.output.control-panel:jar}/lib/guava-15.0.jar"/>
+        <copy file="${basedir}/lib/rescuecore.jar" tofile="${artifact.output.control-panel:jar}/lib/rescuecore.jar"/>
+        <copy file="${basedir}/lib/jaxen-1.1.1.jar" tofile="${artifact.output.control-panel:jar}/lib/jaxen-1.1.1.jar"/>
+        <copy file="${basedir}/lib/jsi-1.0b2p1.jar" tofile="${artifact.output.control-panel:jar}/lib/jsi-1.0b2p1.jar"/>
+        <copy file="${basedir}/lib/trove-0.1.8.jar" tofile="${artifact.output.control-panel:jar}/lib/trove-0.1.8.jar"/>
+        <copy file="${basedir}/lib/jscience-4.3.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/jscience-4.3.jar"/>
+        <copy file="${basedir}/lib/log4j-1.2.15.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/log4j-1.2.15.jar"/>
+        <copy file="${basedir}/lib/javaGeom-0.9.0.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/javaGeom-0.9.0.jar"/>
+        <copy file="${basedir}/lib/jcommon-1.0.16.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/jcommon-1.0.16.jar"/>
+        <copy file="${basedir}/lib/visual-debugger-1.0.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/visual-debugger-1.0.jar"/>
+        <copy file="${basedir}/lib/slf4j-api-1.7.12.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/slf4j-api-1.7.12.jar"/>
+        <copy file="${basedir}/lib/jfreechart-1.0.13.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/jfreechart-1.0.13.jar"/>
+        <copy file="${basedir}/lib/reflections-0.9.10.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/reflections-0.9.10.jar"/>
+        <copy file="${basedir}/lib/javassist-3.19.0-GA.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/javassist-3.19.0-GA.jar"/>
+        <copy file="${basedir}/lib/uncommons-maths-1.2.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/uncommons-maths-1.2.jar"/>
+        <copy file="${basedir}/lib/slf4j-log4j12-1.7.12.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/slf4j-log4j12-1.7.12.jar"/>
+        <copy file="${basedir}/lib/commons-logging-1.1.1.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/commons-logging-1.1.1.jar"/>
+        <copy file="${basedir}/lib/uncommons-maths-1.2.1.jar"
+              tofile="${artifact.output.control-panel:jar}/lib/uncommons-maths-1.2.1.jar"/>
+    </target>
+
+
+    <target name="build.all.artifacts" depends="artifact.control-panel:jar" description="Build all artifacts">
+
+        <!-- Delete temporary files -->
+        <delete dir="${artifacts.temp.dir}"/>
+    </target>
+
+    <target name="all" depends="build.modules, build.all.artifacts" description="build all"/>
+</project>
