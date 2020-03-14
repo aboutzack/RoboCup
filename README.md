@@ -348,8 +348,15 @@ GYJ：调试发布search<br>CRF：结合ActionFireFighting思考灭火位置策�
 CGY:写stuckHelper和修改astar<br>
 
 2020年3月12日
+
 CGY:写stuckHelper,修复bug<br>GYJ:读actiontransport，改进search<br>
 
 2020年3月13日
+
 CGY:完成stuckHelper并适配at和fb<br>
 GYJ:改进search，发布新search。存在问题:个别未知情况下，新search确定的target仍会使actionmove返回null。<br>
+
+2020年3月14日
+
+CRF：调试ActionFireFighting中的refuge和hydrant的分配策略。<br>
+
