@@ -660,10 +660,10 @@ public class CSUSearch extends Search {
 				optimalBuildings.remove(this.result);
 				return true;
 			} else {//剩下的building都不可到达,重置
-//				Collection<EntityID> toRemove = new HashSet<>(unsearchedBuildings);
-//				this.reset();
-//				unsearchedBuildings.removeAll(toRemove);
-//				return false;
+				Collection<EntityID> toRemove = new HashSet<>(unsearchedBuildings);
+				this.reset();
+				unsearchedBuildings.removeAll(toRemove);
+				return false;
 			}
 		}
 		return false;

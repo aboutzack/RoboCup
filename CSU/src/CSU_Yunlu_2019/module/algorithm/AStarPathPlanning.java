@@ -194,8 +194,9 @@ public class AStarPathPlanning  extends PathPlanning {
                     if (toEdges != null && !toEdges.isEmpty() && !toEdges.get(0).isBlocked()) {
                         result = planPath;
                     }
+                } else {
+                    result = planPath;
                 }
-                result = planPath;
             }
         }
         if (CSUConstants.DEBUG_PATH_PLANNING) {
@@ -222,8 +223,10 @@ public class AStarPathPlanning  extends PathPlanning {
                             result = planPath;
                             break;
                         }
+                    } else {
+                        result = planPath;
+                        break;
                     }
-                    result = planPath;
                 }
             }
             if (CSUConstants.DEBUG_PATH_PLANNING) {
@@ -456,12 +459,23 @@ public class AStarPathPlanning  extends PathPlanning {
                 //下面还要乘上一个常数,代表路是否能通过的权值
                 this.cost = parent.getCost() + Ruler.getManhattanDistance(worldInfo.getLocation(id), worldInfo.getLocation(parent.getID()));
                 Area area = (Area) worldInfo.getEntity(entity.getID());
-                if ((area instanceof Building) && ((Building) area).isFierynessDefined()) {//防止进入着火的屋子
-                    int fieriness = ((Building) area).getFieryness();
-                    if (fieriness > 0 && fieriness < 4) {
-                        cost *= BURNING;
+                if (area instanceof Building) {
+                    if (((Building) area).isFierynessDefined()) {//防止进入着火的屋子
+                        int fieriness = ((Building) area).getFieryness();
+                        if (fieriness > 0 && fieriness < 4) {
+                            cost *= BURNING;
+                            impassable = true;
+                        }
                     }
-                }else if (!amIPoliceForce) {//at或者fb
+                    CSURoad entrance = world.getCsuRoad(parent.getID());
+                    if (entrance != null) {
+                        List<CSUEdge> toEdges = entrance.getCsuEdgesTo(id);
+                        if (toEdges != null && !toEdges.isEmpty() && toEdges.get(0).isBlocked() && !amIPoliceForce) {//排除进不去的房屋
+                            cost *= IMPASSABLE;
+                            impassable = true;
+                        }
+                    }
+                } else if (!amIPoliceForce) {//at或者fb
                     //如果当前entity是road
                     if (area instanceof Road) {
                         //如果可通过
@@ -469,16 +483,29 @@ public class AStarPathPlanning  extends PathPlanning {
                             cost *= PASSABLE;
                         } else if (area.isBlockadesDefined()) {
                             CSURoad csuRoad = world.getCsuRoad(id);
-                            if (csuRoad.isPassable()) {//可通过
-                                // TODO: 2/22/20 判断是否能通过的算法表现并不好
-                                passableRoads.add(id);
-                                impassableRoads.remove(id);
-                                cost *= PASSABLE;
-                            } else {//不可通过
-                                impassableRoads.add(id);
-                                passableRoads.remove(id);
-                                cost *= IMPASSABLE;
-                                impassable = true;
+                            List<CSUEdge> toEdges = csuRoad.getCsuEdgesTo(parent.getID());
+                            if (toEdges != null && !toEdges.isEmpty()) {//edge已知,需要加强条件
+                                if (csuRoad.isPassable() && !toEdges.get(0).isBlocked()) {
+                                    passableRoads.add(id);
+                                    impassableRoads.remove(id);
+                                    cost *= PASSABLE;
+                                } else {
+                                    impassableRoads.add(id);
+                                    passableRoads.remove(id);
+                                    cost *= IMPASSABLE;
+                                    impassable = true;
+                                }
+                            }else {//edge未知,只判断road是否可通
+                                if (csuRoad.isPassable()) {
+                                    passableRoads.add(id);
+                                    impassableRoads.remove(id);
+                                    cost *= PASSABLE;
+                                } else {
+                                    impassableRoads.add(id);
+                                    passableRoads.remove(id);
+                                    cost *= IMPASSABLE;
+                                    impassable = true;
+                                }
                             }
                         } else if (impassableRoads.contains(id)) {//看不到此road且之前发现路是不通的
                             cost *= IMPASSABLE;
