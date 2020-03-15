@@ -12,6 +12,7 @@ import maps.MapException;
 import org.dom4j.DocumentException;
 import rescuecore2.Constants;
 import rescuecore2.GUIComponent;
+import rescuecore2.LaunchComponents;
 import rescuecore2.components.ComponentConnectionException;
 import rescuecore2.components.ComponentLauncher;
 import rescuecore2.components.TCPComponentLauncher;
@@ -33,14 +34,17 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.rmi.AlreadyBoundException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import static rescuecore2.misc.java.JavaTools.instantiateFactory;
 
 /**
  * @author Mostafa
  * @author Mahdi
+ * @author Guanyu-cai
  */
 public class MrlLauncher extends JFrame implements WindowListener {
     private static org.apache.log4j.Logger Logger = org.apache.log4j.Logger.getLogger(MrlLauncher.class);
@@ -535,6 +539,17 @@ public class MrlLauncher extends JFrame implements WindowListener {
             if (kernelInfo != null && kernelInfo.kernel != null && !kernelInfo.kernel.hasTerminated()) {
                 //kernelInfo.kernel.shutdown();
                 new Thread(new LoadKernelThread()).start();
+                try {
+                    Thread.currentThread().sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                new Thread(new LoadMiscSimulatorThread()).start();
+                new Thread(new LoadClearSimulatorThread()).start();
+                new Thread(new LoadCollapseSimulatorThread()).start();
+                new Thread(new LoadFireSimulatorThread()).start();
+                new Thread(new LoadIgnitionSimulatorThread()).start();
+                new Thread(new LoadTrafficSimulatorThread()).start();
 
 //                    loadKernelButton.setEnabled(true);
             }
@@ -552,6 +567,17 @@ public class MrlLauncher extends JFrame implements WindowListener {
                 loadKernelButton.setEnabled(false);
                 mapSelectButton.setEnabled(false);
                 new Thread(new LoadKernelThread()).start();
+                try {
+                    Thread.currentThread().sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                new Thread(new LoadMiscSimulatorThread()).start();
+                new Thread(new LoadClearSimulatorThread()).start();
+                new Thread(new LoadCollapseSimulatorThread()).start();
+                new Thread(new LoadFireSimulatorThread()).start();
+                new Thread(new LoadIgnitionSimulatorThread()).start();
+                new Thread(new LoadTrafficSimulatorThread()).start();
             } else {
                 JOptionPane.showMessageDialog(MrlLauncher.this,
                         "Selected map is not valid.",
@@ -1386,6 +1412,138 @@ public class MrlLauncher extends JFrame implements WindowListener {
                 //Logger.error(e.getMessage());
                 Logger.info("failed: " + e.getMessage());
             }
+        }
+    }
+
+    private class LoadMiscSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("misc.MiscSimulator");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "misc.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Misc simulator is ready.");
+        }
+    }
+
+    private class LoadTrafficSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("traffic3.simulator.TrafficSimulator");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "traffic3.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Traffic simulator is ready.");
+        }
+    }
+
+    private class LoadFireSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("firesimulator.FireSimulatorWrapper");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "resq-fire.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Fire simulator is ready.");
+        }
+    }
+
+    private class LoadIgnitionSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("ignition.IgnitionSimulator");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "ignition.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Ignition simulator is ready.");
+        }
+    }
+
+    private class LoadCollapseSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("collapse.CollapseSimulator");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "collapse.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Collapse simulator is ready.");
+        }
+    }
+
+    private class LoadClearSimulatorThread implements Runnable {
+
+        @Override
+        public void run() {
+            List<String> arguments = new ArrayList<>();
+            String address = getMapAddress(false);
+            if (address == null) {
+                return;
+            }
+            arguments.add("clear.ClearSimulator");
+            arguments.add("-c");
+            arguments.add(address + File.separator + "config" + File.separator + "clear.cfg");
+            arguments.add("--nogui");
+
+            String[] args = new String[arguments.size()];
+            args = arguments.toArray(args);
+
+            LaunchComponents.main(args);
+            System.out.println("Clear simulator is ready.");
         }
     }
 
