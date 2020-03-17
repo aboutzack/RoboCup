@@ -175,12 +175,14 @@ public class AStarPathPlanning  extends PathPlanning {
 
     @Override
     public PathPlanning calc() {
+        // TODO: 3/17/20 如果edge能通,但是路IsImpassable,实际上可以通向一边的edge
         long a = System.currentTimeMillis();
         this.result=null;
         List<EntityID> planPath = null;
         Area sourceArea = (Area) worldInfo.getEntity(from);
         debugLog(targets.size() + " targets.");
         long b = System.currentTimeMillis();
+        //判断当前道路是否可通
         //上次计算出的最近target还未到达
         if (lastNearestTarget != null && targets.contains(lastNearestTarget)) {
             Area target = (Area) worldInfo.getEntity(lastNearestTarget);

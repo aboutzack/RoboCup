@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.*;
 
 /**
- * Mainly for blockades. 
- * 
+ * Mainly for blockades.
+ *
  * Date: May 31, 2014  Time: 7:50pm
- * 
+ *
  * @author appreciation-csu
  *
  */
@@ -33,27 +33,28 @@ public class CSURoad {
 	private EntityID selfId;
 	private CSUWorldHelper worldHelper;
 	private AgentInfo agentInfo;
-	
+
 	private CSULineOfSightPerception lineOfSightPerception;
 	private List<EntityID> observableAreas;
-	
+
 	private List<CSUEdge> csuEdges;
 	private List<CSUBlockade> csuBlockades = new ArrayList<>();
-	
+
 	private Pair<Line2D, Line2D> pfClearLines = null;
 	private Area pfClearArea = null;
 
 	private int lastUpdateTime = 0;
 	private Polygon polygon;
-	
+
 	/**
 	 * When {@link CSURoad#pfClearLines} is null, the roadCenterLine is null, too.
 	 */
 	private Line2D roadCenterLine = null;
-	
+
 	private boolean isEntrance = false;
 	private boolean isRoadCenterBlocked = false;
-	
+	private static final double COLINEAR_THRESHOLD = 1.0E-3D;
+
 	// constructor
 	public CSURoad(Road road, CSUWorldHelper world) {
 		this.worldHelper = world;
@@ -62,17 +63,17 @@ public class CSURoad {
 		this.selfId = road.getID();
 		this.lineOfSightPerception = new CSULineOfSightPerception(world);
 		this.csuEdges = createCsuEdges();
-		
+
 		this.CLEAR_WIDTH = world.getConfig().repairRad;
 		createPolygon();
 	}
-	
+
 	// constructor, only for test
 	public CSURoad(EntityID roadId, List<CSUEdge> edges) {
 		this.selfId = roadId;
 		this.csuEdges = edges;
 	}
-	
+
 	/**
 	 * Update the blockade inform.
 	 */
@@ -82,7 +83,7 @@ public class CSURoad {
 			next.setOpenPart(next.getLine());
 			next.setBlocked(false);
 		}
-		
+
 		this.csuBlockades = createCsuBlockade();
 		if (selfRoad.isBlockadesDefined()) {
 			for (CSUEdge next : csuEdges) {
@@ -90,7 +91,7 @@ public class CSURoad {
 					continue;
 				setCsuEdgeOpenPart(next);
 			}
-			
+
 		}
 	}
 
@@ -101,7 +102,7 @@ public class CSURoad {
 
 	/**
 	 * Create the CSUEdge objects for this road
-	 * 
+	 *
 	 * @return a list of CSUEdges
 	 */
 	private List<CSUEdge> createCsuEdges() {
@@ -116,7 +117,7 @@ public class CSURoad {
 
 	/**
 	 * Create the CSUBlockade objects for this road.
-	 * 
+	 *
 	 * @return a list of CSUBlockades
 	 */
 	private List<CSUBlockade> createCsuBlockade() {
@@ -288,7 +289,7 @@ public class CSURoad {
 	public Road getSelfRoad() {
 		return selfRoad;
 	}
-	
+
 	public EntityID getId() {
 		return this.selfId;
 	}
@@ -299,19 +300,19 @@ public class CSURoad {
 		}
 		return observableAreas;
 	}
-	
+
 	public CSUEdge getCsuEdgeInPoint(Point2D middlePoint) {
 		for (CSUEdge next : csuEdges) {
 			if (contains(next.getLine(), middlePoint, 1.0))
 				return next;
 		}
-		
+
 		return null;
 	}
 
 	/**
 	 * For entrance only.
-	 * 
+	 *
 	 * @return true when this entrance is need to clear.
 	 * 140824 true -- dont need ,false -- need
 	 */
@@ -319,9 +320,9 @@ public class CSURoad {
 		double buildingEntranceLength = 0.0;
 		double maxUnpassableEdgeLength = Double.MIN_VALUE;
 		double length;
-		
+
 		Edge buildingEntrance = null;
-		
+
 		//building的边
 		for (Edge next : selfRoad.getEdges()) {
 			//可以通过的边
@@ -338,27 +339,27 @@ public class CSURoad {
 				}
 			}
 		}
-		
+
 		if (buildingEntrance == null)
 			return true;
 		double rad = buildingEntranceLength + maxUnpassableEdgeLength;
 		Area entranceArea = entranceArea(buildingEntrance.getLine(), rad);
-		
+
 		Set<EntityID> blockadeIds = new HashSet<>();
-		
+
 		if (selfRoad.isBlockadesDefined()) {
 			blockadeIds.addAll(selfRoad.getBlockades());
 		}
-		
+
 		for (EntityID next : selfRoad.getNeighbours()) {
 			StandardEntity entity = worldHelper.getEntity(next, StandardEntity.class);
 			if (entity instanceof Road) {
 				Road road = (Road) entity;
-				if (road.isBlockadesDefined()) 
+				if (road.isBlockadesDefined())
 					blockadeIds.addAll(road.getBlockades());
 			}
 		}
-		
+
 		for (EntityID next : blockadeIds) {
 			StandardEntity entity = worldHelper.getEntity(next, StandardEntity.class);
 			if (entity == null)
@@ -380,9 +381,9 @@ public class CSURoad {
 		}
 		return true;
 	}
-	
+
 	private Area entranceArea(Line2D line, double rad) {
-		double theta = Math.atan2(line.getEndPoint().getY() - line.getOrigin().getY(), 
+		double theta = Math.atan2(line.getEndPoint().getY() - line.getOrigin().getY(),
 				line.getEndPoint().getX() - line.getOrigin().getX());
 		theta = theta - Math.PI / 2;
 		while (theta > Math.PI || theta < -Math.PI) {
@@ -392,61 +393,61 @@ public class CSURoad {
 				theta += 2 * Math.PI;
 		}
 		int x = (int)(rad * Math.cos(theta)), y = (int)(rad * Math.sin(theta));
-		
+
 		Polygon polygon = new Polygon();
 		polygon.addPoint((int)(line.getOrigin().getX() + x), (int)(line.getOrigin().getY() + y));
 		polygon.addPoint((int)(line.getEndPoint().getX() + x), (int)(line.getEndPoint().getY() + y));
 		polygon.addPoint((int)(line.getEndPoint().getX() - x), (int)(line.getEndPoint().getY() - y));
 		polygon.addPoint((int)(line.getOrigin().getX() - x), (int)(line.getOrigin().getY() - y));
-		
+
 		return new Area(polygon);
 	}
-	
+
 	public List<CSUEdge> getCsuEdgesTo(EntityID neighbourId) {
 		List<CSUEdge> result = new ArrayList<>();
-		
+
 		for (CSUEdge next : csuEdges) {
 			if (next.isPassable() && next.getNeighbours().first().equals(neighbourId)) {
 				result.add(next);
 			}
 		}
-		
+
 		return result;
 	}
-	
+
 	// TODO July 9, 2014  Time: 2:59pm
 	/**
 	 * Get all passable edge od this road. If all edge are impassable, then you
 	 * are stucked.
-	 * 
+	 *
 	 * @return a set of passable edge.
 	 */
-	public Set<CSUEdge> getPassableEdge() {
+	public Set<CSUEdge> getPassableEdges() {
 		Set<CSUEdge> result = new HashSet<>();
-		
+
 		for (CSUEdge next : csuEdges) {
 			if (next.isPassable() && !next.isBlocked()) {
 				result.add(next);
 			}
 		}
-		
+
 		return result;
 	}
-	
+
 	/**
 	 * Determines whether this road's center point is covered by blockades.
-	 * 
+	 *
 	 * @return true when this road's center point is covered by blockade.
 	 *         Otherwise, false.
 	 */
 	public boolean isRoadCenterBlocked() {
 		return this.isRoadCenterBlocked;
 	}
-	
+
 	/**
 	 * Determines whether this road is passable or not. When this road is
 	 * totally blocked by a blockade, then this road is impassable.
-	 * 
+	 *
 	 * @return true when this road is passable. Otherwise, false.
 	 */
 	public boolean isPassable() {
@@ -458,7 +459,7 @@ public class CSURoad {
 			}*/
 			// return true;
 			// TODO July 9, 2014  Time: 2:58pm
-			return getPassableEdge().size() > 1;      ///why > 
+			return getPassableEdges().size() > 1;      ///why >
 		} else {
 			List<CSUBlockade> blockades = new LinkedList<>(getCsuBlockades());
 			
@@ -472,22 +473,40 @@ public class CSURoad {
 		}
 	}
 
-//	public boolean isPassableForPF() {
-//		if (isAllEdgePassable()) {
-//			return getPassableEdge().size() > 1;
-//		} else {
-//			List<CSUBlockade> blockades = new LinkedList<>(getCsuBlockades());
-//			
-//			for (CSUEscapePoint next : getEscapePoint(this, 1000)) {
-//				blockades.removeAll(next.getRelateBlockade());
-//			}
-//			
-//			if (blockades.isEmpty())
-//				return true;
-//			return false;
-//		}
-//	}
-	
+	/**
+	* @Description: 判断这条路需不需要清理
+	* @Author: Guanyu-Cai
+	* @Date: 3/17/20
+	*/
+	public boolean isPassableForPF() {
+		if (isAllEdgePassable() || isOneEdgeUnpassable()) {
+			return getPassableEdges().size() > 1;      ///why >
+		}
+		boolean isPassable = true;
+		//判断blockade是否会和两条相对的edge相交,如果会则不可通过
+		List<Polygon> blockadePolygons = getBlockadePolygons(10);
+		for (Polygon polygon : blockadePolygons) {
+			for (CSUEdge edge : csuEdges) {
+				CSUEdge oppositeEdge = getOppositeEdge(edge);
+				if (Util.hasIntersectLine(polygon, Util.improveLineBothSides(edge.getLine(), 300000)) &&
+						Util.hasIntersectLine(polygon, Util.improveLineBothSides(oppositeEdge.getLine(), 300000))) {
+					isPassable = false;
+					break;
+				}
+			}
+			if (!isPassable) {
+				break;
+			}
+		}
+		List<CSUBlockade> blockades = new LinkedList<>(getCsuBlockades());
+
+		for (CSUEscapePoint next : getEscapePoint(this, 500)) {
+			blockades.removeAll(next.getRelateBlockade());
+		}
+
+		return blockades.isEmpty();
+	}
+
 	/**
 	 * Determines the passability of entrances.
 	 * @return true when entrance is passable. Otherwise, false.
@@ -495,7 +514,7 @@ public class CSURoad {
 	public boolean isEntrancePassable() {
 		return false;
 	}
-	
+
 	public boolean isAllEdgePassable() {
 		for (CSUEdge next : csuEdges) {
 			if (!next.isPassable())
@@ -503,24 +522,24 @@ public class CSURoad {
 		}
 		return true;
 	}
-	
+
 	public boolean isOneEdgeUnpassable() {
 		int count = 0;
 		for (CSUEdge next : csuEdges) {
-			if (!next.isPassable()) 
+			if (!next.isPassable())
 				count++;
 		}
-		
+
 		if (count == 1)
 			return true;
 		else
 			return false;
 	}
-	
+
 	public boolean isEntrance() {
 		return this.isEntrance;
 	}
-	
+
 	public boolean isEntranceNeighbour() {
 //		for (EntityID next : selfRoad.getNeighbours()) {
 //			StandardEntity neig = worldHelper.getEntity(next, StandardEntity.class);
@@ -529,38 +548,38 @@ public class CSURoad {
 //		}
 		return false;
 	}
-	
+
 	public void setEntrance(boolean entrance) {
 		this.isEntrance = entrance;
 	}
-	
+
 	/**
 	 * We only consider the case when there are four edges, excluding entrances.
 	 * <p>
 	 * Anti-clockwise of verters.
 	 */
 	public Pair<Line2D, Line2D> getPfClearLine(CSURoad road) {
-		
+
 		if (this.pfClearLines != null)
 			return this.pfClearLines;
-		
+
 		if (road.getCsuEdges().size() != 4)
 			return null;
 		if (road.isAllEdgePassable())
 			return null;
-		
+
 		CSUEdge edge_1 = road.getCsuEdges().get(0);
 		CSUEdge edge_2 = road.getCsuEdges().get(1);
 		CSUEdge edge_3 = road.getCsuEdges().get(2);
 		CSUEdge edge_4 = road.getCsuEdges().get(3);
-		
+
 		Line2D line_1 = null, line_2 = null, line_3 = null, line_4 = null;
-		
+
 		if (edge_1.isPassable() && edge_3.isPassable()) {
 			roadCenterLine = new Line2D(edge_1.getMiddlePoint(), edge_3.getMiddlePoint());
-			
+
 			Point2D perpendicular_1, perpendicular_2;
-			
+
 			Pair<Double, Boolean> dis = ptSegDistSq(edge_2.getLine(), edge_1.getStart());
 			if (dis.second().booleanValue()) { // the point is out the range of this line
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_4.getLine(), edge_1.getEnd());
@@ -569,7 +588,7 @@ public class CSURoad {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_2.getLine(), edge_1.getStart());
 				line_1 = new Line2D(edge_1.getStart(), perpendicular_1);
 			}
-			
+
 			dis = ptSegDistSq(edge_4.getLine(), edge_3.getStart());
 			if (dis.second().booleanValue()) {
 				perpendicular_2 = GeometryTools2D.getClosestPoint(edge_2.getLine(), edge_3.getEnd());
@@ -580,9 +599,9 @@ public class CSURoad {
 			}
 		} else if (edge_2.isPassable() && edge_4.isPassable()) {
 			roadCenterLine = new Line2D(edge_2.getMiddlePoint(), edge_4.getMiddlePoint());
-			
+
 			Point2D perpendicular_1, perpendicular_2;
-			
+
 			Pair<Double, Boolean> dis = ptSegDistSq(edge_3.getLine(), edge_2.getStart());
 			if (dis.second().booleanValue()) {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_1.getLine(), edge_2.getEnd());
@@ -591,7 +610,7 @@ public class CSURoad {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_3.getLine(), edge_2.getStart());
 				line_1 = new Line2D(edge_2.getStart(), perpendicular_1);
 			}
-			
+
 			dis = ptSegDistSq(edge_1.getLine(), edge_4.getStart());
 			if (dis.second().booleanValue()) {
 				perpendicular_2 = GeometryTools2D.getClosestPoint(edge_3.getLine(), edge_4.getEnd());
@@ -601,46 +620,46 @@ public class CSURoad {
 				line_2 = new Line2D(perpendicular_2, edge_4.getStart());
 			}
 		}
-		
+
 		double rate_1 = CLEAR_WIDTH / getLength(line_1);
 		double rate_2 = CLEAR_WIDTH / getLength(line_2);
 		Point2D mid_1 = getMiddle(line_1), mid_2 = getMiddle(line_2);
-		
+
 		Point2D end_1 = (new Line2D(mid_1, line_1.getOrigin())).getPoint(rate_1);
 		Point2D end_2 = (new Line2D(mid_2, line_2.getOrigin())).getPoint(rate_2);
 		line_3 = new Line2D(end_1, end_2);
-		
+
 		end_1 = (new Line2D(mid_1, line_1.getEndPoint())).getPoint(rate_1);
 		end_2 = (new Line2D(mid_2, line_2.getEndPoint())).getPoint(rate_2);
 		line_4 = new Line2D(end_1, end_2);
-		
+
 		this.pfClearLines = new Pair<Line2D, Line2D>(line_3, line_4);
 		return this.pfClearLines;
 	}
-	
+
 	public Area getPfClearArea(CSURoad road) {
-		
+
 		if (this.pfClearArea != null)
 			return pfClearArea;
-		
+
 		if (road.getCsuEdges().size() != 4)
 			return null;
 		if (road.isAllEdgePassable())
 			return null;
-		
+
 		CSUEdge edge_1 = road.getCsuEdges().get(0);
 		CSUEdge edge_2 = road.getCsuEdges().get(1);
 		CSUEdge edge_3 = road.getCsuEdges().get(2);
 		CSUEdge edge_4 = road.getCsuEdges().get(3);
-		
+
 		Polygon area = new Polygon();
-		
+
 		Line2D line_1 = null, line_2 = null;
-		
+
 		if (edge_1.isPassable() && edge_3.isPassable()) {
 			roadCenterLine = new Line2D(edge_1.getMiddlePoint(), edge_3.getMiddlePoint());
 			Point2D perpendicular_1, perpendicular_2;
-			
+
 			Pair<Double, Boolean> dis = ptSegDistSq(edge_2.getLine(), edge_1.getStart());
 			if (!dis.second().booleanValue()) { // the point is out the range of this line
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_4.getLine(), edge_1.getEnd());
@@ -649,7 +668,7 @@ public class CSURoad {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_2.getLine(), edge_1.getStart());
 				line_1 = new Line2D(edge_1.getStart(), perpendicular_1);
 			}
-			
+
 			dis = ptSegDistSq(edge_4.getLine(), edge_3.getStart());
 			if (!dis.second().booleanValue()) {
 				perpendicular_2 = GeometryTools2D.getClosestPoint(edge_2.getLine(), edge_3.getEnd());
@@ -661,7 +680,7 @@ public class CSURoad {
 		} else if (edge_2.isPassable() && edge_4.isPassable()) {
 			roadCenterLine = new Line2D(edge_2.getMiddlePoint(), edge_4.getMiddlePoint());
 			Point2D perpendicular_1, perpendicular_2;
-			
+
 			Pair<Double, Boolean> dis = ptSegDistSq(edge_3.getLine(), edge_2.getStart());
 			if (!dis.second().booleanValue()) {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_1.getLine(), edge_2.getEnd());
@@ -670,7 +689,7 @@ public class CSURoad {
 				perpendicular_1 = GeometryTools2D.getClosestPoint(edge_3.getLine(), edge_2.getStart());
 				line_1 = new Line2D(edge_2.getStart(), perpendicular_1);
 			}
-			
+
 			dis = ptSegDistSq(edge_1.getLine(), edge_4.getStart());
 			if (!dis.second().booleanValue()) {
 				perpendicular_2 = GeometryTools2D.getClosestPoint(edge_3.getLine(), edge_4.getEnd());
@@ -680,31 +699,31 @@ public class CSURoad {
 				line_2 = new Line2D(perpendicular_2, edge_4.getStart());
 			}
 		}
-		
+
 		double rate_1 = CLEAR_WIDTH / getLength(line_1);
 		double rate_2 = CLEAR_WIDTH / getLength(line_2);
 		Point2D mid_1 = getMiddle(line_1), mid_2 = getMiddle(line_2);
-		
+
 		Point2D end_1 = (new Line2D(mid_1, line_1.getOrigin())).getPoint(rate_1);
 		Point2D end_2 = (new Line2D(mid_2, line_2.getOrigin())).getPoint(rate_2);
 		area.addPoint((int)end_1.getX(), (int)end_1.getY());
 		area.addPoint((int)end_2.getX(), (int)end_2.getY());
-		
+
 		end_1 = (new Line2D(mid_1, line_1.getEndPoint())).getPoint(rate_1);
 		end_2 = (new Line2D(mid_2, line_2.getEndPoint())).getPoint(rate_2);
-		
+
 		// the order of the following two lines should not be change
 		area.addPoint((int)end_2.getX(), (int)end_2.getY());
 		area.addPoint((int)end_1.getX(), (int)end_1.getY());
-		
+
 		this.pfClearArea = new Area(area);
 		return this.pfClearArea;
 	}
-	
+
 	/**
 	 * The method {@link CSURoad#getPfClearLine(CSURoad)} should be invoked
 	 * somewhere before using of this method.
-	 * 
+	 *
 	 * @return the center line of this road. Null when
 	 *         {@link CSURoad#getPfClearLine(CSURoad)} has not been invoked
 	 *         somewhere before this metthod or the return value of
@@ -713,29 +732,29 @@ public class CSURoad {
 	public Line2D getRoadCenterLine() {
 		return this.roadCenterLine;
 	}
-	
+
 	private boolean contains(Line2D line, Point2D point, double threshold) {
-		
-		double pos = java.awt.geom.Line2D.ptSegDist(line.getOrigin().getX(), line.getOrigin().getY(), 
+
+		double pos = java.awt.geom.Line2D.ptSegDist(line.getOrigin().getX(), line.getOrigin().getY(),
 				line.getEndPoint().getX(), line.getEndPoint().getY(), point.getX(), point.getY());
 		if (pos <= threshold)
 			return true;
-		
+
 		return false;
 	}
-	
+
 	private double distance(Point2D first, Point2D second) {
 		return Math.hypot(first.getX() - second.getX(), first.getY() - second.getY());
 	}
-	
+
 	public List<CSUEscapePoint> getEscapePoint(CSURoad road, int threshold) {
 		List<CSUEscapePoint> m_p_points = new ArrayList<>();
-		
+
 		for (CSUBlockade next : road.getCsuBlockades()) {
 			if (next == null)
 				continue;
 			Polygon expan = next.getPolygon();
-			
+
 			for(CSUEdge csuEdge : road.getCsuEdges()) {
 				CSUEscapePoint p = findPoints(csuEdge, expan, next);
 				if (p == null) {
@@ -745,11 +764,11 @@ public class CSURoad {
 				}
 			}
 		}
-		
+
 		filter(road, m_p_points, threshold);
 		return m_p_points;
 	}
-	
+
 	private CSUEscapePoint findPoints(CSUEdge csuEdge, Polygon expan, CSUBlockade next) {
 		if (csuEdge.isPassable()) {
 			// do nothing
@@ -759,45 +778,45 @@ public class CSURoad {
 			}
 			double minDistance = Double.MAX_VALUE, distance;
 			Pair<Integer, Integer> minDistanceVertex = null;
-			
+
 			for (Pair<Integer, Integer> vertex : next.getVertexesList()) {
-				
+
 				Pair<Double, Boolean> dis = ptSegDistSq(csuEdge.getStart().getX(),
-						csuEdge.getStart().getY(), csuEdge.getEnd().getX(), 
+						csuEdge.getStart().getY(), csuEdge.getEnd().getX(),
 						csuEdge.getEnd().getY(), vertex.first(), vertex.second());
-				
+
 				if (dis.second().booleanValue())
 					continue;
 				distance = dis.first().doubleValue();
-				
+
 				if (distance < minDistance) {
 					minDistance = distance;
 					minDistanceVertex = vertex;
 				}
 			}
-			
+
 			if (minDistanceVertex == null)
 				return null;
-			
+
 			Point2D perpendicular = GeometryTools2D.getClosestPoint(csuEdge.getLine(),
 					new Point2D(minDistanceVertex.first(), minDistanceVertex.second()));
-			
+
 			Point middlePoint = getMiddle(minDistanceVertex, perpendicular);
-			
+
 			Point2D vertex = new Point2D(minDistanceVertex.first(), minDistanceVertex.second());
 			Point2D perpenPoint = new Point2D(perpendicular.getX(), perpendicular.getY());
-			
+
 			Line2D lin = new Line2D(vertex, perpenPoint);
-			
+
 			return new CSUEscapePoint(middlePoint, lin, next);
 		}
-		
+
 		return null;
 	}
-	
+
 	private void filter(CSURoad road, List<CSUEscapePoint> m_p_points, int threshold) {
 		Mark:for (Iterator<CSUEscapePoint> itor = m_p_points.iterator(); itor.hasNext(); ) {
-			
+
 			CSUEscapePoint m_p = itor.next();
 			for (CSUEdge edge : road.getCsuEdges()) {
 				if (edge.isPassable())
@@ -807,31 +826,31 @@ public class CSURoad {
 					continue Mark;
 				}
 			}
-			
+
 			for (CSUBlockade blockade : road.getCsuBlockades()) {
 				if (blockade == null)
 					continue;
 				Polygon polygon = blockade.getPolygon();
 				Polygon po = ExpandApexes.expandApexes(blockade.getSelfBlockade(), 200);
-				
-				
+
+
 				if (po.contains(m_p.getLine().getEndPoint().getX(), m_p.getLine().getEndPoint().getY())) {
-					
+
 					Set<Point2D> intersections = Util.getIntersections(polygon, m_p.getLine());
-					
+
 					double minDistance = Double.MAX_VALUE, distance;
 					Point2D closest = null;
 					boolean shouldRemove = false;
 					for (Point2D inter : intersections) {
 						distance = Ruler.getDistance(m_p.getLine().getOrigin(), inter);
-						
+
 						if (distance > threshold && distance < minDistance) {
 							minDistance = distance;
 							closest = inter;
 						}
 						shouldRemove = true;
 					}
-					
+
 					if (closest != null) {
 						Point p = getMiddle(m_p.getLine().getOrigin(), closest);
 						m_p.getUnderlyingPoint().setLocation(p);
@@ -841,7 +860,7 @@ public class CSURoad {
 						continue Mark;
 					}
 				}
-				
+
 				if (po.contains(m_p.getUnderlyingPoint())) {
 					itor.remove();
 					continue Mark;
@@ -849,7 +868,7 @@ public class CSURoad {
 			}
 		}
 	}
-	
+
 	private boolean contains(Line2D line, Point point, double threshold) {
 
 		double pos = java.awt.geom.Line2D.ptSegDist(line.getOrigin().getX(),
@@ -860,13 +879,13 @@ public class CSURoad {
 
 		return false;
 	}
-	
+
 	private Pair<Double, Boolean> ptSegDistSq(Line2D line, Point2D point) {
-		return ptSegDistSq((int)line.getOrigin().getX(), (int)line.getOrigin().getY(), 
-				(int)line.getEndPoint().getX(), (int)line.getEndPoint().getY(), 
+		return ptSegDistSq((int)line.getOrigin().getX(), (int)line.getOrigin().getY(),
+				(int)line.getEndPoint().getX(), (int)line.getEndPoint().getY(),
 				(int)point.getX(), (int)point.getY());
 	}
-	
+
 	private Pair<Double, Boolean> ptSegDistSq(double x1, double y1, double x2,
                                               double y2, double px, double py) {
 
@@ -893,12 +912,12 @@ public class CSURoad {
 				projlenSq = dotprod * dotprod / (x2 * x2 + y2 * y2);
 			}
 		}
-		
+
 		double lenSq = px * px + py * py - projlenSq;
 
 		if (lenSq < 0)
 			lenSq = 0;
-		
+
 		if (projlenSq == 0) {
 			// the target point out of this line
 			return new Pair<Double, Boolean>(Math.sqrt(lenSq), true);
@@ -917,7 +936,7 @@ public class CSURoad {
 		}
 		return false;
 	}*/
-	
+
 	public boolean hasIntersection(Polygon polygon, rescuecore2.misc.geometry.Line2D line) {
 		List<Line2D> polyLines = getLines(polygon);
 		for (rescuecore2.misc.geometry.Line2D ln : polyLines) {
@@ -954,24 +973,24 @@ public class CSURoad {
 	private Point getMiddle(Pair<Integer, Integer> first, Point2D second) {
 		int x = first.first() + (int)second.getX();
 		int y = first.second() + (int)second.getY();
-		
+
 		return new Point(x / 2, y / 2);
 	}
-	
+
 	private Point getMiddle(Point2D first, Point2D second) {
 		int x = (int)(first.getX() + second.getX());
 		int y = (int)(first.getY() + second.getY());
-		
+
 		return new Point(x / 2, y / 2);
 	}
-	
+
 	private Point2D getMiddle(Line2D line) {
 		double x = line.getOrigin().getX() + line.getEndPoint().getX();
 		double y = line.getOrigin().getY() + line.getEndPoint().getY();
-		
+
 		return new Point2D(x / 2, y / 2);
 	}
-	
+
 	private int getLength(Line2D line) {
 		return (int) Ruler.getDistance(line.getOrigin(), line.getEndPoint());
 	}
@@ -985,48 +1004,131 @@ public class CSURoad {
 	}
 
 	/**
-	* @Description: 获取和edge相对的一条edge
+	* @Description: 根据角度获取和edge相对的一条edge
 	* @Author: Guanyu-Cai
-	* @Date: 3/13/20
+	* @Date: 3/16/20
 	*/
 	public CSUEdge getOppositeEdge(CSUEdge edge) {
 		if (!csuEdges.contains(edge)) {
 			return null;
 		}
-		CSUEdge result = null;
-		double maxDistance = Double.MIN_VALUE;
-		for (CSUEdge next : csuEdges) {
-			double distance = Ruler.getDistance(next.getMiddlePoint(), edge.getMiddlePoint());
-			if (distance > maxDistance) {
-				maxDistance = distance;
-				result = next;
+		List<Pair<CSUEdge, Line2D>> edgeLinesExcept = getEdgeLinesExcept(edge);
+		edgeLinesExcept.sort(new Util.AngleComparator(edge.getLine()));
+		return !edgeLinesExcept.isEmpty() ? edgeLinesExcept.get(0).first() : null;
+	}
+
+	/**
+	* @Description: 根据角度获取和edge相对的一条passable edge
+	* @Author: Guanyu-Cai
+	* @Date: 3/13/20
+	*/
+	public CSUEdge getOppositePassableEdge(CSUEdge edge) {
+		if (!csuEdges.contains(edge)) {
+			return null;
+		}
+		List<Pair<CSUEdge, Line2D>> passableEdgeLinesExcept = getPassableEdgeLinesExcept(edge);
+		passableEdgeLinesExcept.sort(new Util.AngleComparator(edge.getLine()));
+		return !passableEdgeLinesExcept.isEmpty() ? passableEdgeLinesExcept.get(0).first() : null;
+	}
+
+	/**
+	* @Description: 获取所有passableEdge-line2D
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+	public List<Pair<CSUEdge, Line2D>> getPassableEdgeLines() {
+		List<Pair<CSUEdge, Line2D>> result = new ArrayList<>();
+		for (CSUEdge edge : csuEdges) {
+			if (edge.isPassable()) {
+				result.add(new Pair<>(edge, edge.getLine()));
 			}
 		}
 		return result;
 	}
 
 	/**
-	 * @Description: 获取和edge相对的edge的neighbour road
+	 * @Description: 获取所有passableEdge-line2d,除了和exceptEdge在同一条直线上的
+	 * @Author: Guanyu-Cai
+	 * @Date: 3/16/20
+	 */
+	public List<Pair<CSUEdge, Line2D>> getPassableEdgeLinesExcept(CSUEdge exceptEdge) {
+		List<Pair<CSUEdge, Line2D>> result = new ArrayList<>();
+		math.geom2d.line.Line2D exceptLine = Util.convertLine(exceptEdge.getLine());
+		for (CSUEdge edge : csuEdges) {
+			math.geom2d.line.Line2D line = Util.convertLine(edge.getLine());
+			if (edge.isPassable() && Util.isCollinear(exceptLine, line, COLINEAR_THRESHOLD)) {
+				result.add(new Pair<>(edge, edge.getLine()));
+			}
+		}
+		return result;
+	}
+
+	/**
+	* @Description: 获取所有passableEdge-line2d,除了和exceptEdge在同一条直线上的
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+	public List<Pair<CSUEdge, Line2D>> getEdgeLinesExcept(CSUEdge exceptEdge) {
+		List<Pair<CSUEdge, Line2D>> result = new ArrayList<>();
+		math.geom2d.line.Line2D exceptLine = Util.convertLine(exceptEdge.getLine());
+		for (CSUEdge edge : csuEdges) {
+			math.geom2d.line.Line2D line = Util.convertLine(edge.getLine());
+			if (!Util.isCollinear(exceptLine, line, COLINEAR_THRESHOLD)) {
+				result.add(new Pair<>(edge, edge.getLine()));
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * @Description: 获取和edge相对的passable edge的neighbour road
 	 * @Author: Guanyu-Cai
 	 * @Date: 3/13/20
 	 */
-	public CSURoad getOppositeEdgeRoad(CSUEdge edge) {
-		CSUEdge oppositeEdge = getOppositeEdge(edge);
+	public CSURoad getOppositePassableEdgeRoad(CSUEdge edge) {
+		CSUEdge oppositeEdge = getOppositePassableEdge(edge);
 		EntityID id = oppositeEdge.getNeighbours().first();
 		return worldHelper.getCsuRoad(id);
 	}
 
+	/**
+	* @Description: 获取所有blockade的polygon
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+	public List<Polygon> getBlockadePolygons() {
+		List<Polygon> result = new ArrayList<>();
+		for (CSUBlockade blockade : csuBlockades) {
+			result.add(blockade.getPolygon());
+		}
+		return result;
+	}
+
+	/**
+	 * @Description: 获取所有blockade的放大scale大小的polygon
+	 * @Author: Guanyu-Cai
+	 * @Date: 3/16/20
+	 */
+	public List<Polygon> getBlockadePolygons(int scale) {
+		List<Polygon> result = new ArrayList<>();
+		for (CSUBlockade blockade : csuBlockades) {
+			Polygon polygon = Util.scaleBySize(blockade.getPolygon(), scale);
+			result.add(polygon);
+		}
+		return result;
+	}
+
 	/* --------------------------------- the following method is only for test --------------------------------- */
-	
+
 	public void setCsuBlockades(List<CSUBlockade> blockades) {
 		this.csuBlockades.clear();
 		this.csuBlockades.addAll(blockades);
 	}
-	
+
 	public List<CSUEdge> getCsuEdges() {
 		return this.csuEdges;
 	}
-	
+
 	public List<CSUBlockade> getCsuBlockades() {
 		return this.csuBlockades;
 	}

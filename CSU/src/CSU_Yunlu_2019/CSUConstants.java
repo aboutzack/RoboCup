@@ -21,4 +21,5 @@ public interface CSUConstants {
     public static final int AGENT_SIZE = 1000;
     public static final int AGENT_PASSING_THRESHOLD = 725;
     public static final int AGENT_MINIMUM_PASSING_THRESHOLD = 200;
+    public static final int COLLINEAR_THRESHOLD = 10;
 }

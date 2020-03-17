@@ -1,11 +1,14 @@
 package CSU_Yunlu_2019.util;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.world.object.CSUEdge;
 import CSU_Yunlu_2019.world.object.CSULineOfSightPerception;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
+import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
@@ -284,6 +287,49 @@ public class Util {
     	return new Line2D(line.getOrigin(), newEndPoint);
     }
 
+    /**
+    * @Description: start和end都延长size的长度
+    * @Author: Guanyu-Cai
+    * @Date: 3/16/20
+    */
+	public static Line2D improveLineBothSides(Line2D line, double size) {
+		double molecular = line.getEndPoint().getY() - line.getOrigin().getY();
+		double denominaor = line.getEndPoint().getX() - line.getOrigin().getX();
+		double slope;
+		if (denominaor != 0) {
+			slope = molecular / denominaor;
+		} else {
+			if (molecular > 0)
+				slope = Double.MAX_VALUE;
+			else
+				slope = -Double.MAX_VALUE;
+			// Double.MIN_VALUE -- smallest positive nozero value of type double
+		}
+
+		double newOriginPointX, newOriginPointY, newEndPointX, newEndPointY;
+		double theta = Math.atan(slope);
+		if (denominaor > 0) {
+			newOriginPointX = line.getOrigin().getX() - size * Math.abs(Math.cos(theta));
+			newEndPointX = line.getEndPoint().getX() + size * Math.abs(Math.cos(theta));
+		} else {
+			newOriginPointX = line.getOrigin().getX() + size * Math.abs(Math.cos(theta));
+			newEndPointX = line.getEndPoint().getX() - size * Math.abs(Math.cos(theta));
+		}
+		if (molecular > 0) {
+			newOriginPointY = line.getOrigin().getY() - size * Math.abs(Math.sin(theta));
+			newEndPointY = line.getEndPoint().getY() + size * Math.abs(Math.sin(theta));
+		} else {
+			newOriginPointY = line.getOrigin().getY() + size * Math.abs(Math.sin(theta));
+			newEndPointY = line.getEndPoint().getY() - size * Math.abs(Math.sin(theta));
+		}
+
+		Point2D newOriginPoint = new Point2D(newOriginPointX, newOriginPointY);
+		Point2D newEndPoint = new Point2D(newEndPointX, newEndPointY);
+
+
+		return new Line2D(newOriginPoint, newEndPoint);
+	}
+
 	public static rescuecore2.misc.geometry.Line2D clipLine(rescuecore2.misc.geometry.Line2D line, double size) {
 		double length = Ruler.getLength(line);
 		return improveLine(line, size - length);
@@ -494,6 +540,90 @@ public class Util {
 		return points;
 	}
 
+	public static double getAngle(rescuecore2.misc.geometry.Vector2D v1, rescuecore2.misc.geometry.Vector2D v2) {
+		double flag = (v1.getX() * v2.getY()) - (v1.getY() * v2.getX());
+		double angle = Math.acos(((v1.getX() * v2.getX()) + (v1.getY() * v2.getY())) / (v1.getLength() * v2.getLength()));
+		if (flag > 0) {
+			return angle;
+		}
+		if (flag < 0) {
+			return -1 * angle;
+		}
+		return 0.0D;
+	}
+
+	/**
+	* @Description: 获取两直线所成锐角
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+	public static double getAngle(Line2D l1, Line2D l2) {
+		Vector2D v1 = l1.getDirection();
+		Vector2D v2 = l2.getDirection();
+		double temp = (v1.getX() * v2.getX() + v1.getY() * v2.getY()) / (v1.getLength() * v2.getLength());
+		if (temp > 0) {
+			return Math.acos(temp);
+		}
+		if (temp < 0) {
+			return Math.acos(-1 * temp);
+		}
+		return 0.0D;
+	}
+
+	/**
+	* @Description: convert from rescuecore2.misc.geometry.Line2D to math.geom2d.line.Line2D
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+	public static math.geom2d.line.Line2D convertLine(Line2D line2D) {
+		double x1 = line2D.getOrigin().getX();
+		double y1 = line2D.getOrigin().getY();
+		double x2 = line2D.getEndPoint().getX();
+		double y2 = line2D.getEndPoint().getY();
+		return new math.geom2d.line.Line2D(x1, y1, x2, y2);
+	}
+
+	/**
+	 * @Description: 判断两条直线是否共线
+	 * @Author: Guanyu-Cai
+	 * @Date: 3/16/20
+	 */
+	public static boolean isCollinear(math.geom2d.line.Line2D l1, math.geom2d.line.Line2D l2, double threshold) {
+		if (!isCollinear(l1.getVector(), l2.getVector(), threshold)) {//判断向量是否共线
+			return false;
+		} else {
+			double dx = l1.getX2() - l1.getX1();
+			double dy = l1.getY2() - l1.getY1();
+			if (Math.abs(dx) > Math.abs(dy)) {
+				return Math.abs((l2.getX1() - l1.getX1()) * dy / dx + l1.getY1() - l2.getY1()) <= CSUConstants.COLLINEAR_THRESHOLD;
+			} else {
+				return Math.abs((l2.getY1() - l1.getY1()) * dx / dy + l1.getX1() - l2.getX1()) <= CSUConstants.COLLINEAR_THRESHOLD;
+			}
+		}
+	}
+	
+	/**
+	* @Description: 判断两条line是否共线
+	* @param thresholdAngle 弧度制角度
+	* @Author: Guanyu-Cai
+	* @Date: 3/16/20
+	*/
+//	public static boolean isColinear(Line2D l1, Line2D l2, double thresholdAngle) {
+//		// TODO: 3/17/20 有问题 
+//		double angle = getAngle(l1.getDirection(), l2.getDirection());
+//		return angle <= thresholdAngle;
+//	}
+
+	/**
+	* @Description: 判断两向量是否共线
+	* @Author: Guanyu-Cai
+	* @Date: 3/17/20
+	*/
+	public static boolean isCollinear(math.geom2d.Vector2D v1, math.geom2d.Vector2D v2, double threshold) {
+		v1 = v1.getNormalizedVector();
+		v2 = v2.getNormalizedVector();
+		return Math.abs(v1.getX() * v2.getY() - v1.getY() * v2.getX()) < threshold;
+	}
 
 	public static class DistanceComparator implements Comparator<Pair<Point2D, Point2D>> {
 		private Point2D reference;
@@ -517,9 +647,9 @@ public class Util {
 
 		@Override
 		public int compare(Pair<Point2D, Point2D> a, Pair<Point2D, Point2D> b) {
-			int d1 = (int) Ruler.getDistance(reference, a.first());
-			int d2 = (int) Ruler.getDistance(reference, b.first());
-			return d1 - d2;
+			double d1 = Ruler.getDistance(reference, a.first());
+			double d2 = Ruler.getDistance(reference, b.first());
+			return Double.compare(d1, d2);
 		}
 	}
 
@@ -530,9 +660,24 @@ public class Util {
 
 		@Override
 		public int compare(Line2D a, Line2D b) {
-			int l1 = (int) Ruler.getLength(a);
-			int l2 = (int) Ruler.getLength(b);
-			return l1 - l2;
+			double l1 = Ruler.getLength(a);
+			double l2 = Ruler.getLength(b);
+			return Double.compare(l1, l2);
+		}
+	}
+
+	public static class AngleComparator implements Comparator<Pair<CSUEdge, Line2D>> {
+		private Line2D reference;
+
+		public AngleComparator(Line2D reference) {
+			this.reference = reference;
+		}
+
+		@Override
+		public int compare(Pair<CSUEdge, Line2D> a, Pair<CSUEdge, Line2D> b) {
+			double angle1 = Math.abs(getAngle(reference, a.second()));
+			double angle2 = Math.abs(getAngle(reference, b.second()));
+			return Double.compare(angle1, angle2);
 		}
 	}
 

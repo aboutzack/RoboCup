@@ -93,9 +93,9 @@ public class StuckHelper {
             Collection<CSURoad> targetValidRoads = new HashSet<>();
             CSURoad csuRoad = world.getCsuRoad(selfPosition);
             targetValidRoads.add(csuRoad);
-            CSURoad oppositeEdgeRoad = csuRoad.getOppositeEdgeRoad(targetEdge);
-            if (oppositeEdgeRoad != null) {
-                targetValidRoads.add(oppositeEdgeRoad);
+            CSURoad oppositePassableEdgeRoad = csuRoad.getOppositePassableEdgeRoad(targetEdge);
+            if (oppositePassableEdgeRoad != null) {
+                targetValidRoads.add(oppositePassableEdgeRoad);
             }
 
             //a large number
