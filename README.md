@@ -360,3 +360,7 @@ GYJ:改进search，发布新search。存在问题:个别未知情况下，新sea
 
 CRF：调试ActionFireFighting中的refuge和hydrant的分配策略。<br>
 CGY:研究visual-debugger<br>
+
+2020年3月17日
+
+CRF：修改hydrant的判断是否使用和选取问题。<br>
