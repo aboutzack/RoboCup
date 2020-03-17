@@ -182,16 +182,6 @@ public class ActionFireFighting extends ExtAction
         return this;
     }
 
-    /** 判断是否需要refill水（需要refill就换水），是否需要休息（需要休息就换水），该火警是否为空（为空就换水）
-     * 调用了needRefill->calcRefill  needRest->calcRefugeAction
-     * both : calcExtinguish    updateWater
-     *
-     * fb每个智能体可以具有的动作为：
-     *     动作类：refill、getMoveAction
-     *     计算类：calcRefugeAction、calcHydrantAction、calcRefugeAndHydrantAction、calcExtinguish
-     *
-     * */
-
     @Override
     public ExtAction calc()
     {
@@ -228,6 +218,9 @@ public class ActionFireFighting extends ExtAction
         return this;
     }
 
+    /**
+     * crf:火警不同情况的判断以及设定target等。
+     */
     private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {/*System.out.println("\n********fireExtinguish00000*******\n");*/
         EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
@@ -256,8 +249,6 @@ public class ActionFireFighting extends ExtAction
             }
         }
 
-
-
         //如果火警在避难所
         if (StandardEntityURN.REFUGE == positionEntity.getStandardURN())
         {
@@ -272,18 +263,20 @@ public class ActionFireFighting extends ExtAction
             }
         }
 
-        //如果火警在道路上且target为null
+        //ROAD且target为null:寻找范围fb并跟随
         if (StandardEntityURN.ROAD == positionEntity.getStandardURN()) {
 //            System.out.println(agent.getID()+" is on a road and its target is "+this.target);
-            if (this.target == null){
-                return new ActionRefill();
+            if (this.target == null) {
+                for (Map.Entry<EntityID, Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
+                    if (this.worldInfo.getDistance(standardEntity, this.worldInfo.getEntity(entry.getKey())) < 4 * scenarioInfo.getFireExtinguishMaxDistance())
+                        this.setTarget(this.worldInfo.getEntity(entry.getKey()).getID());
+//                    System.out.println("fb id = "+entry.getKey()+"       water ="+entry.getValue());
+                }
+                return new ActionRest();
             }
         }
 
-        //如果在blockade中
-        if (StandardEntityURN.BLOCKADE == positionEntity.getStandardURN()){
-//            System.out.println(agent+"--------------");
-        }
+
 
 //        List<StandardEntity> neighbourBuilding = new ArrayList<>();
 //        StandardEntity entity = this.worldInfo.getEntity(target);
@@ -315,9 +308,9 @@ public class ActionFireFighting extends ExtAction
 
         }
 
-        //如果agent被阻挡
-        if (isInBlockade(agent)){
-//            System.out.println(agent+" is being blocked");
+        //如果在blockade中
+        if (StandardEntityURN.BLOCKADE == positionEntity.getStandardURN()){
+//            System.out.println(agent+"--------------");
             //给pf 发送信息
             if (dangerBuilding.size() > 0){
                 FierynessSorter fierynessSorter = new FierynessSorter();
@@ -327,7 +320,7 @@ public class ActionFireFighting extends ExtAction
             }
         }
 
-        //有正在燃烧的建筑物
+        //有正在燃烧的建筑物,水量够灭火，不够补水
         if (burningBuilding.size() > 0)
         {
             FierynessSorter fierynessSorter = new FierynessSorter();
@@ -373,7 +366,7 @@ public class ActionFireFighting extends ExtAction
         return null;
     }
 
-    /** 判断是否需要水 加水 */
+
     private boolean needRefill(FireBrigade agent, boolean refillFlag)
     {
         if (refillFlag)
@@ -383,6 +376,7 @@ public class ActionFireFighting extends ExtAction
         }
         return agent.getWater() <= this.refillRequest;
     }
+
     private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
     {
         StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
@@ -420,7 +414,7 @@ public class ActionFireFighting extends ExtAction
 //        return null;
     }
 
-    /** 判断是否需要休息 */
+
     private boolean needRest(Human agent)
     {
         int hp = agent.getHP();
@@ -445,7 +439,7 @@ public class ActionFireFighting extends ExtAction
     }
 
 
-
+    /** hydrant */
     private Action calcRefugeAndHydrantAction(Human human, PathPlanning pathPlanning, EntityID target)
     {
         Set<EntityID> availableSupplier = getAvailableHydrants();
@@ -459,6 +453,7 @@ public class ActionFireFighting extends ExtAction
         );
     }
 
+    /** refuge */
     private Action calcRefugeAction(Human human, PathPlanning pathPlanning, EntityID target, boolean isRefill)
     {
         return this.calcSupplyAction(
@@ -484,7 +479,10 @@ public class ActionFireFighting extends ExtAction
 
     private Action calcSupplyAction(Human human, PathPlanning pathPlanning, Collection<EntityID> supplyPositions, EntityID target, boolean isRefill) {
         EntityID position = human.getPosition();
-//        int size = supplyPositions.size();
+//        System.out.println("check all firebridge's water~~~~~~~~~~~~~~");
+//        for (Map.Entry<EntityID,Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
+//            System.out.println("fb id = "+entry.getKey()+"       water ="+entry.getValue());
+//        }
         if (supplyPositions.contains(position)) {
             return isRefill ? new ActionRefill() : new ActionRest();
         }
@@ -631,7 +629,11 @@ public class ActionFireFighting extends ExtAction
         return false;
     }
 
-    //判断一个消防栓是否正在被占用
+    /**
+     * crf:
+     * 判断一个消防栓是否正在被占用:
+     * 确定hydrant范围内的fb isrefill() && 范围内等待中的fb(getwater = 0)
+     */
     private boolean isOccupied(EntityID hydrantID)
     {
         EntityID myID = this.agentInfo.getID();
@@ -643,6 +645,14 @@ public class ActionFireFighting extends ExtAction
                 if(firebrigade.getPosition().equals(hydrantID) && this.isRefilling(firebrigade.getID()) && !firebrigade.getID().equals(myID))
                 {
                     return true;
+                }
+                else if (worldInfo.getDistance(agents.getID(),hydrantID) < scenarioInfo.getFireExtinguishMaxDistance()) {
+                    //正在有补水的或者被分配到了正在补水的位置的
+                    if (this.isRefilling(agents.getID())) {
+                        return true;
+                    } else if (((FireBrigade) agents).getWater() == 0) {
+                        return true;
+                    }
                 }
             }
         }
@@ -659,19 +669,20 @@ public class ActionFireFighting extends ExtAction
             RefillTargets.add(s);
         }
 
+        //优先遍历hydrant，然后refuge，保证水量充足
         RefillTargets.sort(new DistanceSorter(this.worldInfo,this.agentInfo.me()));
         for(StandardEntity s:RefillTargets)
         {
-            if(s instanceof Refuge)
-            {
-                return s;
-            }
-            if(s instanceof Hydrant && !isOccupied(s.getID()))
-            {
+            if(s instanceof Hydrant && !isOccupied(s.getID())) {
                 return s;
             }
         }
-
+        for(StandardEntity s:RefillTargets)
+        {
+            if(s instanceof Refuge) {
+                return s;
+            }
+        }
         return null;
     }
 
