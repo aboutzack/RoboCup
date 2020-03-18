@@ -115,7 +115,8 @@ public class StuckHelper {
                     if (CSUConstants.DEBUG_STUCK_HELPER) {
                         System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + validIntersections.get(0) + " planPath(0): " + path.get(0));
                     }
-                    return moveToPoint(validIntersections.get(0));
+                    Point2D target = Util.improveLine(new Line2D(locationPoint, validIntersections.get(0)), CSUConstants.AGENT_PASSING_THRESHOLD).getEndPoint();
+                    return moveToPoint(target);
                 }
             }
         }
