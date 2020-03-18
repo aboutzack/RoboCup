@@ -38,7 +38,7 @@ public class StuckHelper {
     }
 
     public Action calc(List<EntityID> path) {
-        if (path == null || path.isEmpty()) {
+        if (path == null || path.size() < 2) {
             return null;
         }
 
@@ -61,7 +61,7 @@ public class StuckHelper {
         CSUEdge targetEdge = null;
         if (selfPosition instanceof Road) {
             CSURoad csuRoad = world.getCsuRoad(selfPosition);
-            for (CSUEdge csuEdge : csuRoad.getCsuEdgesTo(path.get(0))) {
+            for (CSUEdge csuEdge : csuRoad.getCsuEdgesTo(path.get(1))) {
                 if (!csuEdge.isBlocked()) {
                     //和目标地点相连的没有阻塞的edge的开放部分的中点
                     openPartCenter = csuEdge.getOpenPartCenter();

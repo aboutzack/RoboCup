@@ -49,7 +49,6 @@ public class CSUFireClustering extends DynamicClustering {
         entityClusterMap = new HashMap<>();
         clusters = new ArrayList<>();
         clusterConvexPolygons = new ArrayList<>();
-        //TODO @MRL consider map scale
         CLUSTER_RANGE_THRESHOLD = scenarioInfo.getPerceptionLosMaxDistance();
 
         switch (si.getMode()) {

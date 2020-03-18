@@ -152,7 +152,7 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         List<EntityID> result = new ArrayList<>();
 
         Human agent;
-        for (StandardEntity next : world.getPlatoonAgentsWithURN()) {
+        for (StandardEntity next : world.getPlatoonAgentsWithURN(world.getWorldInfo())) {
             agent = (Human) next;
 
             if (agent.getID().getValue() == selfHuman.getID().getValue()) {

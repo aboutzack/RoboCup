@@ -5,6 +5,9 @@ import CSU_Yunlu_2019.geom.ExpandApexes;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
+import CSU_Yunlu_2019.world.graph.GraphHelper;
+import CSU_Yunlu_2019.world.graph.MyEdge;
+import CSU_Yunlu_2019.world.graph.Node;
 import adf.agent.info.AgentInfo;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
@@ -32,6 +35,7 @@ public class CSURoad {
 	private Road selfRoad;
 	private EntityID selfId;
 	private CSUWorldHelper worldHelper;
+	private GraphHelper graph;
 	private AgentInfo agentInfo;
 
 	private CSULineOfSightPerception lineOfSightPerception;
@@ -53,11 +57,12 @@ public class CSURoad {
 
 	private boolean isEntrance = false;
 	private boolean isRoadCenterBlocked = false;
-	private static final double COLINEAR_THRESHOLD = 1.0E-3D;
+	private static final double COLLINEAR_THRESHOLD = 1.0E-3D;
 
 	// constructor
 	public CSURoad(Road road, CSUWorldHelper world) {
 		this.worldHelper = world;
+		this.graph = world.getGraph();
 		this.agentInfo = world.getAgentInfo();
 		this.selfRoad = road;
 		this.selfId = road.getID();
@@ -78,21 +83,231 @@ public class CSURoad {
 	 * Update the blockade inform.
 	 */
 	public void update() {
-		lastUpdateTime = worldHelper.getTime();
-		for (CSUEdge next : csuEdges) {
-			next.setOpenPart(next.getLine());
-			next.setBlocked(false);
-		}
-
-		this.csuBlockades = createCsuBlockade();
-		if (selfRoad.isBlockadesDefined()) {
+		if (worldHelper.getRoadsSeen().contains(selfId)) {
+			//reset
+			lastUpdateTime = worldHelper.getTime();
 			for (CSUEdge next : csuEdges) {
-				if (!next.isPassable())
-					continue;
-				setCsuEdgeOpenPart(next);
+				next.setOpenPart(next.getLine());
+				next.setBlocked(false);
+			}
+			for (MyEdge myEdge : graph.getMyEdgesInArea(selfId)) {
+				myEdge.setPassable(true);
 			}
 
+			//update
+			this.csuBlockades = createCsuBlockade();
+			if (selfRoad.isBlockadesDefined()) {
+				for (CSUEdge csuEdge : csuEdges) {
+					if (csuEdge.isPassable()) {
+						csuEdge.setOpenPart(csuEdge.getLine());
+						List<CSUBlockade> blockedStart = new ArrayList<>();
+						List<CSUBlockade> blockedEnd = new ArrayList<>();
+						for (CSUBlockade csuBlockade : csuBlockades) {
+
+							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getStart()) < CSUConstants.AGENT_PASSING_THRESHOLD) {
+								blockedStart.add(csuBlockade);
+							}
+							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getEnd()) < CSUConstants.AGENT_PASSING_THRESHOLD) {
+								blockedEnd.add(csuBlockade);
+							}
+						}
+						setCsuEdgeOpenPart(csuEdge);
+						if (csuBlockades.size() == 1) {
+							if (Util.containsEach(blockedEnd, blockedStart)) {
+								csuBlockades.get(0).addBlockedEdges(csuEdge);
+								csuEdge.setBlocked(true);
+							}
+						} else {
+							for (CSUBlockade block1 : blockedStart) {
+								for (CSUBlockade block2 : blockedEnd) {
+									if (Util.isPassable(block1.getPolygon(), block2.getPolygon(), CSUConstants.AGENT_PASSING_THRESHOLD)) {
+										csuEdge.setBlocked(true);
+										block1.addBlockedEdges(csuEdge);
+										block2.addBlockedEdges(csuEdge);
+									}
+
+								}
+							}
+						}
+					} else {
+						for (CSUBlockade csuBlockade : csuBlockades) {
+							double distance = Ruler.getDistance(csuEdge.getLine(), csuBlockade.getPolygon());
+
+							if (distance < CSUConstants.AGENT_PASSING_THRESHOLD) {
+								csuEdge.setBlocked(true);
+								csuBlockade.addBlockedEdges(csuEdge);
+							}
+
+						}
+					}
+				}
+			}
+			updateNodePassably();
+			updateMyEdgePassably();
 		}
+	}
+
+	/**
+	 * 更新node是否可通
+	 */
+	private void updateNodePassably() {
+		for (CSUEdge csuEdge : csuEdges) {
+			if (csuEdge.isPassable()) {
+				Node node = graph.getNode(csuEdge.getMiddlePoint());
+				if (node == null) {
+					continue;
+				}
+				if (csuEdge.isBlocked() || csuEdge.getOtherSideEdge().isBlocked()) {
+					node.setPassable(false, agentInfo.getTime());
+				} else {
+					node.setPassable(true, agentInfo.getTime());
+				}
+			}
+		}
+	}
+
+	/**
+	 * 更新myEdge是否可通过
+	 */
+	private void updateMyEdgePassably() {
+		for (int i = 0; i < csuEdges.size() - 1; i++) {
+			CSUEdge edge1 = csuEdges.get(i);
+			if (!edge1.isPassable()) {
+				continue;
+			}
+			//考虑passable的csuEdge
+			for (int j = i + 1; j < csuEdges.size(); j++) {
+				CSUEdge edge2 = csuEdges.get(j);
+				if (!edge2.isPassable()) {
+					continue;
+				}
+				setMyEdgePassably(edge1, edge2, isPassable(edge1, edge2));
+			}
+		}
+	}
+
+	private void setMyEdgePassably(CSUEdge edge1, CSUEdge edge2, boolean passably) {
+		if (!(agentInfo.me() instanceof Human) || !edge1.getNeighbours().second().equals(edge2.getNeighbours().second())) {
+			return;
+		}
+		Node node1 = graph.getNode(edge1.getMiddlePoint());
+		Node node2 = graph.getNode(edge2.getMiddlePoint());
+		MyEdge myEdge = graph.getMyEdge(selfId, new Pair<>(node1, node2));
+		myEdge.setPassable(passably);
+	}
+
+	/**
+	 * @return 两edge之间是否可通
+	 */
+	public boolean isPassable(CSUEdge from, CSUEdge to) {
+		if (!from.getNeighbours().second().equals(to.getNeighbours().second())) {
+			System.err.println("this 2 edge is not in a same area!!!");
+			return false;
+		}
+		//如果有一端block,则返回false
+		if (from.isBlocked() || to.isBlocked())
+			return false;
+		//这两条edge之间的所有edge
+		Pair<List<CSUEdge>, List<CSUEdge>> edgesBetween = getEdgesBetween(from, to, false);
+	
+		int count = csuBlockades.size();
+		List<CSUEdge> blockedEdges = new ArrayList<>();
+		if (count == 1) {
+			//添加进blockEdge
+			blockedEdges.addAll(csuBlockades.get(0).getBlockedEdges());
+		} else if (count > 1) {
+			for (int i = 0; i < count - 1; i++) {
+				CSUBlockade block1 = csuBlockades.get(i);
+				for (int j = i + 1; j < count; j++) {
+					CSUBlockade block2 = csuBlockades.get(j);
+					if (isBlockedTwoSides(block1, edgesBetween)) {
+						return false;
+					}
+					if (isBlockedTwoSides(block2, edgesBetween)) {
+						return false;
+					}
+					if (isInSameSide(block1, block2, edgesBetween)) {
+						continue;
+					}
+					if (Util.isPassable(block1.getPolygon(), block2.getPolygon(), CSUConstants.AGENT_PASSING_THRESHOLD)) {
+						blockedEdges.removeAll(block1.getBlockedEdges());
+						blockedEdges.addAll(block1.getBlockedEdges());
+						blockedEdges.removeAll(block2.getBlockedEdges());
+						blockedEdges.addAll(block2.getBlockedEdges());
+					}
+				}
+			}
+		} else if (count == 0) {
+			return !(from.isBlocked() || to.isBlocked());
+		}
+		return !(Util.containsEach(blockedEdges, edgesBetween.first()) && Util.containsEach(blockedEdges, edgesBetween.second()));
+	}
+
+	private Pair<List<CSUEdge>, List<CSUEdge>> getEdgesBetween(CSUEdge edge1, CSUEdge edge2, boolean justImPassable) {
+		List<CSUEdge> leftSideEdges = new ArrayList<>();
+		List<CSUEdge> rightSideEdges = new ArrayList<>();
+		rescuecore2.misc.geometry.Point2D startPoint1 = edge1.getStart();
+		rescuecore2.misc.geometry.Point2D endPoint1 = edge1.getEnd();
+		rescuecore2.misc.geometry.Point2D startPoint2 = edge2.getStart();
+		rescuecore2.misc.geometry.Point2D endPoint2 = edge2.getEnd();
+
+		boolean finishedLeft = false;
+		boolean finishedRight = false;
+		for (CSUEdge edge : csuEdges) {
+			if (finishedLeft && finishedRight)
+				break;
+			for (CSUEdge ed : csuEdges) {
+				if (finishedLeft && finishedRight)
+					break;
+				if (ed.equals(edge1) || ed.equals(edge2)) {
+					continue;
+				}
+				if (startPoint1.equals(startPoint2) || startPoint1.equals(endPoint2)) {
+					finishedLeft = true;
+				}
+				if (endPoint1.equals(startPoint2) || endPoint1.equals(endPoint2)) {
+					finishedRight = true;
+				}
+
+				if (ed.getStart().equals(startPoint1) && !finishedLeft && !leftSideEdges.contains(ed)) {
+					startPoint1 = ed.getEnd();
+					if (!justImPassable || !ed.isPassable())
+						leftSideEdges.add(ed);
+					continue;
+				}
+				if (ed.getEnd().equals(startPoint1) && !finishedLeft && !leftSideEdges.contains(ed)) {
+					startPoint1 = ed.getStart();
+					if (!justImPassable || !ed.isPassable())
+						leftSideEdges.add(ed);
+					continue;
+				}
+				if (ed.getStart().equals(endPoint1) && !finishedRight && !rightSideEdges.contains(ed)) {
+					endPoint1 = ed.getEnd();
+					if (!justImPassable || !ed.isPassable())
+						rightSideEdges.add(ed);
+					continue;
+				}
+				if (ed.getEnd().equals(endPoint1) && !finishedRight && !rightSideEdges.contains(ed)) {
+					endPoint1 = ed.getStart();
+					if (!justImPassable || !ed.isPassable())
+						rightSideEdges.add(ed);
+					continue;
+				}
+			}
+		}
+		return new Pair<>(leftSideEdges, rightSideEdges);
+	}
+
+	private boolean isInSameSide(CSUBlockade block1, CSUBlockade block2, Pair<List<CSUEdge>, List<CSUEdge>> edgesBetween) {
+		return edgesBetween.first().containsAll(block1.getBlockedEdges()) &&
+				edgesBetween.first().containsAll(block2.getBlockedEdges()) ||
+				edgesBetween.second().containsAll(block1.getBlockedEdges()) &&
+						edgesBetween.second().containsAll(block2.getBlockedEdges());
+	}
+
+	private boolean isBlockedTwoSides(CSUBlockade block1, Pair<List<CSUEdge>, List<CSUEdge>> edgesBetween) {
+		return Util.containsEach(edgesBetween.first(), block1.getBlockedEdges()) &&
+				Util.containsEach(edgesBetween.second(), block1.getBlockedEdges());
 	}
 
 	private void createPolygon() {
@@ -1056,7 +1271,7 @@ public class CSURoad {
 		math.geom2d.line.Line2D exceptLine = Util.convertLine(exceptEdge.getLine());
 		for (CSUEdge edge : csuEdges) {
 			math.geom2d.line.Line2D line = Util.convertLine(edge.getLine());
-			if (edge.isPassable() && Util.isCollinear(exceptLine, line, COLINEAR_THRESHOLD)) {
+			if (edge.isPassable() && Util.isCollinear(exceptLine, line, COLLINEAR_THRESHOLD)) {
 				result.add(new Pair<>(edge, edge.getLine()));
 			}
 		}
@@ -1073,7 +1288,7 @@ public class CSURoad {
 		math.geom2d.line.Line2D exceptLine = Util.convertLine(exceptEdge.getLine());
 		for (CSUEdge edge : csuEdges) {
 			math.geom2d.line.Line2D line = Util.convertLine(edge.getLine());
-			if (!Util.isCollinear(exceptLine, line, COLINEAR_THRESHOLD)) {
+			if (!Util.isCollinear(exceptLine, line, COLLINEAR_THRESHOLD)) {
 				result.add(new Pair<>(edge, edge.getLine()));
 			}
 		}

@@ -243,7 +243,7 @@ public class CSUSearch extends Search {
 		nowPosition  = agentInfo.getPosition();
 		if(lastPosition!=null ){
 			if(Util.getdistance(worldInfo.getLocation(lastPosition),worldInfo.getLocation(nowPosition)) < 10 && worldInfo.getEntity(nowPosition).getStandardURN() != BLOCKADE){
-				System.out.println("agent:"+agentInfo.getID()+",目标为:"+this.result+",不在障碍里,原地不动");
+//				System.out.println("agent:"+agentInfo.getID()+",目标为:"+this.result+",不在障碍里,原地不动");
 			}
 		}
 		this.updateKnownCivilians();

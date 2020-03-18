@@ -21,8 +21,10 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.*;
 
 /**
  * @Author: Guanyu-Cai
@@ -187,6 +189,10 @@ public class ActionExtMove extends ExtAction {
         }
         lastmovePath.clear();
         lastmovePath.addAll(path);
+
+        if (!path.isEmpty() && !path.contains(world.getSelfPositionId())) {
+            path.add(0, world.getSelfPositionId());
+        }
 
         if (agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil() && isStuck(path)) {
             action = stuckHelper.calc(path);

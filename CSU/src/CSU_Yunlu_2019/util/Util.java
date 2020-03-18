@@ -601,7 +601,40 @@ public class Util {
 			}
 		}
 	}
-	
+
+	public static boolean containsEach(Collection collection1, Collection collection2) {
+		for (Object object : collection1) {
+			if (collection2.contains(object)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean isPassable(Polygon polygon, Polygon polygon1, int agentPassingThreshold) {
+
+		int count = polygon1.npoints;
+		int j;
+		double tempDistance;
+		boolean isPassable = false;
+		for (int i = 0; i < count; i++) {
+			j = (i + 1) % count;
+			rescuecore2.misc.geometry.Point2D startPoint = new rescuecore2.misc.geometry.Point2D(polygon1.xpoints[i], polygon1.ypoints[i]);
+			rescuecore2.misc.geometry.Point2D endPoint = new rescuecore2.misc.geometry.Point2D(polygon1.xpoints[j], polygon1.ypoints[j]);
+			if (startPoint.equals(endPoint)) {
+				continue;
+			}
+			rescuecore2.misc.geometry.Line2D poly2Line = new rescuecore2.misc.geometry.Line2D(startPoint, endPoint);
+			tempDistance = Ruler.getDistance(poly2Line, polygon);
+			if (tempDistance < agentPassingThreshold) {
+				isPassable = true;
+				break;
+			}
+		}
+		return isPassable;
+
+	}
+
 	/**
 	* @Description: 判断两条line是否共线
 	* @param thresholdAngle 弧度制角度

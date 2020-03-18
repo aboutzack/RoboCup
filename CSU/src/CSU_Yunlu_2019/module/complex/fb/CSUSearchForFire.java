@@ -76,7 +76,7 @@ public class CSUSearchForFire extends Search {
 
 		this.unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
 		fireInCluster = this.updateFire();//判断搜索分区内有没有着火的建筑
-		this.BurnOut = this.Burnout();//如果分区内建筑全烧毁了就为TRUE，有没烧毁的为FALSE
+//		this.BurnOut = this.Burnout();//如果分区内建筑全烧毁了就为TRUE，有没烧毁的为FALSE
 		if(this.fireInCluster)//有着火的
 			this.SearchTime = threshold;
 		if(BurnOut)//全烧毁了
@@ -88,7 +88,6 @@ public class CSUSearchForFire extends Search {
 			this.reset();
 		}
 		this.unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
-
 		if(this.unsearchedRoadIDs.isEmpty()) {
 			this.reset();
 			unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());

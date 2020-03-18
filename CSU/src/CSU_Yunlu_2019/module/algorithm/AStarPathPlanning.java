@@ -1,59 +1,48 @@
-
 package CSU_Yunlu_2019.module.algorithm;
 
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
-import CSU_Yunlu_2019.world.object.CSUEdge;
-import CSU_Yunlu_2019.world.object.CSURoad;
+import CSU_Yunlu_2019.world.graph.GraphHelper;
+import CSU_Yunlu_2019.world.graph.MyEdge;
+import CSU_Yunlu_2019.world.graph.Node;
 import adf.agent.communication.MessageManager;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
-import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.misc.Pair;
-import rescuecore2.misc.collections.LazyMap;
 import rescuecore2.standard.entities.*;
-import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
 
 /**
-* @Description: 考虑了blockade的A*算法
-* @Author: Guanyu-Cai
-* @Date: 2/20/20
-*/
-public class AStarPathPlanning  extends PathPlanning {
-
-    private final boolean DEBUGLOG = false;
-
-    private Map<EntityID, Set<EntityID>> graph;
-
+ * @description: 将每条passable edge作为Node的寻路算法
+ * @author: Guanyu-Cai
+ * @Date: 03/18/2020
+ */
+public class AStarPathPlanning extends PathPlanning {
     private EntityID from;
     private List<EntityID> targets;
     private List<EntityID> result;
 
-//    private StuckDetector stuckDetector;
-    private HashSet<EntityID> passableRoads;
     private List<EntityID> previousPath = new ArrayList<>();
     private Area previousTarget = null;
-    private HashSet<EntityID> impassableRoads;
-    private EntityID lastNearestTarget = null;
     private boolean amIPoliceForce = false;
-    //持续像同一个目标移动的次数
-    private int repeatMovingTime = 0;
+    private int repeatMovingTime = 0;//持续向同一个目标移动的次数
+    private int pathCost = -1;
+
     private static final double PASSABLE = 1;
     private static final double UNKNOWN = 1.2;
     private static final double IMPASSABLE = 100;
     private static final double BURNING = 100;
 
     private CSUWorldHelper world;
+    private GraphHelper graph;
 
     public AStarPathPlanning(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -62,30 +51,54 @@ public class AStarPathPlanning  extends PathPlanning {
         } else {
             world = moduleManager.getModule("WorldHelper.Default", CSUConstants.WORLD_HELPER_DEFAULT);
         }
-        this.init();
+        graph = moduleManager.getModule("GraphHelper.Default", CSUConstants.GRAPH_HELPER_DEFAULT);
+        if (agentInfo.me() instanceof PoliceForce) {
+            amIPoliceForce = true;
+        }
     }
 
-    private void init() {
-        Map<EntityID, Set<EntityID>> neighbours = new LazyMap<EntityID, Set<EntityID>>() {
-            @Override
-            public Set<EntityID> createValue() {
-                return new HashSet<>();
-            }
-        };
-        for (Entity next : this.worldInfo) {
-            if (next instanceof Area) {
-                Collection<EntityID> areaNeighbours = ((Area) next).getNeighbours();
-                neighbours.get(next.getID()).addAll(areaNeighbours);
-            }
+    @Override
+    public PathPlanning precompute(PrecomputeData precomputeData) {
+        super.precompute(precomputeData);
+        if (this.getCountPrecompute() >= 2) {
+            return this;
         }
-        this.graph = neighbours;
+        this.world.precompute(precomputeData);
+        this.graph.precompute(precomputeData);
+        return this;
+    }
 
-//        stuckDetector = new StuckDetector(this.agentInfo);
-        this.passableRoads = new HashSet<>();
-        this.impassableRoads = new HashSet<>();
-        if (agentInfo.me().getStandardURN() == StandardEntityURN.POLICE_FORCE) {
-            this.amIPoliceForce = true;
+    @Override
+    public PathPlanning resume(PrecomputeData precomputeData) {
+        super.resume(precomputeData);
+        if (this.getCountResume() >= 2) {
+            return this;
         }
+        this.world.resume(precomputeData);
+        this.graph.resume(precomputeData);
+        return this;
+    }
+
+    @Override
+    public PathPlanning preparate() {
+        super.preparate();
+        if (this.getCountPreparate() >= 2) {
+            return this;
+        }
+        this.world.preparate();
+        this.graph.preparate();
+        return this;
+    }
+
+    @Override
+    public PathPlanning updateInfo(MessageManager messageManager) {
+        super.updateInfo(messageManager);
+        if (this.getCountUpdateInfo() >= 2) {
+            return this;
+        }
+        this.world.updateInfo(messageManager);
+        this.graph.updateInfo(messageManager);
+        return this;
     }
 
     @Override
@@ -120,136 +133,40 @@ public class AStarPathPlanning  extends PathPlanning {
     }
 
     @Override
-    public PathPlanning precompute(PrecomputeData precomputeData) {
-        super.precompute(precomputeData);
-        if (this.getCountPrecompute() >= 2) {
-            return this;
-        }
-        this.world.precompute(precomputeData);
-        return this;
-    }
-
-    @Override
-    public PathPlanning resume(PrecomputeData precomputeData) {
-        super.resume(precomputeData);
-        if (this.getCountResume() >= 2) {
-            return this;
-        }
-        this.world.resume(precomputeData);
-        return this;
-    }
-
-    @Override
-    public PathPlanning preparate() {
-        super.preparate();
-        if (this.getCountPreparate() >= 2) {
-            return this;
-        }
-        this.world.preparate();
-        return this;
-    }
-
-    @Override
-    public PathPlanning updateInfo(MessageManager messageManager) {
-        super.updateInfo(messageManager);
-        if (this.getCountUpdateInfo() >= 2) {
-            return this;
-        }
-        this.world.updateInfo(messageManager);
-        for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
-            Class<? extends CommunicationMessage> messageClass = message.getClass();
-            if (messageClass == MessageRoad.class) {
-                MessageRoad messageRoad = (MessageRoad) message;
-                if (messageRoad.isPassable()) {
-                    impassableRoads.remove(messageRoad.getRoadID());
-                    passableRoads.add(messageRoad.getRoadID());
-                }
-            }
-        }
-        return this;
-    }
-
-    public void debugLog(String info) {
-        if (DEBUGLOG) System.out.println(this.agentInfo.getID() + ": " + info);
+    public double getDistance() {
+        return pathCost;
     }
 
     @Override
     public PathPlanning calc() {
-        // TODO: 3/17/20 如果edge能通,但是路IsImpassable,实际上可以通向一边的edge
-        long a = System.currentTimeMillis();
-        this.result=null;
-        List<EntityID> planPath = null;
+        this.result = null;
+        List<EntityID> planPath;
         Area sourceArea = (Area) worldInfo.getEntity(from);
-        debugLog(targets.size() + " targets.");
-        long b = System.currentTimeMillis();
-        //判断当前道路是否可通
-        //上次计算出的最近target还未到达
-        if (lastNearestTarget != null && targets.contains(lastNearestTarget)) {
-            Area target = (Area) worldInfo.getEntity(lastNearestTarget);
+        if (previousTarget != null && targets.contains(previousTarget.getID())) {
+            Area target = previousTarget;
             planPath = new ArrayList<>(getPath(sourceArea, target));
-            //检测第第一条edge是否可以通过
-            if (planPath != null && !planPath.isEmpty()) {
-                CSURoad selfRoad = world.getCsuRoad(agentInfo.getPosition());
-                if (selfRoad != null) {
-                    EntityID firstToRoad = previousPath.get(0);
-                    List<CSUEdge> toEdges = selfRoad.getCsuEdgesTo(firstToRoad);
-                    if (toEdges != null && !toEdges.isEmpty() && !toEdges.get(0).isBlocked()) {
-                        result = planPath;
-                    }
-                } else {
-                    result = planPath;
-                }
-            }
-        }
-        if (CSUConstants.DEBUG_PATH_PLANNING) {
-            System.out.println("\r<br> lastNearestTarget执行耗时 : "+(System.currentTimeMillis()-b)/1000f+" 秒 ");
+            result = planPath;
         }
         if (result == null || result.isEmpty()) {
-            long c = System.currentTimeMillis();
             targets.sort(new DistanceComparator(worldInfo, agentInfo));
-            if (CSUConstants.DEBUG_PATH_PLANNING) {
-                System.out.println("\r<br> targets排序耗时 : "+(System.currentTimeMillis()-c)/1000f+" 秒 ");
-            }
-            long d = System.currentTimeMillis();
             for (EntityID target1 : targets) {
                 Area target = (Area) worldInfo.getEntity(target1);
-                lastNearestTarget = target1;
                 planPath = new ArrayList<>(getPath(sourceArea, target));
                 if (!planPath.isEmpty()) {
-                    //由于road的isPassable只是粗略判断,还需要判断路径的第一条edge是否可通
-                    CSURoad selfRoad = world.getCsuRoad(agentInfo.getPosition());
-                    if (selfRoad != null) {
-                        EntityID firstToRoad = planPath.get(0);
-                        List<CSUEdge> toEdges = selfRoad.getCsuEdgesTo(firstToRoad);
-                        if (toEdges != null && !toEdges.isEmpty() && !toEdges.get(0).isBlocked()) {
-                            result = planPath;
-                            break;
-                        }
-                    } else {
-                        result = planPath;
-                        break;
-                    }
+                    result = planPath;
+                    break;
                 }
-            }
-            if (CSUConstants.DEBUG_PATH_PLANNING) {
-                System.out.println("\r<br> 寻找可到达target耗时 : "+(System.currentTimeMillis()-d)/1000f+" 秒 ");
             }
         }
         if (result != null && result.isEmpty()) {
             result = null;
         }
-        if (CSUConstants.DEBUG_PATH_PLANNING) {
-            System.out.println(agentInfo.getID() +" 总执行耗时 : "+(System.currentTimeMillis()-a)/1000f+" 秒 ");
-            System.out.println("==================================");
-        }
         return this;
     }
 
     /**
-    * @Description: 根据target获取path
-    * @Author: Guanyu-Cai
-    * @Date: 2/21/20
-    */
+     * @return 最终计算出的path
+     */
     private List<EntityID> getPath(Area sourceArea, Area target) {
         List<EntityID> path = new ArrayList<>();
         if (target == null) {
@@ -263,16 +180,15 @@ public class AStarPathPlanning  extends PathPlanning {
         //是否需要重新进行a*寻路
         boolean repeatAStar = !isPositionOnPreviousPath(sourceArea.getID());
         if (repeatAStar || repeatPlanning) {
-            Area nearestTarget = null;
             previousPath.clear();
-            Node node = getPathEndNode(target.getID());
-            if (node != null) {
-                path = getPathByEndNode(node);
-                previousTarget = nearestTarget;
-                previousPath = path;
+            path.addAll(getGraphPath(sourceArea, target));
+            if (!path.isEmpty()) {
+                path = getAreaPath(sourceArea, target, path);
             }
+            previousTarget = target;
+            previousPath = path;
         } else if (previousTarget.equals(target)) {
-            //截取之前的路,但要重新判断是否可以通过
+            //截取之前计算的路
             ArrayList<EntityID> temp = new ArrayList<>();
             for (EntityID aPreviousPath : previousPath) {
                 if (!sourceArea.getID().equals(aPreviousPath)) {
@@ -283,137 +199,212 @@ public class AStarPathPlanning  extends PathPlanning {
             }
             //删点已经走过的路
             previousPath.removeAll(temp);
-            boolean stillPassable = true;
-            //粗略检测路点是否可通过
-            for (int i = 0; i < Math.min(3, previousPath.size()); i++) {
-                EntityID id = previousPath.get(i);
-                Area area = (Area)worldInfo.getEntity(id);
-                if (area instanceof Road && area.isBlockadesDefined()){
-                    CSURoad csuRoad = world.getCsuRoad(id);
-                    if (!csuRoad.isPassable()) {
-                        stillPassable = false;
-                        passableRoads.remove(id);
-                        impassableRoads.add(id);
-                        break;
-                    }
-                }
-            }
-            if (stillPassable) {
-                path = previousPath;
-            }else {
-                Area nearestTarget = null;
-                previousPath.clear();
-                Node node = getPathEndNode(target.getID());
-                if (node != null) {
-                    path = getPathByEndNode(node);
-                    previousTarget = nearestTarget;
-                    previousPath = path;
-                }
-            }
+            path = previousPath;
         }
         return path;
     }
 
     /**
-    * @Description: 根据a*的最后一个节点获取路径
-    * @Author: Guanyu-Cai
-    * @Date: 2/21/20
-    */
-    private LinkedList<EntityID> getPathByEndNode(Node node) {
-        LinkedList<EntityID> path = new LinkedList<>();
-        do {
-            path.add(0, node.getID());
-            String route = "";
-            route += "<=" + node.getID();
-            node = node.getParent();
-            if (node == null) {
-                debugLog("Found a node with no ancestor! Something is broken.");
+     * @return 获取node组成的path
+     */
+    public List<EntityID> getGraphPath(Area source, Area destination) {
+        if (destination == null) {
+            return new ArrayList<>();
+        }
+        //获取距离source最近的node
+        Node sourceNode = getNearestNode(source, world.getSelfLocation());
+        //获取距离destination最近的node
+        Node destinationNode = getNearestNode(destination, world.getLocation(destination));
+        int extraPathCost = 0;
+        if (sourceNode == null || destinationNode == null) {
+            return new ArrayList<>();
+        }
+        extraPathCost += Ruler.getDistance(source.getLocation(worldInfo.getRawWorld()), sourceNode.getPosition());
+        extraPathCost += Ruler.getDistance(destination.getLocation(worldInfo.getRawWorld()), destinationNode.getPosition());
+
+        boolean findPath = false;
+        Set<Node> open = new HashSet<>();
+        Set<EntityID> closed = new HashSet<>();
+        Node current;
+        sourceNode.setG(0);
+        sourceNode.setCost(0);
+        sourceNode.setDepth(0);
+        sourceNode.setParent(null);
+        destinationNode.setParent(null);
+        open.add(sourceNode);
+
+        if (sourceNode.equals(destinationNode)) {
+            pathCost = sourceNode.getCost();
+            pathCost += extraPathCost;
+            return getPathByEndNode(destinationNode);
+        }
+
+        int maxDepth = 0;
+        pathCost = -1;
+
+        //小于node的数量和open不为空
+        while ((maxDepth < graph.getNodeSize()) && (open.size() != 0)) {
+
+            current = Collections.min(open);
+            pathCost = current.getCost();
+            pathCost += extraPathCost;
+            if (current.equals(destinationNode)) {
+                findPath = true;
                 break;
             }
-        } while (node.getID() != this.from);
+
+            open.remove(current);
+            closed.add(current.getId());
+
+            //areaId-myEdge , 获取所有neighbour nodes
+            for (Pair<EntityID, MyEdge> neighbour : current.getNeighbourNodes()) {
+                MyEdge neighbourMyEdge = neighbour.second();
+                Node neighbourNode = neighbourMyEdge.getOtherNode(current);
+
+                //获取可通过的myEdge
+                if (!closed.contains(neighbourNode.getId()) && (neighbourMyEdge.isPassable())) {
+                    //edge的weight加上current的weight
+                    int neighbourG = neighbourMyEdge.getWeight() + current.getG(); // neighbour weight
+
+                    //如果房屋着火
+                    Area area = (Area) worldInfo.getEntity(neighbourMyEdge.getAreaId());
+                    if (area != null && (area instanceof Building) && ((Building) area).isFierynessDefined()) {
+                        int fieriness = ((Building) area).getFieryness();
+                        if (fieriness > 0 && fieriness < 4) {
+                            neighbourG *= BURNING;
+                        }
+                    }
+
+                    if (!open.contains(neighbourNode)) {
+
+                        neighbourNode.setParent(current.getId());
+                        neighbourNode.setHeuristic((int) Ruler.getDistance(neighbourNode.getPosition(), destinationNode.getPosition()));
+                        neighbourNode.setG(neighbourG);
+                        neighbourNode.setCost(neighbourNode.getHeuristic() + neighbourG);
+                        neighbourNode.setDepth(current.getDepth() + 1);
+
+                        open.add(neighbourNode);
+
+                        if (neighbourNode.getDepth() > maxDepth) {
+                            maxDepth = neighbourNode.getDepth();
+                        }
+
+                    } else {
+                        //重新计算花费
+                        if (neighbourNode.getG() > neighbourG) {
+
+                            neighbourNode.setParent(current.getId());
+                            neighbourNode.setG(neighbourG);
+                            neighbourNode.setCost(neighbourNode.getHeuristic() + neighbourG);
+                            neighbourNode.setDepth(current.getDepth() + 1);
+
+                            if (neighbourNode.getDepth() > maxDepth) {
+                                maxDepth = neighbourNode.getDepth();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (findPath) {
+            return getPathByEndNode(destinationNode);
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * @return 由node path获取area path
+     */
+    public List<EntityID> getAreaPath(Area sourceArea, Area destinationArea, List<EntityID> path) {
+        Node node;
+        List<EntityID> areaPath = new ArrayList<>();
+        List<EntityID> tempAreaPathList = new ArrayList<>();
+        areaPath.add(sourceArea.getID());
+        //遍历node的path
+        for (int i = path.size() - 1; i >= 0; i--) {
+            node = graph.getNode(path.get(i));
+            for (EntityID areaId : node.getNeighbourAreaIds()) {
+                //至少经历过路上的两个node才算作路过
+                if (tempAreaPathList.contains(areaId)) {
+                    if (!areaPath.contains(areaId)) {
+                        areaPath.add(areaId);
+                    }
+                } else {
+                    tempAreaPathList.add(areaId);
+                }
+            }
+        }
+
+        if (!areaPath.contains(destinationArea.getID())) {
+            areaPath.add(destinationArea.getID());
+        }
+
+        if (!((Area) worldInfo.getEntity(destinationArea.getID())).getNeighbours().contains(sourceArea)
+                && areaPath.size() < 3) {
+            return new ArrayList<>();
+        }
+        if (agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil()) {
+            areaPath = validatePath(areaPath);
+        }
+        return areaPath;
+    }
+
+    private List<EntityID> validatePath(List<EntityID> path) {
+        Edge edge;
+        Area area;
+        for (int i = 0; i < path.size() - 1; i++) {
+            area = (Area) worldInfo.getEntity(path.get(i));
+            //获取要经过的edge
+            edge = area.getEdgeTo(path.get(i + 1));
+            if (edge == null) {
+                path = path.subList(0, i + 1);
+                System.out.println(agentInfo.getID() + " time: " + agentInfo.getTime() + " 路径错误!!!");
+                System.out.println(agentInfo.getThinkTimeMillis());
+                break;
+            }
+        }
         return path;
     }
 
-    /**
-    * @Description: a*寻路算法核心
-    * @Author: Guanyu-Cai
-    * @Date: 2/21/20
-    */
-    private Node getPathEndNode(EntityID target){
-        PriorityQueue<Node> open = new PriorityQueue<>();
-        HashSet<EntityID> closed = new HashSet<>();
-        Map<EntityID, Node> nodeMap = new HashMap<>();
-
-        Node current = new Node(null, from, target);
-        //能找到路的的距离target最近的点
-        Node nearest = current;
-        if (!current.isImpassable()) {
-            open.add(current);
-            nodeMap.put(from, current);
-        }
-        int cnt = 0;
-        double count = 0;
-        while (!open.isEmpty()) {
-            //获取open里f最小的node
-            current = open.poll();
-            if (current.getHeuristic() < nearest.getHeuristic()) {
-                nearest = current;
-            }
-            EntityID cid = current.getID();
-            closed.add(cid);
-			Collection<EntityID> neighbours = this.graph.get(cid);
-
-            for (EntityID nid : neighbours) {
-                if (closed.contains(nid)) {
-                    continue;
-                }
-                Node neighbor = new Node(current, nid, target);
-                if (neighbor.isImpassable()) {
-                    closed.add(nid);
-                    continue;
-                }
-                Node node = nodeMap.get(nid);
-                if (!open.contains(node)) {//不在open
-                    if (!neighbor.isImpassable() && isInProperRange(worldInfo.getLocation(from), worldInfo.getLocation(target), worldInfo.getLocation(nid))) {
-                        open.add(neighbor);
-                        nodeMap.put(nid, neighbor);
-                    } else {
-                        closed.add(nid);
-                        nodeMap.put(nid, neighbor);
-                    }
-                } else if (node != null && node.estimate() > neighbor.estimate()) {//在open,更新g值
-                    open.remove(node);
-                    open.add(neighbor);
-                    nodeMap.put(nid, neighbor);
+    private Node getNearestNode(Area area, Pair<Integer, Integer> XYPair) {
+        Node selected = null;
+        int minDistance = Integer.MAX_VALUE;
+        int distance;
+        //获取所在位置所有edge
+        List<Node> areaNodes = new ArrayList<>(graph.getAreaNodes(area.getID()));
+        //获取最近的passable的node
+        for (Node node : areaNodes) {
+            if (node.isPassable()) {
+                distance = Ruler.getDistance(XYPair.first(), XYPair.second(), node.getPosition().first(), node.getPosition().second());
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    selected = node;
                 }
             }
-            if (cid.getValue() == target.getValue()) {
-                debugLog("Solved at iteration " + cnt);
-                if (CSUConstants.DEBUG_PATH_PLANNING) {
-                    System.out.println("solved at"+cnt);
+        }
+        //获取最近的node
+        if (selected == null) {
+            for (Node node : areaNodes) {
+                distance = Ruler.getDistance(XYPair.first(), XYPair.second(), node.getPosition().first(), node.getPosition().second());
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    selected = node;
                 }
-                return current;
             }
-            ++cnt;
-            // debugLog("iteration " + cnt);
         }
-        debugLog("path not found.");
-        if (CSUConstants.DEBUG_PATH_PLANNING) {
-            System.out.println("unSolved at"+cnt);
-        }
-        return null;
+        return selected;
     }
 
-    /**
-    * @Description:判断某个点是否在合适的距离内,提高a*速度,防止找不到时搜索整个地图
-    * @param sourceArea 当前所在位置
-    * @param target 寻路终点
-    * @param checkedArea 被检查是否在某个范围内的点
-    * @Author: Guanyu-Cai
-    * @Date: 2/21/20
-    */
-    private boolean isInProperRange(Pair<Integer, Integer> sourceArea,Pair<Integer, Integer> target,Pair<Integer, Integer> checkedArea) {
-        return Ruler.getDistance(sourceArea, checkedArea) < 3 * Ruler.getDistance(sourceArea, target);
+    private List<EntityID> getPathByEndNode(Node node) {
+        List<EntityID> path = new ArrayList<>();
+        Node current = node;
+        path.add(current.getId());
+        while (current.getParent() != null) {
+            path.add(current.getParent());
+            current = graph.getNode(current.getParent());
+        }
+        return path;
     }
 
     private boolean repeatPlanning(Area target) {
@@ -431,141 +422,6 @@ public class AStarPathPlanning  extends PathPlanning {
         return previousPath.contains(position);
     }
 
-    /**
-    * @Description: A*算法的节点
-    * @Author: Guanyu-Cai
-    * @Date: 2/20/20
-    */
-    private class Node implements Comparable<Node> {
-        private EntityID id;
-        private Node parent;
-        private double cost;
-        private double heuristic;
-        private int length;
-        private boolean impassable;
-
-        public Node(Node parent, EntityID id, EntityID target) {
-            this.id = id;
-            this.parent = parent;
-            this.impassable = false;
-
-            if (this.parent == null) {
-                if(this.getID() != from) {
-                    debugLog("this.parentNode==null && this.getID()!=from");
-                }
-                this.cost = 0;
-                this.length = 0;
-            } else {
-                StandardEntity entity = worldInfo.getEntity(id);
-                StandardEntity positionEntity = worldInfo.getPosition(agentInfo.getID());
-                //下面还要乘上一个常数,代表路是否能通过的权值
-                this.cost = parent.getCost() + Ruler.getManhattanDistance(worldInfo.getLocation(id), worldInfo.getLocation(parent.getID()));
-                Area area = (Area) worldInfo.getEntity(entity.getID());
-                if (area instanceof Building) {
-                    if (((Building) area).isFierynessDefined()) {//防止进入着火的屋子
-                        int fieriness = ((Building) area).getFieryness();
-                        if (fieriness > 0 && fieriness < 4) {
-                            cost *= BURNING;
-                            impassable = true;
-                        }
-                    }
-                    CSURoad entrance = world.getCsuRoad(parent.getID());
-                    if (entrance != null) {
-                        List<CSUEdge> toEdges = entrance.getCsuEdgesTo(id);
-                        if (toEdges != null && !toEdges.isEmpty() && toEdges.get(0).isBlocked() && !amIPoliceForce) {//排除进不去的房屋
-                            cost *= IMPASSABLE;
-                            impassable = true;
-                        }
-                    }
-                } else if (!amIPoliceForce) {//at或者fb
-                    //如果当前entity是road
-                    if (area instanceof Road) {
-                        //如果可通过
-                        if (passableRoads.contains(id)) {
-                            cost *= PASSABLE;
-                        } else if (area.isBlockadesDefined()) {
-                            CSURoad csuRoad = world.getCsuRoad(id);
-                            List<CSUEdge> toEdges = csuRoad.getCsuEdgesTo(parent.getID());
-                            if (toEdges != null && !toEdges.isEmpty()) {//edge已知,需要加强条件
-                                if (csuRoad.isPassable() && !toEdges.get(0).isBlocked()) {
-                                    passableRoads.add(id);
-                                    impassableRoads.remove(id);
-                                    cost *= PASSABLE;
-                                } else {
-                                    impassableRoads.add(id);
-                                    passableRoads.remove(id);
-                                    cost *= IMPASSABLE;
-                                    impassable = true;
-                                }
-                            }else {//edge未知,只判断road是否可通
-                                if (csuRoad.isPassable()) {
-                                    passableRoads.add(id);
-                                    impassableRoads.remove(id);
-                                    cost *= PASSABLE;
-                                } else {
-                                    impassableRoads.add(id);
-                                    passableRoads.remove(id);
-                                    cost *= IMPASSABLE;
-                                    impassable = true;
-                                }
-                            }
-                        } else if (impassableRoads.contains(id)) {//看不到此road且之前发现路是不通的
-                            cost *= IMPASSABLE;
-                            impassable = true;
-                        } else {
-                            cost *= UNKNOWN;
-                        }
-                    } else {//当前entity是building
-                        cost *= PASSABLE;
-                    }
-                }
-                this.length = parent.getLength() + 1;
-            }
-            this.heuristic = Ruler.getManhattanDistance(worldInfo.getLocation(id), worldInfo.getLocation(target));
-        }
-
-        @Override
-        public int compareTo(Node o) {
-            double diff = (this.estimate()) - (o.estimate());
-            if (diff > 0) return 1;
-            if (diff < 0) return -1;
-            return 0;
-        }
-
-        public EntityID getID() {
-            return this.id;
-        }
-
-        public double getCost() {
-            return this.cost;
-        }
-
-        public double getHeuristic() {
-            return this.heuristic;
-        }
-
-        public double estimate() {
-            return this.cost + this.heuristic;
-        }
-
-        public Node getParent() {
-            return this.parent;
-        }
-
-        public EntityID getId() {
-            return id;
-        }
-
-        public int getLength() {
-            return length;
-        }
-
-        public boolean isImpassable() {
-            return impassable;
-        }
-
-    }
-
     public static class DistanceComparator implements Comparator<EntityID> {
         private WorldInfo worldInfo;
         private AgentInfo agentInfo;
@@ -579,8 +435,7 @@ public class AStarPathPlanning  extends PathPlanning {
         public int compare(EntityID o1, EntityID o2) {
             int d1 = worldInfo.getDistance(worldInfo.getEntity(o1), agentInfo.me());
             int d2 = worldInfo.getDistance(worldInfo.getEntity(o2), agentInfo.me());
-            return d1 > d2 ? 1 : d1 < d2 ? -1 : 0;
+            return Integer.compare(d1, d2);
         }
     }
 }
-

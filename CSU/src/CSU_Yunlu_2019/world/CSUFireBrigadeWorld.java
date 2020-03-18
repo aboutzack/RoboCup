@@ -37,7 +37,7 @@ public class CSUFireBrigadeWorld extends CSUWorldHelper{
 
     public Set<EntityID> getAreaInShape(Shape shape) {
         Set<EntityID> result = new FastSet<>();
-        for (StandardEntity next : getBuildingsWithURN()) {
+        for (StandardEntity next : getBuildingsWithURN(worldInfo)) {
             Area area = (Area) next;
             if (!(area.isXDefined() && area.isYDefined()))
                 continue;

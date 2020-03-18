@@ -2,7 +2,6 @@ package CSU_Yunlu_2019.world.object;
 
 import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
-import adf.agent.info.WorldInfo;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
@@ -199,8 +198,8 @@ public class CSUEdge {
 				line.getOrigin().getY() - line.getEndPoint().getY());
 	}
 
-	public CSUEdge getOtherSideEdge(WorldInfo world) {
-		Area neighbour = (Area) world.getEntity(getNeighbours().second());
+	public CSUEdge getOtherSideEdge() {
+		Area neighbour = (Area) worldHelper.getEntity(getNeighbours().second());
 		if (neighbour instanceof Road) {
 			CSURoad roadNeighbour = worldHelper.getCsuRoad(neighbour.getID());
 			return roadNeighbour.getCsuEdgeInPoint(getMiddlePoint());

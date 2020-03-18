@@ -5,6 +5,7 @@ import CSU_Yunlu_2019.geom.PolygonScaler;
 import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.standard.simplePartition.Line;
+import CSU_Yunlu_2019.world.graph.GraphHelper;
 import CSU_Yunlu_2019.world.object.*;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
@@ -81,6 +82,9 @@ public class CSUWorldHelper extends AbstractModule {
     //others
     protected ConfigConstants config;
 
+    //sub modules
+    protected GraphHelper graph;
+
     public CSUWorldHelper(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
         this.agentInfo = ai;
@@ -111,7 +115,9 @@ public class CSUWorldHelper extends AbstractModule {
         csuHydrantMap = new HashMap<>();
 
         config = new ConfigConstants(scenarioInfo.getRawConfig(), this);
+        graph = moduleManager.getModule("GraphHelper.Default", CSUConstants.GRAPH_HELPER_DEFAULT);
 
+        registerModule(graph);
         initMapInforms();
         initMapCenter();
         initWorldCommunicationCondition();
@@ -128,6 +134,7 @@ public class CSUWorldHelper extends AbstractModule {
         if (this.getCountPrecompute() >= 2) {
             return this;
         }
+        graph.precompute(precomputeData);
         return this;
     }
 
@@ -137,6 +144,7 @@ public class CSUWorldHelper extends AbstractModule {
         if (this.getCountResume() >= 2) {
             return this;
         }
+        graph.resume(precomputeData);
         return this;
     }
 
@@ -146,6 +154,7 @@ public class CSUWorldHelper extends AbstractModule {
         if (this.getCountPreparate() >= 2) {
             return this;
         }
+        graph.preparate();
         return this;
     }
 
@@ -168,6 +177,7 @@ public class CSUWorldHelper extends AbstractModule {
         if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
+        graph.updateInfo(messageManager);
         reflectMessage(messageManager);
         roadsSeen.clear();
         buildingsSeen.clear();
@@ -282,7 +292,7 @@ public class CSUWorldHelper extends AbstractModule {
     }
 
     private void initCsuBuildings() {
-        for (StandardEntity entity : getBuildingsWithURN()) {
+        for (StandardEntity entity : getBuildingsWithURN(worldInfo)) {
             CSUBuilding csuBuilding;
             Building building = (Building) entity;
             String xy = building.getX() + "," + building.getY();
@@ -308,7 +318,7 @@ public class CSUWorldHelper extends AbstractModule {
     private void initCsuRoads() {
         CSURoad csuRoad;
         Road road;
-        for (StandardEntity entity : getRoadsWithURN()) {
+        for (StandardEntity entity : getRoadsWithURN(worldInfo)) {
             road = (Road) entity;
             csuRoad = new CSURoad(road, this);
             this.csuRoadMap.put(entity.getID(), csuRoad);
@@ -317,7 +327,7 @@ public class CSUWorldHelper extends AbstractModule {
 
     private void initCsuHydrants() {
         CSUHydrant csuHydrant;
-        for (StandardEntity entity : getHydrantsWithURN()) {
+        for (StandardEntity entity : getHydrantsWithURN(worldInfo)) {
             csuHydrant = new CSUHydrant(entity.getID());
             this.csuHydrantMap.put(entity.getID(), csuHydrant);
         }
@@ -353,7 +363,7 @@ public class CSUWorldHelper extends AbstractModule {
         int min_y = Integer.MAX_VALUE;
         int max_y = Integer.MIN_VALUE;
 
-        Collection<StandardEntity> areas = getAreasWithURN();
+        Collection<StandardEntity> areas = getAreasWithURN(worldInfo);
 
         long x = 0, y = 0;
         Area result;
@@ -783,6 +793,10 @@ public class CSUWorldHelper extends AbstractModule {
         }
     }
 
+    public EntityID getSelfPositionId() {
+        return getSelfPosition().getID();
+    }
+
     public Pair<Integer, Integer> getSelfLocation() {
         return worldInfo.getLocation(agentInfo.me());
     }
@@ -892,7 +906,31 @@ public class CSUWorldHelper extends AbstractModule {
         return config;
     }
 
-    public Collection<StandardEntity> getBuildingsWithURN() {
+    public GraphHelper getGraph() {
+        return graph;
+    }
+
+    public Set<EntityID> getRoadsSeen() {
+        return roadsSeen;
+    }
+
+    public Set<EntityID> getBuildingsSeen() {
+        return buildingsSeen;
+    }
+
+    public Set<EntityID> getCiviliansSeen() {
+        return civiliansSeen;
+    }
+
+    public Set<EntityID> getFireBrigadesSeen() {
+        return fireBrigadesSeen;
+    }
+
+    public Set<EntityID> getBlockadesSeen() {
+        return blockadesSeen;
+    }
+
+    public static Collection<StandardEntity> getBuildingsWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.BUILDING,
                 StandardEntityURN.REFUGE,
@@ -902,19 +940,19 @@ public class CSUWorldHelper extends AbstractModule {
                 StandardEntityURN.GAS_STATION);
     }
 
-    public Collection<StandardEntity> getHydrantsWithURN() {
+    public static Collection<StandardEntity> getHydrantsWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(StandardEntityURN.HYDRANT);
     }
 
-    public Collection<StandardEntity> getGasStationsWithUrn() {
+    public static Collection<StandardEntity> getGasStationsWithUrn(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(StandardEntityURN.GAS_STATION);
     }
 
-    public Collection<StandardEntity> getRefugesWithUrn() {
+    public static Collection<StandardEntity> getRefugesWithUrn(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE);
     }
 
-    public Collection<StandardEntity> getAreasWithURN() {
+    public static Collection<StandardEntity> getAreasWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.BUILDING,
                 StandardEntityURN.REFUGE,
@@ -926,7 +964,7 @@ public class CSUWorldHelper extends AbstractModule {
                 StandardEntityURN.GAS_STATION);
     }
 
-    public Collection<StandardEntity> getHumansWithURN() {
+    public static Collection<StandardEntity> getHumansWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.CIVILIAN,
                 StandardEntityURN.FIRE_BRIGADE,
@@ -934,7 +972,7 @@ public class CSUWorldHelper extends AbstractModule {
                 StandardEntityURN.AMBULANCE_TEAM);
     }
 
-    public Collection<StandardEntity> getAgentsWithURN() {
+    public static Collection<StandardEntity> getAgentsWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.FIRE_BRIGADE,
                 StandardEntityURN.POLICE_FORCE,
@@ -944,14 +982,14 @@ public class CSUWorldHelper extends AbstractModule {
                 StandardEntityURN.AMBULANCE_CENTRE);
     }
 
-    public Collection<StandardEntity> getPlatoonAgentsWithURN() {
+    public static Collection<StandardEntity> getPlatoonAgentsWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.FIRE_BRIGADE,
                 StandardEntityURN.POLICE_FORCE,
                 StandardEntityURN.AMBULANCE_TEAM);
     }
 
-    public Collection<StandardEntity> getRoadsWithURN() {
+    public static Collection<StandardEntity> getRoadsWithURN(WorldInfo worldInfo) {
         return worldInfo.getEntitiesOfType(StandardEntityURN.ROAD, StandardEntityURN.HYDRANT);
     }
 

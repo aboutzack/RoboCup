@@ -16,7 +16,7 @@ public class CSUBlockade {
 	private Blockade underlyingBlockade;
 	
 	private EntityID blockadeId;
-	
+	private List<CSUEdge> blockedEdges;
 //	private AdvancedWorldModel world;
 	
 	private List<Pair<Integer, Integer>> vertexes = new ArrayList<>();
@@ -25,8 +25,8 @@ public class CSUBlockade {
 //		this.world = world;
 		this.underlyingBlockade = worldHelper.getEntity(blockadeId, Blockade.class);
 		this.blockadeId = blockadeId;
-		
 		this.polygon = createPolygon(underlyingBlockade.getApexes());
+		this.blockedEdges = new ArrayList<>();
 	}
 	
 	/**
@@ -72,5 +72,14 @@ public class CSUBlockade {
 	
 	public List<Pair<Integer, Integer>> getVertexesList() {
 		return this.vertexes;
+	}
+
+	public List<CSUEdge> getBlockedEdges() {
+		return blockedEdges;
+	}
+
+	public void addBlockedEdges(CSUEdge csuEdge) {
+		if (!blockedEdges.contains(csuEdge))
+			blockedEdges.add(csuEdge);
 	}
 }

@@ -470,7 +470,7 @@ public final class ConfigConstants {
 		MAX_Y = worldHelper.getWorldInfo().getWorldBounds().second().second();
 		
 		int maxHP = 0;
-		for (StandardEntity se: worldHelper.getHumansWithURN()) {
+		for (StandardEntity se: worldHelper.getHumansWithURN(worldHelper.getWorldInfo())) {
 			Human hm = (Human) se;
 			if (hm.isHPDefined()) {
 				maxHP = Math.max(maxHP, hm.getHP());
@@ -480,7 +480,7 @@ public final class ConfigConstants {
 		hpMax = maxHP;
 		
 		int maxBuildingID = 0;
-		for (StandardEntity se : worldHelper.getBuildingsWithURN()) {
+		for (StandardEntity se : worldHelper.getBuildingsWithURN(worldHelper.getWorldInfo())) {
 			if (maxBuildingID < se.getID().getValue())
 				maxBuildingID = se.getID().getValue();
 		}
