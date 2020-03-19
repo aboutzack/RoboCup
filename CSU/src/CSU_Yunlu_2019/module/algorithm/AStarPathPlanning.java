@@ -261,14 +261,14 @@ public class AStarPathPlanning extends PathPlanning {
                 MyEdge neighbourMyEdge = neighbour.second();
                 Node neighbourNode = neighbourMyEdge.getOtherNode(current);
 
-                //获取可通过的myEdge
-                if (!closed.contains(neighbourNode.getId()) && (neighbourMyEdge.isPassable())) {
+                //获取可通过的myEdge,当自己是pf时无视障碍物直接选择最短路径
+                if (!closed.contains(neighbourNode.getId()) && ((neighbourMyEdge.isPassable()) || amIPoliceForce)) {
                     //edge的weight加上current的weight
                     int neighbourG = neighbourMyEdge.getWeight() + current.getG(); // neighbour weight
 
                     //如果房屋着火
                     Area area = (Area) worldInfo.getEntity(neighbourMyEdge.getAreaId());
-                    if (area != null && (area instanceof Building) && ((Building) area).isFierynessDefined()) {
+                    if ((area instanceof Building) && ((Building) area).isFierynessDefined()) {
                         int fieriness = ((Building) area).getFieryness();
                         if (fieriness > 0 && fieriness < 4) {
                             neighbourG *= BURNING;
@@ -278,7 +278,7 @@ public class AStarPathPlanning extends PathPlanning {
                     if (!open.contains(neighbourNode)) {
 
                         neighbourNode.setParent(current.getId());
-                        neighbourNode.setHeuristic((int) Ruler.getDistance(neighbourNode.getPosition(), destinationNode.getPosition()));
+                        neighbourNode.setHeuristic((int) Ruler.getManhattanDistance(neighbourNode.getPosition(), destinationNode.getPosition()));
                         neighbourNode.setG(neighbourG);
                         neighbourNode.setCost(neighbourNode.getHeuristic() + neighbourG);
                         neighbourNode.setDepth(current.getDepth() + 1);
