@@ -26,8 +26,21 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
 
 public class CSURoadDetector extends RoadDetector {
+	
+	public static final String KEY_JUDGE_ROAD = "RoadDetector.judge_road";
+	public static final String KEY_START_X = "RoadDetector.start_x";
+	public static final String KEY_START_Y = "RoadDetector.start_y";
+	public static final String KEY_END_X = "RoadDetector.end_x";
+	public static final String KEY_END_Y = "RoadDetector.end_y";
+	public static final String KEY_ROAD_SIZE = "RoadDetector.road_size";
+
+    private List<guidelineHelper> judgeRoad = new ArrayList<>();
+	private int roadsize;
 
 	//targets
 	private Set<EntityID> targetAreas = new HashSet<>();
@@ -99,6 +112,18 @@ public class CSURoadDetector extends RoadDetector {
         }
         this.clustering.precompute(precomputeData);
         this.pathPlanning.precompute(precomputeData);
+        
+        this.create_guideline();
+        this.roadsize = this.judgeRoad.size();
+        precomputeData.setInteger(KEY_ROAD_SIZE, this.roadsize);
+        
+        for(int i=0 ; i<this.roadsize ; ++i) {
+        	precomputeData.setDouble(KEY_START_X + i, this.judgeRoad.get(i).getStartPoint().getX());
+        	precomputeData.setDouble(KEY_START_Y + i, this.judgeRoad.get(i).getStartPoint().getY());
+        	precomputeData.setDouble(KEY_END_X + i, this.judgeRoad.get(i).getEndPoint().getX());
+        	precomputeData.setDouble(KEY_END_Y + i, this.judgeRoad.get(i).getEndPoint().getY());
+        	precomputeData.setEntityID(KEY_JUDGE_ROAD + i, this.judgeRoad.get(i).getSelfID());
+        }
 
         //entrances of building
         Set<EntityID> entrances = new HashSet<>();
@@ -199,6 +224,22 @@ public class CSURoadDetector extends RoadDetector {
         if(this.getCountResume() >= 2) {
             return this;
         }
+        
+        
+        this.roadsize = precomputeData.getInteger(KEY_ROAD_SIZE);
+        for(int i=0 ; i<this.roadsize ; ++i) {
+        	double startx = precomputeData.getDouble(KEY_START_X + i);
+        	double starty = precomputeData.getDouble(KEY_START_Y + i);
+        	Point2D start = new Point2D(startx,starty);
+        	double endx = precomputeData.getDouble(KEY_END_X + i);
+        	double endy = precomputeData.getDouble(KEY_END_Y + i);
+        	Point2D end = new Point2D(endx,endy);
+        	Road road = (Road) this.worldInfo.getEntity(precomputeData.getEntityID(KEY_JUDGE_ROAD + i));
+        	guidelineHelper line = new guidelineHelper(road,start,end);
+        	if(! this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+        }
+        
+        
         this.clustering.resume(precomputeData);
         this.pathPlanning.resume(precomputeData);
 
@@ -531,7 +572,7 @@ public class CSURoadDetector extends RoadDetector {
             if (position instanceof Building) {
                 Building building = (Building)position;
                 EntityID entrance = this.getClosestEntityID(this.getAllEntrancesOfBuilding(building), this.agentInfo.getID());
-                if (!this.isPassable((Area)this.worldInfo.getEntity(entrance))) {
+                if (!this.isPassable((Road)this.worldInfo.getEntity(entrance))) {
                     messageManager.addMessage(new CommandPolice(true, null, entrance, CommandPolice.ACTION_CLEAR));
                 }
             }
@@ -555,7 +596,7 @@ public class CSURoadDetector extends RoadDetector {
                 } else if (positionEntity instanceof Building) {
                     boolean flag = false;
                     for (EntityID entrance : this.getAllEntrancesOfBuilding((Building)positionEntity)) {
-                        if (this.isPassable((Area)this.worldInfo.getEntity(entrance))) {
+                        if (this.isPassable((Road)this.worldInfo.getEntity(entrance))) {
                             flag = true;
                             break;
                         }
@@ -808,36 +849,195 @@ public class CSURoadDetector extends RoadDetector {
         return passableEdges;
     }
 
-    private boolean isPassable(Area area) {
-        if (!(area instanceof Road)) {
-            return true;
-        }
-        if (!area.isBlockadesDefined() || area.getBlockades().isEmpty()) {
-            return true;
-        }
-        Collection<Blockade> blockades = this.worldInfo.getBlockades(area);
-        int X = area.getX();
-        int Y = area.getY();
-        for (Edge edge : this.getPassableEdge(area)) {
-            Point2D mid = this.getMidPoint(edge.getLine());
-            double midX = mid.getX();
-            double midY = mid.getY();
-            Vector2D vector = new Vector2D(X - mid.getX(), Y - mid.getY());
-            vector = vector.normalised().scale(250).getNormal();
-            for (Blockade blockade : blockades) {
-                if (blockade.isApexesDefined()) {
-                    if (this.intersect(X, Y, midX, midY, blockade) ||
-                            this.intersect(X + vector.getX(), Y + vector.getY(),
-                                    midX + vector.getX(), midY + vector.getY(), blockade) ||
-                            this.intersect(X - vector.getX(), Y - vector.getY(),
-                                    midX - vector.getX(), midY - vector.getY(), blockade)) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
+    private boolean isPassable(Road road) {
+    	if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
+			return true;
+		}
+		Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
+				.collect(Collectors.toSet());	
+			Line2D guideline = null;
+			for(guidelineHelper r : this.judgeRoad) {
+				if(r.getSelfID().equals(road.getID())) {
+					guideline = r.getGuideline();
+				}
+			}
+			if (guideline != null) {
+				for (Blockade blockade : blockades) {
+					List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
+					for(int i =0;i<Points.size();++i) {
+						if(i!=Points.size()-1) {
+							double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
+							double crossProduct2 = this.getCrossProduct(guideline, Points.get(i+1));
+							if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
+								Line2D line = new Line2D(Points.get(i),Points.get(i+1));
+								Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
+								if(intersect!=null) {
+									return false;
+								}
+							}
+						}
+						else {
+							double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
+							double crossProduct2 = this.getCrossProduct(guideline, Points.get(0));
+							if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
+								Line2D line = new Line2D(Points.get(i),Points.get(0));
+								Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
+								if(intersect!=null) {
+									return false;
+								}
+							}
+						}
+					}
+				}
+				return true;
+	        }	
+		return false;
+	}
+    
+    private Line2D get_longest_line(Road road) {
+		List<Edge> edges = road.getEdges();
+		List<Point2D> Points = new ArrayList<>();
+		for(Edge edge : edges) {
+			Point2D point = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
+			Points.add(point);
+		}
+		Point2D start = null;
+		Point2D end = null;
+		double max = Double.MIN_VALUE;
+		
+		for(int i = 0; i < Points.size(); ++i) {
+			for(int j = 0; j < Points.size(); ++j) {
+				if(j==i) continue;
+				else {
+					double dist = this.getDistance(Points.get(i).getX(), Points.get(i).getY(), Points.get(j).getX(),Points.get(j).getY());
+					if(dist > max) {
+						max = dist;
+						start = Points.get(i);
+						end = Points.get(j);
+					}
+				}
+			}
+		}
+		if(start!=null && end!=null) {
+			Line2D guideline = new Line2D(start,end);
+			return guideline;
+		}
+		else return null;
     }
+
+    private double getCrossProduct(Line2D line , Point2D point) {
+    	
+    	double X = point.getX();
+    	double Y = point.getY();
+    	double X1 = line.getOrigin().getX();
+    	double Y1 = line.getOrigin().getY();
+    	double X2 = line.getEndPoint().getX();
+    	double Y2 = line.getEndPoint().getY();
+    	
+    	return ((X2 - X1)*(Y - Y1) - (X - X1)*(Y2 - Y1));
+    }
+    
+    private void create_guideline() {
+    	
+		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+			Road road = (Road) se;
+    		for(EntityID neighbour : road.getNeighbours()) {
+    			if(this.worldInfo.getEntity(neighbour) instanceof Building || this.worldInfo.getEntity(neighbour) instanceof Refuge) {
+    				guidelineHelper entrance = new guidelineHelper(this.get_longest_line(road),road);
+    				if(!this.judgeRoad.contains(entrance))	this.judgeRoad.add(entrance);
+    				for(EntityID id : road.getNeighbours()) {
+    	    			StandardEntity entity = this.worldInfo.getEntity(id);
+    	    			if(entity instanceof Road) {
+    	    				Road next = (Road) entity;
+    	    				guidelineHelper line = new guidelineHelper(this.get_longest_line(next),next);
+    	    				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+    	    			}
+    				}
+    			}
+    		}
+		}
+    	    	
+    	StandardEntity positionEntity = this.worldInfo.getEntity(this.agentInfo.getPosition());
+    	
+    	if(positionEntity instanceof Road) {
+    		Road position = (Road) positionEntity;
+    		guidelineHelper guideline = new guidelineHelper(this.get_longest_line(position),position);
+    		if(!this.judgeRoad.contains(guideline))	this.judgeRoad.add(guideline);
+    		
+    		for(EntityID neighbour : position.getNeighbours()) {
+    			if(this.worldInfo.getEntity(neighbour) instanceof Road) {
+    				Road road = (Road) this.worldInfo.getEntity(neighbour);
+    				Edge edge = position.getEdgeTo(neighbour);
+    				Point2D start = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
+    				Point2D mid = new Point2D(road.getX(),road.getY());
+    				guidelineHelper line = new guidelineHelper(road,start,mid);
+    				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+    			}
+    		}
+    		
+    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+				boolean flag = false;
+				Road otherRoads = (Road) se;
+
+    			this.pathPlanning.setFrom(position.getID());
+    			this.pathPlanning.setDestination(se.getID());
+    			List<EntityID> path = this.pathPlanning.calc().getResult();
+    			if(path!=null && path.size()>2) {
+    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+    					if(!(entity instanceof Road)) continue;
+    					Road road = (Road) entity;
+    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+    					Edge edge1 = before.getEdgeTo(road.getID());
+    					Edge edge2 = road.getEdgeTo(next.getID());
+    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
+    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
+        				guidelineHelper line = new guidelineHelper(road,start,end);
+        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+    				}
+    			}
+    		}
+    	}
+    	
+    	else if(positionEntity instanceof Building) {
+    		Building building = (Building) positionEntity;
+    		
+    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+    			this.pathPlanning.setFrom(building.getID());
+    			this.pathPlanning.setDestination(se.getID());
+    			List<EntityID> path = this.pathPlanning.calc().getResult();
+    			if(path!=null && path.size()>2) {
+    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+    					if(!(entity instanceof Road)) continue;
+    					Road road = (Road) entity;
+    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+    					Edge edge1 = before.getEdgeTo(road.getID());
+    					Edge edge2 = road.getEdgeTo(next.getID());
+    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
+    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
+        				guidelineHelper line = new guidelineHelper(road,start,end);
+        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+    				}
+    			}
+    		}
+    	}
+    	
+		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+			Road road = (Road) se;
+			guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
+			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+		}
+    }
+    
+    private double getDistance(double fromX, double fromY, double toX, double toY) {
+    	double dx = fromX - toX;
+    	double dy = fromY - toY;
+    	return Math.hypot(dx, dy);
+    }
+
 
     private boolean isHumanStucked(Human human, Road road) {
         if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
@@ -956,3 +1156,4 @@ public class CSURoadDetector extends RoadDetector {
         }
     }
 }
+
