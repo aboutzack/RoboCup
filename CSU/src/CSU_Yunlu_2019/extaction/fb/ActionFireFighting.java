@@ -78,8 +78,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction precompute(PrecomputeData precomputeData)
-    {
+    public ExtAction precompute(PrecomputeData precomputeData) {
         super.precompute(precomputeData);
         if (this.getCountPrecompute() >= 2)
         {
@@ -98,8 +97,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction resume(PrecomputeData precomputeData)
-    {
+    public ExtAction resume(PrecomputeData precomputeData) {
         super.resume(precomputeData);
         if (this.getCountResume() >= 2)
         {
@@ -118,8 +116,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction preparate()
-    {
+    public ExtAction preparate() {
         super.preparate();
         if (this.getCountPreparate() >= 2)
         {
@@ -138,8 +135,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction updateInfo(MessageManager messageManager)
-    {
+    public ExtAction updateInfo(MessageManager messageManager) {
         super.updateInfo(messageManager);
         if (this.getCountUpdateInfo() >= 2)
         {
@@ -168,8 +164,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction setTarget(EntityID target)
-    {
+    public ExtAction setTarget(EntityID target) {
         this.target = null;
         if (target != null)
         {
@@ -183,8 +178,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     @Override
-    public ExtAction calc()
-    {
+    public ExtAction calc() {
         this.result = null;
         FireBrigade agent = (FireBrigade) this.agentInfo.me();
 
@@ -367,8 +361,7 @@ public class ActionFireFighting extends ExtAction
     }
 
 
-    private boolean needRefill(FireBrigade agent, boolean refillFlag)
-    {
+    private boolean needRefill(FireBrigade agent, boolean refillFlag) {
         if (refillFlag)
         {
             StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
@@ -377,8 +370,7 @@ public class ActionFireFighting extends ExtAction
         return agent.getWater() <= this.refillRequest;
     }
 
-    private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target)
-    {
+    private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {
         StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
         if (positionURN == REFUGE || positionURN == HYDRANT)
         {
@@ -415,8 +407,7 @@ public class ActionFireFighting extends ExtAction
     }
 
 
-    private boolean needRest(Human agent)
-    {
+    private boolean needRest(Human agent) {
         int hp = agent.getHP();
         int damage = agent.getDamage();
         if (hp == 0 || damage == 0)
@@ -440,8 +431,7 @@ public class ActionFireFighting extends ExtAction
 
 
     /** hydrant */
-    private Action calcRefugeAndHydrantAction(Human human, PathPlanning pathPlanning, EntityID target)
-    {
+    private Action calcRefugeAndHydrantAction(Human human, PathPlanning pathPlanning, EntityID target) {
         Set<EntityID> availableSupplier = getAvailableHydrants();
         availableSupplier.addAll(this.worldInfo.getEntityIDsOfType(StandardEntityURN.REFUGE));
         return this.calcSupplyAction(
@@ -454,8 +444,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     /** refuge */
-    private Action calcRefugeAction(Human human, PathPlanning pathPlanning, EntityID target, boolean isRefill)
-    {
+    private Action calcRefugeAction(Human human, PathPlanning pathPlanning, EntityID target, boolean isRefill) {
         return this.calcSupplyAction(
                 human,
                 pathPlanning,
@@ -481,7 +470,7 @@ public class ActionFireFighting extends ExtAction
         EntityID position = human.getPosition();
 //        System.out.println("check all firebridge's water~~~~~~~~~~~~~~");
 //        for (Map.Entry<EntityID,Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
-//            System.out.println("fb id = "+entry.getKey()+"       water ="+entry.getValue());
+//            System.out.println("fb id = "+entry.getKey()+"       water ="+entry.getValue()+"   and check refilling "+this.isRefilling(entry.getKey()));
 //        }
         if (supplyPositions.contains(position)) {
             return isRefill ? new ActionRefill() : new ActionRest();
@@ -547,8 +536,7 @@ public class ActionFireFighting extends ExtAction
     }
 
 
-    private class DistanceSorter implements Comparator<StandardEntity>
-    {
+    private class DistanceSorter implements Comparator<StandardEntity> {
         private StandardEntity reference;
         private WorldInfo worldInfo;
 
@@ -594,8 +582,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     //计算扑灭一个目标建筑所需水量
-    private int calcExtinguishTargetWater(EntityID target)
-    {
+    private int calcExtinguishTargetWater(EntityID target) {
         if(this.worldInfo.getEntity(target) instanceof Building)
         {
             Building targetBuilding = (Building)this.worldInfo.getEntity(target);
@@ -613,18 +600,28 @@ public class ActionFireFighting extends ExtAction
         return 0;
     }
 
-    //判断一个消防员是否正在补水
-    private boolean isRefilling(EntityID entityID)
-    {
+    /**
+     * crf:判断firebridge是否在补水=>根据距离+当前水量，水量变化不好判断（）
+     */
+    private boolean isRefilling(EntityID entityID) {
         if(this.fireBrigadesWaterMap.get(entityID) != null)
         {
-            FireBrigade fireBrigade = (FireBrigade)this.worldInfo.getEntity(entityID);
-            int lastWater = this.fireBrigadesWaterMap.get(entityID);
-            int nowWater = fireBrigade.getWater();
-            if(nowWater - lastWater > 0)
-            {
-                return true;
+            if (((FireBrigade)this.worldInfo.getEntity(entityID)).getWater() == 0){
+                for(StandardEntity temhydrant:this.worldInfo.getEntitiesOfType(HYDRANT))
+                {
+                    if (this.worldInfo.getDistance(temhydrant.getID(),entityID) < 0.5*scenarioInfo.getFireExtinguishMaxDistance()){
+                        return true;
+                    }
+                }
             }
+
+//            FireBrigade fireBrigade = (FireBrigade)this.worldInfo.getEntity(entityID);
+//            int lastWater = this.fireBrigadesWaterMap.get(entityID);
+//            int nowWater = fireBrigade.getWater();
+//            if(nowWater - lastWater > 0)
+//            {
+//                return true;
+//            }
         }
         return false;
     }
@@ -634,8 +631,8 @@ public class ActionFireFighting extends ExtAction
      * 判断一个消防栓是否正在被占用:
      * 确定hydrant范围内的fb isrefill() && 范围内等待中的fb(getwater = 0)
      */
-    private boolean isOccupied(EntityID hydrantID)
-    {
+    private boolean isOccupied(EntityID hydrantID) {
+        List<EntityID> temlist = new ArrayList<>();
         EntityID myID = this.agentInfo.getID();
         for(StandardEntity agents:this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE))
         {
@@ -646,7 +643,8 @@ public class ActionFireFighting extends ExtAction
                 {
                     return true;
                 }
-                else if (worldInfo.getDistance(agents.getID(),hydrantID) < scenarioInfo.getFireExtinguishMaxDistance()) {
+                else if (worldInfo.getDistance(agents.getID(),hydrantID) < 2*scenarioInfo.getFireExtinguishMaxDistance()) {
+                    temlist.add(agents.getID());
                     //正在有补水的或者被分配到了正在补水的位置的
                     if (this.isRefilling(agents.getID())) {
                         return true;
@@ -656,12 +654,21 @@ public class ActionFireFighting extends ExtAction
                 }
             }
         }
+        // check around hydrant and set new hydrant target
+        if (temlist.size() > 1){
+//            System.out.println("check point ------------");
+            for (EntityID id:temlist){
+//                System.out.println(id +" is around hydrant and remain water is "+fireBrigadesWaterMap.get(id));
+                if (fireBrigadesWaterMap.get(id) == 0){
+
+                }
+            }
+        }
         return false;
     }
 
     //返回补水的目标
-    private Entity calcRefillWaterTarget()
-    {
+    private Entity calcRefillWaterTarget() {
         Collection<StandardEntity> Targets=this.worldInfo.getEntitiesOfType(HYDRANT,REFUGE);
         List<StandardEntity> RefillTargets=new ArrayList<>();
         for (StandardEntity s:Targets)
@@ -687,8 +694,7 @@ public class ActionFireFighting extends ExtAction
     }
 
     //更新fireBrigadesWaterMap
-    private void updateWater()
-    {
+    private void updateWater() {
         this.fireBrigadesWaterMap.clear();
         for(StandardEntity entity:this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE))
         {
