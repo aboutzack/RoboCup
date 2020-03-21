@@ -272,6 +272,7 @@ public class ActionExtClear extends ExtAction {
 
 		entrance = new EntranceHelper(worldInfo);
 		
+		this.create_guideline();
 
     	Road road;
 		CSURoadHelper csuRoad;
@@ -2832,5 +2833,6 @@ public class ActionExtClear extends ExtAction {
 		return false;
 	}
 }
+
 
 

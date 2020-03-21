@@ -263,6 +263,8 @@ public class CSURoadDetector extends RoadDetector {
         this.pathPlanning.preparate();
         this.clustering.preparate();
 
+        this.create_guideline();
+        
         //entrances
         Set<EntityID> entrances = new HashSet<>();
         for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.BUILDING)) {
@@ -390,8 +392,65 @@ public class CSURoadDetector extends RoadDetector {
 		return this;
 	}
 	
+	boolean search_flag = false;
+	boolean arrive_flag = false;
+	StandardEntity nearest_refuge = null;
+	private void Find_Refuge() {
+		//检测离每个refuge最近的警察
+		if(!this.search_flag) {
+			for(StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
+				boolean nearest_flag = true;
+				Refuge refuge = (Refuge) SE;
+				double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),refuge.getX(),refuge.getY());
+				for(StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+					PoliceForce police = (PoliceForce) se;
+					double dist = this.getDistance(police.getX(),police.getY(),refuge.getX(),refuge.getY());
+					if(dist < distance) {
+						nearest_flag = false;
+						break;
+					}
+				}
+				if(nearest_flag) {
+					this.nearest_refuge = SE;
+					break;
+				}else {
+					continue;
+				}
+			}
+		}
+		this.search_flag=true;
+	}
+	
+	private RoadDetector Get_To_Refuge(EntityID positionID) {
+		if(!arrive_flag) {
+			this.Find_Refuge();
+			if(this.nearest_refuge!=null) {
+				Refuge refuge = (Refuge) nearest_refuge;
+				if(this.agentInfo.getPosition().getValue()==refuge.getID().getValue()) {
+					this.arrive_flag = true;
+					return null;
+				}
+				else {
+					return this.getPathTo(positionID, refuge.getID());
+				}
+			}
+		}
+		return null;
+	}
+	
+	private RoadDetector getPathTo(EntityID positionIDfrom, EntityID positionIDto) {
+		this.pathPlanning.setFrom(positionIDfrom);
+        this.pathPlanning.setDestination(positionIDto);
+        List<EntityID> path = this.pathPlanning.calc().getResult();
+        if (path != null && path.size() > 0) {
+            this.result = path.get(path.size() - 1);
+        }
+        return this;
+	}
+	
 	@Override
 	public RoadDetector calc() {
+        EntityID positionID = this.agentInfo.getPosition();
         Human me = (Human)this.agentInfo.me();
         if (me.isDamageDefined() && me.getDamage() > 0) {
             this.result = this.getClosestEntityID(this.worldInfo.getEntityIDsOfType(StandardEntityURN.REFUGE), this.agentInfo.getID());
@@ -399,8 +458,15 @@ public class CSURoadDetector extends RoadDetector {
             return this;
         }
 
+		if(this.agentInfo.getTime()>2 && !this.arrive_flag) this.Get_To_Refuge(positionID);
+
+		if(nearest_refuge !=null && this.result != null && !this.arrive_flag) {
+			if(nearest_refuge.getID().getValue()==this.result.getValue()) {
+				return this;
+			}
+		}
+        
         if (this.result == null) {
-            EntityID positionID = this.agentInfo.getPosition();
             if (this.targetAreas.contains(positionID) &&
                     (!this.clearedAreas.contains(positionID) || this.stuckAgentRoads.contains(positionID))) {
                 this.result = positionID;
