@@ -365,3 +365,7 @@ CGY:研究visual-debugger<br>
 
 CRF：修改hydrant的判断是否使用和选取问题。<br>
 CGY:完成edge based A*寻路算法,解决road based判断不准确的问题<br>
+
+2020年3月22日
+
+CGY:修复bug,尝试加入关于道路的通讯<br>
