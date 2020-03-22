@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.extaction.fb;
 
 
+import CSU_Yunlu_2019.standard.DistanceComparator;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
@@ -328,7 +329,17 @@ public class ActionFireFighting extends ExtAction
                 return new ActionExtinguish(burningBuilding.get(0).getID(), this.maxExtinguishPower);
             }
         }
-        return this.getMoveAction(pathPlanning, agentPosition, target);
+        List<StandardEntity> objectsInRange = new ArrayList<>(worldInfo.getObjectsInRange(target, maxExtinguishDistance));
+        Collections.sort(objectsInRange, new DistanceComparator(worldInfo.getEntity(target), worldInfo));
+        for (StandardEntity entity : objectsInRange) {
+            if (entity instanceof Area) {
+                Action moveAction = getMoveAction(pathPlanning, agentPosition, entity.getID());
+                if (moveAction != null) {
+                    return moveAction;
+                }
+            }
+        }
+        return null;
     }
 
     private Action getMoveAction(PathPlanning pathPlanning, EntityID from, EntityID target) {
@@ -475,18 +486,18 @@ public class ActionFireFighting extends ExtAction
         if (supplyPositions.contains(position)) {
             return isRefill ? new ActionRefill() : new ActionRest();
         }
-        List<EntityID> firstResult = null;
-        while (supplyPositions.size() > 0) {
+//        List<EntityID> firstResult = null;
+        if (supplyPositions.size() > 0) {
             pathPlanning.setFrom(position);
             pathPlanning.setDestination(supplyPositions);
             List<EntityID> path = pathPlanning.calc().getResult();
             if (path != null && path.size() > 0) {
-                if (firstResult == null) {
-                    firstResult = new ArrayList<>(path);
-                    if (target == null) {
-                        break;
-                    }
-                }
+//                if (firstResult == null) {
+//                    firstResult = new ArrayList<>(path);
+//                    if (target == null) {
+//                        break;
+//                    }
+//                }
                 Action action = getMoveAction(path);
                 if (action != null) {
                     return action;
@@ -509,7 +520,8 @@ public class ActionFireFighting extends ExtAction
 //                break;
 //            }
         }
-        return firstResult != null ? getMoveAction(firstResult) : null;
+        return null;
+//        return firstResult != null ? getMoveAction(firstResult) : null;
     }
 
     /**
