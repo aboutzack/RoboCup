@@ -22,6 +22,7 @@ import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static rescuecore2.standard.entities.StandardEntityURN.HYDRANT;
 import static rescuecore2.standard.entities.StandardEntityURN.REFUGE;
@@ -531,7 +532,8 @@ public class ActionFireFighting extends ExtAction
     */
     public Set<EntityID> getAvailableHydrants() {
         // TODO: 3/1/20 记录其他每个人的位置,将排除范围扩大到所有的hydrants
-        Set<EntityID> availableHydrants = new HashSet<>();
+        Collection<StandardEntity> availableHydrants = worldInfo.getEntitiesOfType(HYDRANT);
+        Set<EntityID> availableHydrantIds = availableHydrants.stream().map(StandardEntity::getID).collect(Collectors.toSet());
         for (EntityID id : worldInfo.getChanged().getChangedEntities()) {
             StandardEntity entity = worldInfo.getEntity(id);
             if (entity instanceof FireBrigade && !entity.getID().equals(agentInfo.getID())) {
@@ -539,12 +541,12 @@ public class ActionFireFighting extends ExtAction
                 if (fireBrigade.isPositionDefined()) {
                     Entity position = worldInfo.getPosition(fireBrigade);
                     if (position instanceof Hydrant) {
-                        availableHydrants.remove(position.getID());
+                        availableHydrantIds.remove(position.getID());
                     }
                 }
             }
         }
-        return availableHydrants;
+        return availableHydrantIds;
     }
 
 
