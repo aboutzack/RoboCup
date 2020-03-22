@@ -25,7 +25,7 @@ public class DistanceBasedClusterSelector extends ClusterSelector {
             double minDistance = Double.MAX_VALUE;
             int nearestClusterIndex = 0;
             for (int i = 0; i < polygons.size(); i++) {
-                double distance = Ruler.getDistance(polygons.get(i), world.getSelfLocation(), false);
+                double distance = Ruler.getDistance(polygons.get(i), world.getSelfLocation(), true);
                 if (distance < minDistance) {
                     minDistance = distance;
                     nearestClusterIndex = i;
