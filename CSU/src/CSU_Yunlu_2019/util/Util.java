@@ -9,12 +9,14 @@ import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.io.*;
 import java.util.List;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Util {
 
@@ -656,6 +658,14 @@ public class Util {
 		v1 = v1.getNormalizedVector();
 		v2 = v2.getNormalizedVector();
 		return Math.abs(v1.getX() * v2.getY() - v1.getY() * v2.getX()) < threshold;
+	}
+
+	public static List<Integer> fetchIdValueFromElements(Collection<StandardEntity> elements) {
+		return elements.stream().map(entity -> entity.getID().getValue()).collect(Collectors.toList());
+	}
+
+	public static List<Integer> fetchIdValueFromElementIds(Collection<EntityID> elementEntityIDs) {
+		return elementEntityIDs.stream().map(EntityID::getValue).collect(Collectors.toList());
 	}
 
 	public static class DistanceComparator implements Comparator<Pair<Point2D, Point2D>> {

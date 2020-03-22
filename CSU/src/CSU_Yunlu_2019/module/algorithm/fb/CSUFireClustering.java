@@ -1,7 +1,9 @@
 package CSU_Yunlu_2019.module.algorithm.fb;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
@@ -14,16 +16,16 @@ import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.DynamicClustering;
 import adf.component.module.algorithm.PathPlanning;
 import math.geom2d.polygon.SimplePolygon2D;
+import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Building;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
+import java.io.Serializable;
 import java.util.List;
 import java.util.*;
-
-import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class CSUFireClustering extends DynamicClustering {
     private int groupingDistance;
@@ -38,7 +40,7 @@ public class CSUFireClustering extends DynamicClustering {
     private WorldInfo worldInfo;
     private ScenarioInfo scenarioInfo;
     private AgentInfo agentInfo;
-    private CSUWorldHelper worldHelper;
+    private CSUWorldHelper world;
 
     public CSUFireClustering(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -62,7 +64,7 @@ public class CSUFireClustering extends DynamicClustering {
                 this.pathPlanning = moduleManager.getModule("PathPlanning.Default", "adf.sample.module.algorithm.SamplePathPlanning");
                 break;
         }
-        worldHelper = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+        world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
     }
 
     @Override
@@ -120,22 +122,44 @@ public class CSUFireClustering extends DynamicClustering {
         }else {//当前没有发现着火建筑
             myNearestClusterIndex = -1;
         }
+        visualDebug();
         return this;
+    }
+
+    private void visualDebug() {
+        if (DebugHelper.DEBUG_MODE) {
+            try {
+                Collection<StandardEntity> clusterEntities = getClusterEntities(myNearestClusterIndex);
+                if (clusterEntities != null) {
+                    List<Integer> elementList = Util.fetchIdValueFromElements(clusterEntities);
+                    DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "MrlSampleBuildingsLayer", (Serializable) elementList);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (DebugHelper.DEBUG_MODE) {
+            try {
+                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", (Serializable) clusterConvexPolygons);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void calcCluster() {
         Cluster cluster;
         Cluster tempCluster;
         Set<Cluster> adjacentClusters = new HashSet<>();
-        for (StandardEntity entity : worldInfo.getEntitiesOfType(BUILDING, AMBULANCE_CENTRE, POLICE_OFFICE, FIRE_STATION, GAS_STATION)) {
+        for (StandardEntity entity : CSUWorldHelper.getBuildingsWithURN(worldInfo)) {
             Building building = (Building) entity;
-            //着过火并且温度大于25
+            //生成新的cluster或者合并进已有的cluster
             if (building.isFierynessDefined() && building.getFieryness() != 8
                     && building.isTemperatureDefined() && building.getTemperature() > 50) {
                 cluster = getCluster(building.getID());
                 //还未分配cluster
                 if (cluster == null) {
-                    cluster = new FireCluster(worldHelper);
+                    cluster = new FireCluster(world);
                     cluster.add(building);
 
                     //checking neighbour clusters
@@ -252,7 +276,7 @@ public class CSUFireClustering extends DynamicClustering {
 
     @Override
     public Collection<StandardEntity> getClusterEntities(int i) {
-        if (i < clusters.size()) {
+        if (i < clusters.size() && i > -1) {
             return clusters.get(i).getEntities();
         } else {
             return null;
@@ -336,10 +360,10 @@ public class CSUFireClustering extends DynamicClustering {
     */
     public Set<StandardEntity> getEntitiesInShape(Shape shape) {
         Set<StandardEntity> result = new HashSet<>();
-        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, GAS_STATION, FIRE_STATION,
-                AMBULANCE_CENTRE, POLICE_OFFICE, ROAD)) {
+        for (StandardEntity next : CSUWorldHelper.getAreasWithURN(worldInfo)) {
             Area area = (Area) next;
-            if (shape.contains(area.getShape().getBounds2D()))
+            Pair<Integer, Integer> location = worldInfo.getLocation(area);
+            if (shape.contains(location.first(), location.second()))
                 result.add(next);
         }
         return result;
@@ -351,10 +375,10 @@ public class CSUFireClustering extends DynamicClustering {
     */
     public Set<Building> getBuildingsInShape(Shape shape) {
         Set<Building> result = new HashSet<>();
-        for (StandardEntity next : worldInfo.getEntitiesOfType(BUILDING, REFUGE, GAS_STATION, FIRE_STATION,
-                AMBULANCE_CENTRE, POLICE_OFFICE)) {
+        for (StandardEntity next : CSUWorldHelper.getBuildingsWithURN(worldInfo)) {
             Building building = (Building) next;
-            if (shape.contains(building.getShape().getBounds2D()))
+            Pair<Integer, Integer> location = worldInfo.getLocation(building);
+            if (shape.contains(location.first(), location.second()))
                 result.add(building);
         }
         return result;
