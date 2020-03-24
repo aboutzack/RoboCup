@@ -34,7 +34,7 @@ public class CSURoad {
 
 	private Road selfRoad;
 	private EntityID selfId;
-	private CSUWorldHelper worldHelper;
+	private CSUWorldHelper world;
 	private GraphHelper graph;
 	private AgentInfo agentInfo;
 
@@ -49,6 +49,7 @@ public class CSURoad {
 
 	private int lastUpdateTime = 0;
 	private Polygon polygon;
+	private int passablyLastResetTime = 0;
 
 	/**
 	 * When {@link CSURoad#pfClearLines} is null, the roadCenterLine is null, too.
@@ -61,7 +62,7 @@ public class CSURoad {
 
 	// constructor
 	public CSURoad(Road road, CSUWorldHelper world) {
-		this.worldHelper = world;
+		this.world = world;
 		this.graph = world.getGraph();
 		this.agentInfo = world.getAgentInfo();
 		this.selfRoad = road;
@@ -83,9 +84,9 @@ public class CSURoad {
 	 * Update the blockade inform.
 	 */
 	public void update() {
-		if (worldHelper.getRoadsSeen().contains(selfId)) {
+		if (world.getRoadsSeen().contains(selfId)) {
 			//reset
-			lastUpdateTime = worldHelper.getTime();
+			lastUpdateTime = world.getTime();
 			for (CSUEdge next : csuEdges) {
 				next.setOpenPart(next.getLine());
 				next.setBlocked(false);
@@ -145,6 +146,63 @@ public class CSURoad {
 			updateNodePassably();
 			updateMyEdgePassably();
 		}
+	}
+
+	private boolean isTimeToResetPassably() {
+		int resetTime = CSUConstants.ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP;
+		return passablyLastResetTime <= lastUpdateTime + resetTime && agentInfo.getTime() - lastUpdateTime > resetTime;
+	}
+	
+	public void resetPassably() {
+		boolean isSeen = world.getRoadsSeen().contains(selfId);
+		//在有radio通讯情况下，会收到其他agent关于某MyEdge不可通的信息，所以即使看不见road也进行reset
+		if (!isSeen && world.isCommunicationLess()) {
+			return;
+		}
+		if (agentInfo.me() instanceof PoliceForce || passablyLastResetTime > lastUpdateTime) {
+			return;
+		}
+		if (isTimeToResetPassably()) {
+			reset();
+		}
+	}
+
+	private void reset() {
+		if (!(agentInfo.me() instanceof Human)) {
+			return;
+		}
+		for (CSUEdge csuEdge : csuEdges) {
+			csuEdge.setBlocked(false);
+			CSUEdge otherEdge = csuEdge.getOtherSideEdge();
+			csuEdge.setOpenPart(csuEdge.getLine());
+			if (otherEdge != null) {
+				CSURoad csuRoad = world.getCsuRoad(csuEdge.getNeighbours().second());
+				if (csuRoad.getLastUpdateTime() < lastUpdateTime) {
+					otherEdge.setOpenPart(otherEdge.getLine());
+				}
+			}
+			rescuecore2.standard.entities.Area neighbour = (rescuecore2.standard.entities.Area) world.getEntity(csuEdge.getNeighbours().second());
+			if (csuEdge.isPassable()) {
+				Node node = graph.getNode((csuEdge.getMiddlePoint()));
+				if (node == null) {
+					System.out.println("node == null in " + selfId);
+					continue;
+				}
+				if (neighbour instanceof Road) {
+					CSURoad csuRoad = world.getCsuRoad(neighbour.getID());
+					CSUEdge neighbourEdge = csuRoad.getCsuEdgeInPoint(csuEdge.getMiddlePoint());
+					if (neighbourEdge != null && !neighbourEdge.isBlocked()) {
+						node.setPassable(true, agentInfo.getTime());
+					}
+				} else {
+					node.setPassable(true, agentInfo.getTime());
+				}
+			}
+		}
+		for (MyEdge myEdge : graph.getMyEdgesInArea(selfId)) {
+			myEdge.setPassable(true);
+		}
+		passablyLastResetTime = agentInfo.getTime();
 	}
 
 	/**
@@ -324,7 +382,7 @@ public class CSURoad {
 		List<CSUEdge> result = new ArrayList<>();
 
 		for (Edge next : selfRoad.getEdges()) {
-			result.add(new CSUEdge(worldHelper, next, selfRoad.getID()));
+			result.add(new CSUEdge(world, next, selfRoad.getID()));
 		}
 
 		return result;
@@ -340,7 +398,7 @@ public class CSURoad {
 		if (!selfRoad.isBlockadesDefined())
 			return result;
 		for (EntityID next : selfRoad.getBlockades()) {
-			StandardEntity entity = worldHelper.getEntity(next, StandardEntity.class);
+			StandardEntity entity = world.getEntity(next, StandardEntity.class);
 			if (entity == null)
 				continue;
 			if (!(entity instanceof Blockade))
@@ -350,7 +408,7 @@ public class CSURoad {
 				continue;
 			if (bloc.getApexes().length < 6)
 				continue;
-			result.add(new CSUBlockade(next, worldHelper));
+			result.add(new CSUBlockade(next, world));
 		}
 
 		return result;
@@ -370,7 +428,7 @@ public class CSURoad {
 		boolean isBlocked = false;
 		List<CSUBlockade> totalBlockades = new ArrayList<>(csuBlockades);
 		//获取edge连接的道路的所有blockades
-		CSURoad neighborRoad = worldHelper.getCsuRoad(edge.getNeighbours().first());
+		CSURoad neighborRoad = world.getCsuRoad(edge.getNeighbours().first());
 		if (neighborRoad != null) {
 			List<CSUBlockade> neighborBlockades = neighborRoad.getCsuBlockades();
 			if (neighborBlockades != null) {
@@ -542,7 +600,7 @@ public class CSURoad {
 		for (Edge next : selfRoad.getEdges()) {
 			//可以通过的边
 			if (next.isPassable()) {
-				StandardEntity entity = worldHelper.getEntity(next.getNeighbour(), StandardEntity.class);
+				StandardEntity entity = world.getEntity(next.getNeighbour(), StandardEntity.class);
 				if (entity instanceof Building) {
 					buildingEntranceLength = distance(next.getStart(), next.getEnd());
 					buildingEntrance = next;
@@ -567,7 +625,7 @@ public class CSURoad {
 		}
 
 		for (EntityID next : selfRoad.getNeighbours()) {
-			StandardEntity entity = worldHelper.getEntity(next, StandardEntity.class);
+			StandardEntity entity = world.getEntity(next, StandardEntity.class);
 			if (entity instanceof Road) {
 				Road road = (Road) entity;
 				if (road.isBlockadesDefined())
@@ -576,7 +634,7 @@ public class CSURoad {
 		}
 
 		for (EntityID next : blockadeIds) {
-			StandardEntity entity = worldHelper.getEntity(next, StandardEntity.class);
+			StandardEntity entity = world.getEntity(next, StandardEntity.class);
 			if (entity == null)
 				continue;
 			if (!(entity instanceof Blockade))
@@ -1303,7 +1361,7 @@ public class CSURoad {
 	public CSURoad getOppositePassableEdgeRoad(CSUEdge edge) {
 		CSUEdge oppositeEdge = getOppositePassableEdge(edge);
 		EntityID id = oppositeEdge.getNeighbours().first();
-		return worldHelper.getCsuRoad(id);
+		return world.getCsuRoad(id);
 	}
 
 	/**

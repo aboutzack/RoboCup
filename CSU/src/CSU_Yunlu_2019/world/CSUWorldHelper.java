@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.world;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.geom.PolygonScaler;
 import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import CSU_Yunlu_2019.standard.Ruler;
@@ -74,7 +75,7 @@ public class CSUWorldHelper extends AbstractModule {
     protected boolean isMapSmall = false;
 
     // communication conditions
-    protected boolean communicationLess = true;     //不能进行无线电通讯
+    protected boolean communicationLess = false;     //不能进行无线电通讯
     protected boolean communicationLow = false;
     protected boolean communicationMedium = false;
     protected boolean communicationHigh = false;
@@ -221,6 +222,11 @@ public class CSUWorldHelper extends AbstractModule {
                 fireBrigadesSeen.add(entity.getID());
             }
         });
+        //reset road passably
+        for (CSURoad csuRoad : csuRoadMap.values()) {
+            csuRoad.resetPassably();
+        }
+        DebugHelper.setGraphEdges(selfId, graph);
         return this;
     }
 

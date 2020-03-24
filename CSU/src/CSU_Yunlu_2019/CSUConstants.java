@@ -24,4 +24,7 @@ public interface CSUConstants {
     public static final int AGENT_MINIMUM_PASSING_THRESHOLD = 200;
     public static final int COLLINEAR_THRESHOLD = 10;
     public static final int TOO_SMALL_EDGE_THRESHOLD = 600;
+    public static final int ROAD_PASSABLY_RESET_TIME_IN_SMALL_MAP = 15;
+    public static final int ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP = 20;
+    public static final int ROAD_PASSABLY_RESET_TIME_IN_HUGE_MAP = 25;
 }
