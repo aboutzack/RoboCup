@@ -206,6 +206,9 @@ public class CSUFireClustering extends DynamicClustering {
             Set<Building> buildingsInShape = getBuildingsInShape(c.getConvexHull().getConvexPolygon());
             if (entitiesInShape != null && !entitiesInShape.isEmpty()) {
                 c.setEntities(entitiesInShape);
+                for (StandardEntity entity : entitiesInShape) {
+                    entityClusterMap.put(entity.getID(), c);
+                }
             }
             if (buildingsInShape != null && !buildingsInShape.isEmpty()) {
                 c.setBuildings(buildingsInShape);
