@@ -210,6 +210,7 @@ public class CSUFireClustering extends DynamicClustering {
             if (buildingsInShape != null && !buildingsInShape.isEmpty()) {
                 c.setBuildings(buildingsInShape);
             }
+            c.updateConvexHull();
         }
     }
 
@@ -406,6 +407,7 @@ public class CSUFireClustering extends DynamicClustering {
 
         rescuecore2.misc.geometry.Point2D clusterCenter = new rescuecore2.misc.geometry.Point2D(cluster2.getCenter().getX(), cluster2.getCenter().getY());
         Polygon convexPolygon = cluster1.getConvexHull().getConvexPolygon();
+        //如果多边形1的任一条边距离多边形2的中点距离小于30000
         for (int i = 0; i < nPointsCluster1; i++) {
             rescuecore2.misc.geometry.Point2D point1 = new rescuecore2.misc.geometry.Point2D(convexPolygon.xpoints[i], convexPolygon.ypoints[i]);
             rescuecore2.misc.geometry.Point2D point2 = new rescuecore2.misc.geometry.Point2D(convexPolygon.xpoints[(i + 1) % nPointsCluster1], convexPolygon.ypoints[(i + 1) % nPointsCluster1]);
