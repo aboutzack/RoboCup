@@ -278,7 +278,7 @@ public class AStarPathPlanning extends PathPlanning {
                     if (!open.contains(neighbourNode)) {
 
                         neighbourNode.setParent(current.getId());
-                        neighbourNode.setHeuristic((int) Ruler.getManhattanDistance(neighbourNode.getPosition(), destinationNode.getPosition()));
+                        neighbourNode.setHeuristic((int) Ruler.getDistance(neighbourNode.getPosition(), destinationNode.getPosition()));
                         neighbourNode.setG(neighbourG);
                         neighbourNode.setCost(neighbourNode.getHeuristic() + neighbourG);
                         neighbourNode.setDepth(current.getDepth() + 1);
@@ -318,6 +318,7 @@ public class AStarPathPlanning extends PathPlanning {
      */
     public List<EntityID> getAreaPath(Area sourceArea, Area destinationArea, List<EntityID> path) {
         Node node;
+        System.out.println("graphPath: " + path);
         List<EntityID> areaPath = new ArrayList<>();
         List<EntityID> tempAreaPathList = new ArrayList<>();
         areaPath.add(sourceArea.getID());
@@ -358,9 +359,9 @@ public class AStarPathPlanning extends PathPlanning {
             //获取要经过的edge
             edge = area.getEdgeTo(path.get(i + 1));
             if (edge == null) {
+                System.out.println(agentInfo.getID() + " time: " + agentInfo.getTime() + " " + path.get(i) + " 到 " + path.get(i + 1) + " 路径错误!!!");
+                System.out.println("原始路径: " + path);
                 path = path.subList(0, i + 1);
-                System.out.println(agentInfo.getID() + " time: " + agentInfo.getTime() + " 路径错误!!!");
-                System.out.println(agentInfo.getThinkTimeMillis());
                 break;
             }
         }

@@ -127,7 +127,7 @@ public class GraphHelper extends AbstractModule {
 
                     if (myEdge == null) {
                         EntityID edgeId = new EntityID(edgeIdGenerator++);
-                        weight = (int) Ruler.getManhattanDistance(node1.getPosition(), node2.getPosition());
+                        weight = (int) Ruler.getDistance(node1.getPosition(), node2.getPosition());
                         myEdge = new MyEdge(edgeId, new Pair<>(node1, node2), area.getID(), weight);
                         //设置edge连接的area(除此area)
                         setMyEdgeNeighbours(area, myEdge);
