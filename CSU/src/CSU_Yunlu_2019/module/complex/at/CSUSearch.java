@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.extaction.ActionExtMove;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
@@ -13,6 +14,7 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
+import jdk.nashorn.internal.runtime.regexp.joni.constants.EncloseType;
 import rescuecore2.messages.Command;
 import rescuecore2.misc.Handy;
 import rescuecore2.standard.entities.*;
@@ -25,12 +27,26 @@ import java.util.*;
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 /**
- * @description: decision maker for search target
+ * @description: decision maker for ambulanceTeam search target
  * @author: Yiji-Gao
  * @Date: 03/09/2020
  */
 //todo 通知警察还没改好,目前通知的条件,最优和次优建筑进不去时.(line:592,line:632)
+//todo:存在问题：1、自己受困时不会通知pf。2、自己受伤时会陷入自己救自己死循环。3、救人人手不够时要通知pf。4、知道有人但是门口堵住时呼叫pf 5、失效建筑如何处理
+//todo:6、由于最优建筑不可抢占，以及次优建筑抢占条件苛刻，如果它们的actionmove是null，则有可能永远陷入null。尝试加入逻辑修改
 public class CSUSearch extends Search {
+
+	/**
+	 * 用于测试
+	 */
+	private int monitorID = 1403518128;//监视对象ID
+	private boolean monitorExact = true;//监视单个对象开关
+	private boolean monitorAll = false;//监视全体开关
+	public EntityID myID = agentInfo.getID();
+	/**
+	 * 用于测试
+	 */
+
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
 
@@ -42,13 +58,16 @@ public class CSUSearch extends Search {
 	private Set<EntityID> optimalBuildings;//最优访问的建筑(已知有人的建筑)
 	private Set<EntityID> secondaryBuildings;//次级优先访问的建筑(听到声音范围的建筑)
 	private Set<EntityID> unsearchedBuildings;//其余等待搜索的建筑
+
+	private Set<EntityID> burnningBuildings;//燃烧的建筑
+
 	private int currentTargetPriority;//当前任务优先级(1:普通目标,2:次优目标,3:最优目标,4:全图目标,5:搜索过的目标)
 	//private Set<EntityID> grabedBuildings;//被抢占的建筑
-	private boolean first = true;
+	private boolean first = true;//忘记有啥用了，但是不敢删掉
 	private final int maxTargetTime = 6;//执行一个普通建筑最长的时间,超出时间加入挂起池
 	private int targetTime = 0;//已经执行了普通任务的时长
-	private Set<EntityID> hangUpBuildings;//挂起池
-	private final int maxHangUpTime = 15;//最长挂起时间
+	private Set<EntityID> hangUpBuildings;//挂起池。加入条件:1、普通建筑被抢占。2、普通建筑超时
+	private final int maxHangUpTime = 10;//最长挂起时间
 	private int hangUpTime = 0;
 //	private final int maxPopSearchedTime = 15;
 //	private int popSearchedTime = 0;
@@ -66,6 +85,8 @@ public class CSUSearch extends Search {
 	public CSUSearch(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
 					 DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
+
+		this.burnningBuildings = new HashSet<EntityID>();
 
 		this.unsearchedBuildings = new HashSet<EntityID>();
 		this.positionArea= agentInfo.getPositionArea();
@@ -143,7 +164,20 @@ public class CSUSearch extends Search {
 
 	//更新已知平民(每回合)
 	private void updateKnownCivilians(){
-		this.knownCivilians.addAll(worldInfo.getEntitiesOfType(StandardEntityURN.CIVILIAN));
+		Set<StandardEntity> civilians = new HashSet<StandardEntity>();
+		civilians.addAll(worldInfo.getEntitiesOfType(StandardEntityURN.CIVILIAN));
+		for(StandardEntity e : civilians){
+			Civilian civ = (Civilian) e;
+			if(civ.isHPDefined() && civ.getHP() > 0){
+				this.knownCivilians.add(civ);
+			}else{
+				this.knownCivilians.add(civ);
+			}
+		}
+		if(!civilians.isEmpty()){
+			if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("ID:"+myID+"知道有"+civilians.size()+"人");
+		}
+		//this.knownCivilians.addAll(worldInfo.getEntitiesOfType(StandardEntityURN.CIVILIAN));//原策略
 	}
 
 	//更新听到的平民(每回合)
@@ -152,6 +186,7 @@ public class CSUSearch extends Search {
 		//knownHeardCivilians.clear();
 		//mrl原采用heard.forEach(next -> {});遍历
 		if (heard != null) {
+			if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("ID:"+myID+",听到了呼救");
 			for (Command next : heard){
 				//排除其他agent的声音
 				if (next instanceof AKSpeak && ((AKSpeak) next).getChannel() == 0 && !next.getAgentID().equals(agentInfo.getID())) {
@@ -168,14 +203,13 @@ public class CSUSearch extends Search {
 		}
 	}
 
-	//更新搜过的建筑(每回合)
+	//更新搜过的建筑(每回合)(如果在楼里，就判断距离，小于观察距离就当作搜过了)
 	private void updateSearchedBuildings(){
-		//如果在楼里，就判断距离，小于观察距离就当作搜过了
 		if (worldInfo.getEntity(agentInfo.getPosition()) instanceof Building) {
 			Building building = (Building) worldInfo.getEntity(agentInfo.getPosition());
 			int distance = Util.getdistance(worldInfo.getLocation(agentInfo.getID()), worldInfo.getLocation(building));
 			if (distance < scenarioInfo.getPerceptionLosMaxDistance()) {
-				if(CSUConstants.DEBUG_AT_SEARCH){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll){
 					System.out.println("视距:"+scenarioInfo.getPerceptionLosMaxDistance()+"，距离:"+distance+",搜了"+building.getID());
 				}
 				searchedBuildings.add(building.getID());
@@ -183,8 +217,9 @@ public class CSUSearch extends Search {
 		}
 	}
 
-	//更新最优建筑(每回合)
+	//更新最优建筑(每回合)(根据knownCivilians)
 	private void updateOptimalBuildings(){
+
 		Collection<EntityID> civlianIDs = Handy.objectsToIDs(knownCivilians);
 		for (EntityID civID : civlianIDs) {
 			if (worldInfo.getEntity(agentInfo.getID()) instanceof Building){
@@ -195,9 +230,13 @@ public class CSUSearch extends Search {
 				}
 			}
 		}
+
+		this.removeUnbrokenBuildings(optimalBuildings);
+		this.removeBurningBuildings(optimalBuildings);
+		this.removeSearchedBuildings(optimalBuildings);
 	}
 
-	//更新次优建筑(听力范围的建筑)(每回合)
+	//更新次优建筑(每回合)(根据heardCivilians)
 	private void updateSecondaryBuildings(){
 		if(!heardCivilians.isEmpty()){
 			for (EntityID entityID: unsearchedBuildings){
@@ -206,6 +245,11 @@ public class CSUSearch extends Search {
 				}
 			}
 		}
+
+		this.removeUnbrokenBuildings(secondaryBuildings);
+		this.removeBurningBuildings(secondaryBuildings);
+		this.removeSearchedBuildings(secondaryBuildings);
+
 	}
 
 	//更新普通建筑(其他没有搜过的建筑)(每回合)
@@ -217,10 +261,10 @@ public class CSUSearch extends Search {
 		//this.removeMyNeighbour();//邻居
 		this.removeSearchedBuildings(unsearchedBuildings);//搜过的
 		this.removeBurningBuildings(unsearchedBuildings);//在烧的
-		//if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("没重置，待搜索列表为空:"+this.unsearchedBuildings.isEmpty());
+		//if(CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("没重置，待搜索列表为空:"+this.unsearchedBuildings.isEmpty());
 		if (this.unsearchedBuildings.isEmpty()) {
 			this.reset();
-			//	if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("重置，待搜索列表为空:"+this.unsearchedBuildings.isEmpty());
+			//	if(CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("重置，待搜索列表为空:"+this.unsearchedBuildings.isEmpty());
 			//this.removeMyNeighbour();
 			this.removeUnbrokenBuildings(unsearchedBuildings);//破损为0的
 			this.removeSearchedBuildings(unsearchedBuildings);
@@ -273,123 +317,252 @@ public class CSUSearch extends Search {
 
 	@Override
 	public Search calc() {
+		if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+			if(myID.getValue() == monitorID)
+				System.out.println("第"+this.agentInfo.getTime()+"回合");
+		}
 		//开局前三秒不能行动，生成地形
 		if (agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()) {
 			return this;
 		}
-		if(CSUConstants.DEBUG_AT_SEARCH){
+		if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll){
 			if(agentInfo.getID().getValue() == 1297269710){
 				System.out.println("agent1297269710执行了calc()");
 			}
 		}
 
+		//定期释放挂起的普通建筑
 		periodicReleaseHangUp();
-		//定时释放搜过的建筑，防止at无目标
-//		popSearchedTime++;
-//		if(popSearchedTime>=maxPopSearchedTime){
-//			Iterator iterator = unsearchedBuildings.iterator();
-//			while(iterator.hasNext()){
-//				EntityID id = (EntityID) iterator.next();
-//				if(worldInfo.getEntity(this.agentInfo.getPosition()) != worldInfo.getEntity(id))
-//					unsearchedBuildings.remove(id);
-//			}
-//			popSearchedTime = 0;
-//		}
+
 		//防止多个at选择同一个建筑
 		if(avoidRedundant()) return this;
 
 		EntityID lastTarget = this.result;
 
-		//如果已经搜过了
-		if(searchedBuildings.contains(this.result)){
-			//搜过的移出去
-			if(currentTargetPriority == 3) optimalBuildings.remove(lastTarget);
-			else if(currentTargetPriority == 2) secondaryBuildings.remove(lastTarget);
-			else if(currentTargetPriority == 1) unsearchedBuildings.remove(lastTarget);
-			else if(currentTargetPriority == 4){
-				if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("已经随机移动到另一建筑");
-			}else if(currentTargetPriority == 5){
-				if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("搜搜过的");
+		//如果目标失效,重新选定
+		if(!isLastTargetValid()){
+			if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+				if(myID.getValue() == monitorID) System.out.println("AT"+myID+":当前目标失效("+this.result.getValue()+")");
 			}
-			if(calcOptimalTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("原目标已经搜过，新目标为最优目标:"+building.getID());
-				}
-			}else if(calcSecondaryTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("原目标已经搜过，新目标为次优目标:"+building.getID());
-				}
-			}else if(calcUnsearchedTarget()){
-				targetTime = 0;
-				if (CSUConstants.DEBUG_AT_SEARCH){
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("原目标已经搜过，新目标换为普通目标:"+building.getID());
-				}
-			}else if(calcWorldTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					System.out.println("愿目标已经搜过，新目标换为移动寻找下一个聚类");
-				}
-			}
-			else if(calcSearchedTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("原目标已经搜过，新目标为搜过的目标:"+building.getID());
-				}
-			}else{
-				if(currentTargetPriority == 3) optimalBuildings.add(lastTarget);
-				else if(currentTargetPriority == 2) secondaryBuildings.add(lastTarget);
-				else if(currentTargetPriority == 1) unsearchedBuildings.add(lastTarget);
-				System.out.println("agent"+agentInfo.getID()+":找不到目标，原因:未知");
-			}
-			return this;
-		}
 
-		//如果没有目标
-		if(this.result == null) {
 			if (calcOptimalTarget()) {
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为当前目标失效切换到最优建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					targetTime = 0;
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("无目标换为最优目标:" + building.getID());
 				}
 			} else if (calcSecondaryTarget()) {
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为当前目标失效切换到次优建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					targetTime = 0;
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("agent" + agentInfo.getID() + ":无目标换为次优目标:" + building.getID());
 				}
 			} else if (calcUnsearchedTarget()) {
 				targetTime = 0;
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为当前目标失效切换到普通建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("agent" + agentInfo.getID() + ":无目标换为普通目标:" + building.getID());
 				}
 			} else if (calcWorldTarget()) {
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为当前目标失效切换到全图搜索("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					System.out.println("agent" + agentInfo.getID() + ":无目标换为移动寻找下一个聚类");
 				}
 			} else if (calcSearchedTarget()) {
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为当前目标失效切换到重复搜索("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					System.out.println("agent" + agentInfo.getID() + ":无目标换为搜搜过的");
 				}
 			} else {
-				if (CSUConstants.DEBUG_AT_SEARCH) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact) {
+					if(myID.getValue() == monitorID)
+						System.out.println("AT"+myID+",目标失效而且找不到目标");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
 					System.out.println("agent" + agentInfo.getID() + ":无论如何都找不到");
 				}
 			}
 			return this;
 		}
-		//如果执行普通建筑
+
+		//如果已经搜过了
+		if(searchedBuildings.contains(this.result)){
+			//搜过的移出去
+			if(currentTargetPriority == 5) optimalBuildings.remove(lastTarget);
+			if(currentTargetPriority == 4) secondaryBuildings.remove(lastTarget);
+			if(currentTargetPriority == 3) unsearchedBuildings.remove(lastTarget);
+			if(currentTargetPriority == 2){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("已经随机移动到另一建筑");
+			}
+			if(currentTargetPriority == 1){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("搜搜过的");
+			}
+			this.result = null;
+		}
+		//如果没有正在执行的目标
+		if(this.result == null) {
+			if (calcOptimalTarget()) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为没有目标切换到最优建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
+					targetTime = 0;
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("无目标换为最优目标:" + building.getID());
+				}
+			} else if (calcSecondaryTarget()) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为没有目标切换到最次优筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("agent" + agentInfo.getID() + ":无目标换为次优目标:" + building.getID());
+				}
+			} else if (calcUnsearchedTarget()) {
+				targetTime = 0;
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为没有目标切换到普通建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("agent" + agentInfo.getID() + ":无目标换为普通目标:" + building.getID());
+				}
+			} else if (calcWorldTarget()) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为没有目标切换到全图搜索("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) {
+					System.out.println("agent" + agentInfo.getID() + ":无目标换为移动寻找下一个聚类");
+				}
+			} else if (calcSearchedTarget()) {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为没有目标切换到重复搜索("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll) {
+					System.out.println("agent" + agentInfo.getID() + ":无目标换为搜搜过的");
+				}
+			} else {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID)
+						System.out.println("AT"+myID+",没有目标而且找不到目标");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll) {
+					System.out.println("agent" + agentInfo.getID() + ":无论如何都找不到");
+				}
+			}
+			return this;
+		}
+
+		//如果正在重复搜索
 		if(currentTargetPriority == 1){
 			if(calcOptimalTarget()){
-				//如果上次目标还没完成，挂起
-				if(!searchedBuildings.contains(lastTarget)) hangUpBuildings.add(lastTarget);
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占重复搜索切换到最优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					targetTime = 0;
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("访问过的目标换为最优目标:"+building.getID());
+				}
+			}else if(calcSecondaryTarget()){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占重复搜索切换到次优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("无目标换为次优目标:"+building.getID());
+				}
+			}else if(calcUnsearchedTarget()){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占重复搜索切换到普通建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("访问过的目标换为普通目标:"+building.getID());
+				}
+			}else if(calcWorldTarget()){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占重复搜索切换到全图搜索("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					System.out.println("agent"+agentInfo.getID()+":移动寻找下一个聚类");
+				}
+			}else{
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact) {
+					if(myID.getValue() == monitorID)
+						System.out.println("AT"+myID+",重复目标抢占失败");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					System.out.println("agent"+agentInfo.getID()+":预想中不可能的情况:全世界都搜遍了");
+				}
+			}
+			return this;
+		}
+		//如果正在全图搜索
+		if(currentTargetPriority == 2){
+			if(calcOptimalTarget()){
 				targetTime = 0;
-				if(CSUConstants.DEBUG_AT_SEARCH){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占全图搜索切换到最优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					targetTime = 0;
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("agent"+agentInfo.getID()+":访问过的目标换为最优目标:"+building.getID());
+				}
+			}else if(calcSecondaryTarget()){
+				targetTime = 0;
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占全图搜索切换到次优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					targetTime = 0;
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("agent"+agentInfo.getID()+":无目标换为次优目标:"+building.getID());
+				}
+			}else if(calcUnsearchedTarget()){
+				targetTime = 0;
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占全图搜索切换到普通建筑("+this.result.getValue()+")");
+				}
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					Building building = (Building) worldInfo.getEntity(result);
+					System.out.println("agent"+agentInfo.getID()+":访问过的目标换为普通目标:"+building.getID());
+				}
+			}else{
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact) {
+					if(myID.getValue() == monitorID)
+						System.out.println("ID:"+myID+"全图搜索抢占失败");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
+					System.out.println("agent"+agentInfo.getID()+"还在原先的聚类");
+				}
+			}
+			return this;
+		}
+		//如果正在执行普通建筑
+		if(currentTargetPriority == 3){
+			if(calcOptimalTarget()){
+				//如果上次目标还没完成，压入普通建筑
+				if(!searchedBuildings.contains(lastTarget)) unsearchedBuildings.add(lastTarget);
+				targetTime = 0;
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占普通建筑切换到最优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("agent"+agentInfo.getID()+":普通目标换为最优目标:"+building.getID());
 				}
@@ -397,14 +570,17 @@ public class CSUSearch extends Search {
 				//如果上次目标还没完成，挂起
 				if(!searchedBuildings.contains(lastTarget)) hangUpBuildings.add(lastTarget);
 				targetTime = 0;
-				if(CSUConstants.DEBUG_AT_SEARCH){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占普通建筑切换到次优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("agent"+agentInfo.getID()+":普通目标换为次优目标:"+building.getID());
 				}
 			}else {
-				targetTime++;//只有正在执行普通任务时才会增加
+				targetTime++;//普通建筑已执行时长
 				if(targetTime >= maxTargetTime || searchedBuildings.contains(lastTarget)){
-					if(CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						if(targetTime >= maxTargetTime) System.out.println("agent"+agentInfo.getID()+":普通目标超时");
 						if(searchedBuildings.contains(lastTarget)) System.out.println("agent"+agentInfo.getID()+"目标建筑已经搜过");
 					}
@@ -412,89 +588,54 @@ public class CSUSearch extends Search {
 					hangUpBuildings.add(lastTarget);
 					if(calcUnsearchedTarget()){
 						if(!searchedBuildings.contains(lastTarget)) hangUpBuildings.add(lastTarget);
-						if (CSUConstants.DEBUG_AT_SEARCH) System.out.println("agent"+agentInfo.getID()+":更换普通目标"+result);
+						if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+							if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为普通建筑超时切换到普通建筑("+this.result.getValue()+")");
+						}
+						if (CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("agent"+agentInfo.getID()+":更换普通目标"+result);
 					}else if(calcWorldTarget()){
-						if (CSUConstants.DEBUG_AT_SEARCH) System.out.println("agent"+agentInfo.getID()+":普通目标换为移动寻找下一个聚类"+this.result);
+						if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+							if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为普通建筑超时切换到全图搜索("+this.result.getValue()+")");
+						}
+						if (CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("agent"+agentInfo.getID()+":普通目标换为移动寻找下一个聚类"+this.result);
 					} else if(!calcSearchedTarget()){
-						if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("agent"+agentInfo.getID()+":自己被困住了(普通目标)");
+						if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+							if(myID.getValue() == monitorID) System.out.println("AT"+myID+":困住了("+this.result.getValue()+")");
+						}
+						if(CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("agent"+agentInfo.getID()+":自己被困住了(普通目标)");
 					}
 					targetTime = 0;
 				}
 			}
 			return this;
 		}
-		//如果执行次级建筑
-		if(currentTargetPriority == 2){
+		//如果正在执行次级建筑
+		if(currentTargetPriority == 4){
 			if(calcOptimalTarget()){
 				if(!searchedBuildings.contains(lastTarget)) secondaryBuildings.add(lastTarget);
-				if(CSUConstants.DEBUG_AT_SEARCH){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为抢占次优建筑切换到最优建筑("+this.result.getValue()+")");
+				}
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 					Building building = (Building) worldInfo.getEntity(result);
 					System.out.println("agent"+agentInfo.getID()+":次优目标换为最优目标:"+building.getID());
 				}
 				//如果搜过了这栋
+			}else {
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact) {
+					if(myID.getValue() == monitorID)
+						System.out.println("ID:"+myID+"次级目标抢占失败");
+				}
 			}
 			return this;
 		}
-		//如果是最优建筑必不可抢占
-		if(currentTargetPriority == 3){
-			return this;
-		}
-		//如果是移动寻找下一个聚类(全图随机找一个建筑)
-		if(currentTargetPriority == 4){
-			if(calcOptimalTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("agent"+agentInfo.getID()+":访问过的目标换为最优目标:"+building.getID());
-				}
-			}else if(calcSecondaryTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("agent"+agentInfo.getID()+":无目标换为次优目标:"+building.getID());
-				}
-			}else if(calcUnsearchedTarget()){
-				targetTime = 0;
-				if (CSUConstants.DEBUG_AT_SEARCH){
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("agent"+agentInfo.getID()+":访问过的目标换为普通目标:"+building.getID());
-				}
-			}else{
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					System.out.println("agent"+agentInfo.getID()+"还在原先的聚类");
-				}
-			}
-		}
-		//如果是已经搜过的建筑
+		//如果正在执行最优建筑
 		if(currentTargetPriority == 5){
-			if(calcOptimalTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("访问过的目标换为最优目标:"+building.getID());
-				}
-			}else if(calcSecondaryTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					targetTime = 0;
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("无目标换为次优目标:"+building.getID());
-				}
-			}else if(calcUnsearchedTarget()){
-				targetTime = 0;
-				if (CSUConstants.DEBUG_AT_SEARCH){
-					Building building = (Building) worldInfo.getEntity(result);
-					System.out.println("访问过的目标换为普通目标:"+building.getID());
-				}
-			}else if(calcWorldTarget()){
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					System.out.println("agent"+agentInfo.getID()+":移动寻找下一个聚类");
-				}
-			}else{
-				if(CSUConstants.DEBUG_AT_SEARCH){
-					System.out.println("agent"+agentInfo.getID()+":预想中不可能的情况:全世界都搜遍了");
-				}
+			if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+				if(myID.getValue() == monitorID) System.out.println("AT"+myID+":正在执行最优建筑("+this.result.getValue()+")");
 			}
+			return this;
 		}
+
 		return this;
 	}
 
@@ -599,7 +740,7 @@ public class CSUSearch extends Search {
 		return false;
 	}
 
-	//次级目标:获取声音范围内的building加入列表
+	//次级目标:获取声音范围内的building加入列表 todo 判断条件加入actionmove
 	private boolean calcSecondaryTarget(){
 		//this.result = null;
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
@@ -612,6 +753,7 @@ public class CSUSearch extends Search {
 				if(CSUConstants.DEBUG_AT_SEARCH){
 					if(this.result == null) System.out.println("agent"+agentInfo.getID()+"由于未知错误,次优建筑返回null");
 				}
+
 				currentTargetPriority = 2;
 				knownCivilians.removeAll(this.worldInfo.getBuriedHumans(result));
 				heardCivilians.removeAll(this.worldInfo.getBuriedHumans(result));
@@ -675,7 +817,7 @@ public class CSUSearch extends Search {
 		searchedBuildings.remove(this.result);
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
 		this.pathPlanning.setDestination(this.searchedBuildings);
-		if(!unsearchedBuildings.isEmpty()){
+		if(!searchedBuildings.isEmpty()){
 			List<EntityID> path = this.pathPlanning.calc().getResult();
 			if (path != null && path.size() > 0) {
 				//if (CSUConstants.DEBUG_AT_SEARCH) System.out.println("去搜搜过的");
@@ -746,7 +888,7 @@ public class CSUSearch extends Search {
 
 	//删除所有没有broken的建筑（学长代码）
 	private void removeUnbrokenBuildings(Set<EntityID> set){
-		if (CSUConstants.DEBUG_AT_SEARCH){
+		if (CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 			//System.out.print("移出没坏的建筑:");
 		}
 		Set<EntityID> changedEntities = this.worldInfo.getChanged().getChangedEntities();
@@ -754,26 +896,24 @@ public class CSUSearch extends Search {
 			StandardEntity entity = worldInfo.getEntity(entityID);
 			if (entity instanceof Building) {
 				Building building = (Building) entity;
-				if(building.isBrokennessDefined()&&CSUConstants.DEBUG_AT_SEARCH){
+				if(building.isBrokennessDefined()&&CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 					//System.out.println("类型:"+building.getURN()+"面积:"+building.getTotalArea()+"，破损:"+building.getBrokenness()+",groundArea:"+building.getGroundArea());
 				}
 				if (building.isBrokennessDefined() && building.getBrokenness() == 0) {
 					set.remove(entityID);
-					if(CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						//System.out.print(entityID+",");
 					}
 				}
 			}
 		}
 	}
-
 	//todo：思路是照搬mrl的,需要酌情修改
 	//更新搜过的建筑（根据和建筑的距离）
-
 	//删去搜过的建筑
 	private void removeSearchedBuildings(Set<EntityID> set){
 		set.removeAll(searchedBuildings);
-		if(CSUConstants.DEBUG_AT_SEARCH){
+		if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 			//System.out.print("agentID"+agentInfo.getID()+",已经搜过的:");
 			for (EntityID entityID:searchedBuildings){
 				//System.out.print(entityID+",");
@@ -785,78 +925,22 @@ public class CSUSearch extends Search {
 
 	//删除正在烧的建筑
 	private void removeBurningBuildings(Set<EntityID> set) {
-		if(CSUConstants.DEBUG_AT_SEARCH){
+		if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 			//System.out.print("移出燃烧建筑:");
 		}
 		Building building;
-		Set<EntityID> burnningBuildings = new HashSet<>();
+		//Set<EntityID> burnningBuildings = new HashSet<>();
 		for (EntityID buildingID : set) {
 			building = (Building) worldInfo.getEntity(buildingID);
 			if (building.isFierynessDefined() && building.getFieryness() > 0 && building.getFieryness() != 4) {
 				burnningBuildings.add(buildingID);
-				if (CSUConstants.DEBUG_AT_SEARCH){
+				if (CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 					//System.out.print(buildingID+",");
 				}
 			}
 		}
-		//if (CSUConstants.DEBUG_AT_SEARCH) System.out.println();
+		//if (CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println();
 		set.removeAll(burnningBuildings);
-	}
-
-	//移出我附近的建筑（逻辑不合理）
-	private Area removeMyNeighbour(){
-		if (this.positionArea instanceof Building) {//在屋子里，把这建屋子移出待搜索列表
-			//unsearchedBuildingIDs.remove(this.positionArea.getID());
-		}else {//在门口，邻居移出
-			List<EntityID> neighbours = this.positionArea.getNeighbours();
-			unsearchedBuildings.removeAll(neighbours);
-		}
-		return this.positionArea;
-	}
-
-	//todo 将建筑按距离排序(排序无效，越界错误)
-	private void sortBuildings(List<EntityID> buildings,int low,int high){
-		int i,j,temp;
-		EntityID bj,bi;
-		if(low>high){
-			return;
-		}
-		i=low;
-		j=high;
-		//temp就是基准位
-		temp = getDistanceFrom(buildings.get(low));
-
-		while (i<j) {
-			//先看右边，依次往左递减
-			while (temp <= getDistanceFrom(buildings.get(j)) && i<j) {
-				j--;
-			}
-			//再看左边，依次往右递增
-			while (temp >= getDistanceFrom(buildings.get(i))&&i<j) {
-				i++;
-			}
-			//如果满足条件则交换
-			if (i<j) {
-				bj = buildings.get(j);
-				bi = buildings.get(i);
-				buildings.remove(bj);
-				buildings.remove(bi);
-				buildings.add(i,bj);
-				buildings.add(j,bi);
-			}
-
-		}
-		//最后将基准为与i和j相等位置的数字交换
-		bj = buildings.get(low);
-		bi = buildings.get(i);
-		buildings.remove(bj);
-		buildings.remove(bi);
-		buildings.add(low,bi);
-		buildings.add(i,bj);
-		//递归调用左半数组
-		sortBuildings(buildings, low, j-1);
-		//递归调用右半数组
-		sortBuildings(buildings, j+1, high);
 	}
 
 	//获得智能体距离指定建筑的距离
@@ -894,53 +978,95 @@ public class CSUSearch extends Search {
 
 			//如果其他at已经够救建筑里的人，此at更换目标
 			if(rescuingATNum >= buriedHumanNum && buriedHumanNum != 0){
+				if(CSUConstants.DEBUG_AT_SEARCH && monitorExact) {
+					if(myID.getValue() == monitorID) System.out.println("AT"+myID+":目标建筑("+this.result.getValue()+")里的人手够了");
+				}
 				EntityID lastTarget = this.result;
 				//防止又选到相同的
-				if(currentTargetPriority == 3) optimalBuildings.remove(lastTarget);
-				else if(currentTargetPriority == 2) secondaryBuildings.remove(lastTarget);
-				else if(currentTargetPriority == 1) unsearchedBuildings.remove(lastTarget);
-				else if(currentTargetPriority == 4){
-					if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("已经随机移动到另一建筑");
-				}else if(currentTargetPriority == 5){
-					if(CSUConstants.DEBUG_AT_SEARCH) System.out.println("搜搜过的");
+				if(currentTargetPriority == 5) optimalBuildings.remove(lastTarget);
+				else if(currentTargetPriority == 4) secondaryBuildings.remove(lastTarget);
+				else if(currentTargetPriority == 3) unsearchedBuildings.remove(lastTarget);
+				else if(currentTargetPriority == 2){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("已经随机移动到另一建筑");
+				}else if(currentTargetPriority == 1){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll) System.out.println("搜搜过的");
 				}
 				//重新计算目标
 				if(calcOptimalTarget()){
-					if(CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+						if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为人手足够切换最优建筑("+this.result.getValue()+")");
+					}
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						targetTime = 0;
 						building = (Building) worldInfo.getEntity(result);
 						System.out.println("重复目标换为最优目标:"+building.getID());
 					}
 				}else if(calcSecondaryTarget()){
-					if(CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+						if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为人手足够切换次优建筑("+this.result.getValue()+")");
+					}
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						targetTime = 0;
 						building = (Building) worldInfo.getEntity(result);
 						System.out.println("重复目标换为次优目标:"+building.getID());
 					}
 				}else if(calcUnsearchedTarget()){
 					targetTime = 0;
-					if (CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+						if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为人手足够切换普通建筑("+this.result.getValue()+")");
+					}
+					if (CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						building = (Building) worldInfo.getEntity(result);
 						//unsearchedBuildings.add(lastTarget);
 						System.out.println("重复目标换为普通目标:"+building.getID());
 					}
 				}else if(calcWorldTarget()){
-					if(CSUConstants.DEBUG_AT_SEARCH){
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+						if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为人手足够切换全图搜索("+this.result.getValue()+")");
+					}
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorAll){
 						System.out.println("重复目标换为移动寻找下一个聚类");
 					}
 				}
 				else if(calcSearchedTarget()) {
-					if (CSUConstants.DEBUG_AT_SEARCH) {
-						building = (Building) worldInfo.getEntity(result);
-						System.out.println("重复目标为搜过的目标:" + building.getID());
+					if(CSUConstants.DEBUG_AT_SEARCH && monitorExact){
+						if(myID.getValue() == monitorID) System.out.println("AT"+myID+":因为人手足够切换重复搜索("+this.result.getValue()+")");
 					}
 				}
-				if(currentTargetPriority == 3) optimalBuildings.add(lastTarget);
-				else if(currentTargetPriority == 2) secondaryBuildings.add(lastTarget);
-				else if(currentTargetPriority == 1) unsearchedBuildings.add(lastTarget);
+//                if(currentTargetPriority == 3) optimalBuildings.add(lastTarget);
+//                else if(currentTargetPriority == 2) secondaryBuildings.add(lastTarget);
+//                else if(currentTargetPriority == 1) unsearchedBuildings.add(lastTarget);
 				return true;
 			}
 		}
 		return false;
+	}
+
+	//如果当前目标建筑着火了，或者里面的人死完了
+	private boolean isLastTargetValid(){
+		if(burnningBuildings.contains(result)) {
+			searchedBuildings.remove(this.result);
+			if(currentTargetPriority == 3) unsearchedBuildings.add(this.result);
+			if(currentTargetPriority == 4) secondaryBuildings.add(this.result);
+			if(currentTargetPriority == 5) optimalBuildings.add(this.result);
+			return false;
+		}
+		Building building = (Building)this.worldInfo.getEntity(this.result);
+		int deadNum = 0;
+		if(this.result != null){
+			for(Human human : worldInfo.getBuriedHumans(building)){
+				if(human.isHPDefined() && human.getHP() == 0){
+					deadNum++;
+				}
+			}
+			//如果建筑内死亡人数等于建筑内被埋的人数，就说明目标失效
+			if(deadNum == worldInfo.getBuriedHumans(building).size() && worldInfo.getBuriedHumans(building).size()!=0) {
+//                if(currentTargetPriority == 3) unsearchedBuildings.add(this.result);
+//                if(currentTargetPriority == 4) secondaryBuildings.add(this.result);
+//                if(currentTargetPriority == 5) optimalBuildings.add(this.result);
+				return false;
+			}
+		}
+		return true;
 	}
 }
