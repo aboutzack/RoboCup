@@ -1,5 +1,7 @@
 package CSU_Yunlu_2019.module.algorithm;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
+import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -16,7 +18,9 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 public class SampleKMeans  extends StaticClustering {
 
@@ -123,6 +127,7 @@ public class SampleKMeans  extends StaticClustering {
 	            this.clusterEntityIDsList.add(i, precomputeData.getEntityIDList(KEY_CLUSTER_ENTITY + i));
 	        }
 	        this.assignAgentsFlag = precomputeData.getBoolean(KEY_ASSIGN_AGENT);
+			visualDebug();
 	        return this;
 	    }
 
@@ -133,6 +138,7 @@ public class SampleKMeans  extends StaticClustering {
 	            return this;
 	        }
 	        this.calcStandard(this.repeatPreparate);
+			visualDebug();
 	        this.entities = null;
 	        return this;
 	    }
@@ -372,6 +378,27 @@ public class SampleKMeans  extends StaticClustering {
 	            }
 	        }
 	    }
+
+	    private void visualDebug() {
+			int index = getClusterIndex(agentInfo.getID());
+			CompositeConvexHull convexHull = new CompositeConvexHull();
+			for (StandardEntity entity : getClusterEntities(index)) {
+				Pair<Integer, Integer> location = worldInfo.getLocation(entity);
+				convexHull.addPoint(location.first(), location.second());
+			}
+			Polygon polygon = convexHull.getConvexPolygon();
+			ArrayList<Polygon> data = new ArrayList<>();
+			if (polygon != null) {
+				data.add(convexHull.getConvexPolygon());
+			}
+			if (DebugHelper.DEBUG_MODE && !(agentInfo.me() instanceof FireBrigade)) {
+				try {
+					DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", data);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 
 	    private StandardEntity getNearEntityByLine(WorldInfo world, List<StandardEntity> srcEntityList, StandardEntity targetEntity) {
 	        Pair<Integer, Integer> location = world.getLocation(targetEntity);
