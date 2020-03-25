@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.algorithm.fb;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
@@ -149,9 +150,11 @@ public class CSUFireClustering extends DynamicClustering {
                 if (cluster == null) {
                     cluster = new FireCluster(world);
                     cluster.add(building);
-
+                    cluster.updateConvexHull();
+                    Polygon polygon = cluster.getConvexHull().getConvexPolygon();
+                    Collection<Building> buildingsInRange = getBuildingsInRange(polygon, CLUSTER_RANGE_THRESHOLD);
                     //checking neighbour clusters
-                    for (StandardEntity neighbourEntity : worldInfo.getObjectsInRange(building.getID(), CLUSTER_RANGE_THRESHOLD)) {
+                    for (StandardEntity neighbourEntity : buildingsInRange) {
                         if (!(neighbourEntity instanceof Building)) {
                             continue;
                         }
@@ -317,6 +320,16 @@ public class CSUFireClustering extends DynamicClustering {
     private void addToClusterSet(Cluster cluster, EntityID entityID) {
         entityClusterMap.put(entityID, cluster);
         clusters.add(cluster);
+    }
+
+    /**
+     * @Description: 获取距离polygon在range内的所有buildings
+     * @Author: Guanyu-Cai
+     * @Date: 3/25/20
+     */
+    private Collection<Building> getBuildingsInRange(Polygon polygon, int range) {
+        Polygon scaledPolygon = Util.scaleBySize(polygon, range);
+        return getBuildingsInShape(scaledPolygon);
     }
 
     /**
