@@ -1683,8 +1683,7 @@ public class ActionExtClear extends ExtAction {
 			}
 		}
 		if(result==null) {
-			this.send_message();
-			result = this.clear();
+			result = this.randomWalk();
 		}
 		if(result!=null) {
 			actionHistory.add(result);
@@ -1704,17 +1703,7 @@ public class ActionExtClear extends ExtAction {
 		StandardEntity entity = this.worldInfo.getEntity(this.agentInfo.getPosition());
 		if(entity instanceof Road) {// 身处的道路
 			Road road = (Road) entity;
-			boolean passable = this.isRoadPassable(road);
-			if (passable)
-			{
-				this.messageManager.addMessage(new MessageRoad(true,road,null,true,true));
-			}
-			else
-			{
-				Collection<Blockade> blockades = worldInfo.getBlockades(road);         //找出最近的障碍物加入消息中
-				Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
-				this.messageManager.addMessage(new MessageRoad(true,road,block,false,true)); //不可以通过，选择最近的障碍物加入
-			}
+			this.messageManager.addMessage(new MessageRoad(true,road,null,true,true));
 		}
 	}
 	/**
@@ -2066,6 +2055,9 @@ public class ActionExtClear extends ExtAction {
 					int dY = (int)((intersection.getY() - agentY) / 10);
 					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
 				}
+				else {
+					this.send_message();
+				}
 	        }			
 		}
 		return noAction();
@@ -2318,6 +2310,9 @@ public class ActionExtClear extends ExtAction {
 					int dX = (int)((intersection.getX() - agentX) / 10);
 					int dY = (int)((intersection.getY() - agentY) / 10);
 					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
+				}
+				else {
+					this.send_message();
 				}
 			}
 		return null;
@@ -2833,6 +2828,7 @@ public class ActionExtClear extends ExtAction {
 		return false;
 	}
 }
+
 
 
 
