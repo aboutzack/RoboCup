@@ -3,7 +3,6 @@ package CSU_Yunlu_2019.module.algorithm.fb;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.standard.Ruler;
-import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
@@ -127,17 +126,6 @@ public class CSUFireClustering extends DynamicClustering {
     }
 
     private void visualDebug() {
-        if (DebugHelper.DEBUG_MODE) {
-            try {
-                Collection<StandardEntity> clusterEntities = getClusterEntities(myNearestClusterIndex);
-                if (clusterEntities != null) {
-                    List<Integer> elementList = Util.fetchIdValueFromElements(clusterEntities);
-                    DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "MrlSampleBuildingsLayer", (Serializable) elementList);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         if (DebugHelper.DEBUG_MODE) {
             try {
                 DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", (Serializable) clusterConvexPolygons);

@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.module.algorithm.fb.CSUFireClustering;
 import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.ClusterSelectorType;
@@ -10,6 +11,7 @@ import CSU_Yunlu_2019.module.complex.fb.targetSelection.DirectionBasedTargetSele
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.IFireBrigadeTargetSelector;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.TargetSelectorType;
+import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import adf.agent.communication.MessageManager;
@@ -32,9 +34,8 @@ import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.io.Serializable;
+import java.util.*;
 
 public class CSUBuildingDetector extends BuildingDetector {
     private EntityID result;
@@ -139,7 +140,21 @@ public class CSUBuildingDetector extends BuildingDetector {
             // TODO: 3/9/20 没有着火房屋时，search重新根据距离分配cluster，防止search时大范围移动?
             this.result = null;
         }
+        visualDebug();
         return this;
+    }
+
+    private void visualDebug() {
+        if (DebugHelper.DEBUG_MODE) {
+            try {
+                Collection<StandardEntity> buildings = new ArrayList<>();
+                buildings.add(world.getEntity(result));
+                List<Integer> elementList = Util.fetchIdValueFromElements(buildings);
+                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "SampleBuildings", (Serializable) elementList);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void setClusterSelector() {

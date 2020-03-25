@@ -318,7 +318,6 @@ public class AStarPathPlanning extends PathPlanning {
      */
     public List<EntityID> getAreaPath(Area sourceArea, Area destinationArea, List<EntityID> path) {
         Node node;
-        System.out.println("graphPath: " + path);
         List<EntityID> areaPath = new ArrayList<>();
         List<EntityID> tempAreaPathList = new ArrayList<>();
         areaPath.add(sourceArea.getID());

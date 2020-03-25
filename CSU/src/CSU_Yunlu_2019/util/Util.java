@@ -661,11 +661,19 @@ public class Util {
 	}
 
 	public static List<Integer> fetchIdValueFromElements(Collection<StandardEntity> elements) {
-		return elements.stream().map(entity -> entity.getID().getValue()).collect(Collectors.toList());
+		try {
+			return elements.stream().map(entity -> entity.getID().getValue()).collect(Collectors.toList());
+		} catch (Exception ex) {
+			return new ArrayList<>();
+		}
 	}
 
 	public static List<Integer> fetchIdValueFromElementIds(Collection<EntityID> elementEntityIDs) {
-		return elementEntityIDs.stream().map(EntityID::getValue).collect(Collectors.toList());
+		try {
+			return elementEntityIDs.stream().map(EntityID::getValue).collect(Collectors.toList());
+		} catch (Exception ex) {
+			return new ArrayList<>();
+		}
 	}
 
 	public static class DistanceComparator implements Comparator<Pair<Point2D, Point2D>> {
