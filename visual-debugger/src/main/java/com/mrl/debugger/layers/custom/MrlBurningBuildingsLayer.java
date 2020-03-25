@@ -9,7 +9,7 @@ import java.awt.*;
 /**
  * @author Pooya
  */
-@ViewLayer(visible = false, caption = "Burning buildings")
+@ViewLayer(visible = false, caption = "Burning buildings", tag = "BurningBuildings")
 public class MrlBurningBuildingsLayer extends MrlStandardBuildingLayer {
 
     private static final Color HEATING_COLOUR = Color.YELLOW; //1

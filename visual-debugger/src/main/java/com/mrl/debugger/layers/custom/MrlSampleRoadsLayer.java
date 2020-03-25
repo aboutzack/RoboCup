@@ -9,7 +9,7 @@ import java.awt.*;
 /**
  * @author Mahdi
  */
-@ViewLayer(visible = false, caption = "Sample roads", drawAllData = true)
+@ViewLayer(visible = false, caption = "Sample roads", drawAllData = true, tag = "SampleRoads")
 public class MrlSampleRoadsLayer extends MrlStandardRoadLayer {
 
     @Override

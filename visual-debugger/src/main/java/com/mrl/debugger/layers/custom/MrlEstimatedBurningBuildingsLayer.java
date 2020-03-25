@@ -1,14 +1,8 @@
 package com.mrl.debugger.layers.custom;
 
 import com.mrl.debugger.ViewLayer;
-import com.mrl.debugger.layers.base.MrlBaseBuildingDtoLayer;
-import com.mrl.debugger.layers.base.MrlBaseDtoLayer;
 import com.mrl.debugger.layers.standard.MrlStandardBuildingDtoLayer;
-import com.mrl.debugger.layers.standard.MrlStandardBuildingLayer;
 import com.mrl.debugger.remote.dto.BuildingDto;
-import com.mrl.debugger.remote.dto.EstimatedDto;
-import com.mrl.debugger.remote.dto.SampleDto;
-import com.mrl.debugger.remote.dto.StandardDto;
 import rescuecore2.standard.entities.Building;
 
 import java.awt.*;
@@ -16,7 +10,7 @@ import java.awt.*;
 /**
  * @author Pooya
  */
-@ViewLayer(visible = false, caption = "Estimated Burning buildings")
+@ViewLayer(visible = false, caption = "Estimated Burning buildings", tag = "EstimatedBurningBuildings")
 public class MrlEstimatedBurningBuildingsLayer extends MrlStandardBuildingDtoLayer {
 
     private static final Color HEATING_COLOUR = Color.YELLOW; //1

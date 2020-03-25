@@ -5,14 +5,13 @@ import com.mrl.debugger.layers.standard.MrlStandardHumanLayer;
 import math.geom2d.conic.Circle2D;
 import rescuecore2.misc.gui.ScreenTransform;
 import rescuecore2.standard.entities.Human;
-import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 
 /**
  * @author Mahdi
  */
-@ViewLayer(visible = false, caption = "Sample humans")
+@ViewLayer(visible = false, caption = "Sample humans", tag = "SampleHumans")
 public class MrlSampleHumansLayer extends MrlStandardHumanLayer {
 
     @Override

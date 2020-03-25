@@ -2,16 +2,14 @@ package com.mrl.debugger.layers.custom;
 
 import com.mrl.debugger.ViewLayer;
 import com.mrl.debugger.layers.standard.MrlStandardBuildingLayer;
-import rescuecore2.misc.gui.ScreenTransform;
 import rescuecore2.standard.entities.Building;
-import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 
 /**
  * @author Mahdi
  */
-@ViewLayer(visible = false, caption = "Sample buildings")
+@ViewLayer(visible = false, caption = "Sample buildings", tag = "SampleBuildings")
 public class MrlSampleBuildingsLayer extends MrlStandardBuildingLayer {
 
     @Override

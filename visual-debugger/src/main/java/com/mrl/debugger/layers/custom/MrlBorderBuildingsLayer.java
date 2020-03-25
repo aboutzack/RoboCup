@@ -9,7 +9,7 @@ import java.awt.*;
 /**
  * @author Pooya
  */
-@ViewLayer(visible = false, caption = "Border buildings")
+@ViewLayer(visible = false, caption = "Border buildings", tag = "BorderBuildings")
 public class MrlBorderBuildingsLayer extends MrlStandardBuildingLayer {
 
     private static final Color HEATING_COLOUR = Color.YELLOW; //1
