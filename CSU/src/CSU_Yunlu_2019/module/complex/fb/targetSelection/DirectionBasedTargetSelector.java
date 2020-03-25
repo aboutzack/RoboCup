@@ -18,11 +18,10 @@ import java.util.List;
 import java.util.*;
 
 /**
- * First we choose the closest fire cluster from this Agent. Then we find the
- * expand direction of this fire cluster. We get buildings in that direction,
- * and with the border buildings of this fire cluster, we calculate their
- * buildingValues. For inDirectionBuildings and borderBuildings, we choose
- * differnet standard to calculate buildingValues. Very obvious,
+ * First we find the expand direction of the specified fire cluster. Then We get
+ * buildings in that direction, and with the border buildings of this fire cluster,
+ * we calculate their buildingValues. For inDirectionBuildings and borderBuildings
+ * , we choose different standard to calculate buildingValues. Very obvious,
  * inDirectionBuildings are more important. Finally, we sorted
  * inDirectionBuildings and borderBuildings together according to their
  * buildingValues and the first in this sorted set is the target building to
@@ -91,7 +90,7 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         Collection<StandardEntity> gasStas = world.getWorldInfo().getEntitiesOfType(StandardEntityURN.GAS_STATION);
         Set<CSUBuilding> targetGasStas = new HashSet<>();
 
-        Polygon cluster_po = cluster.getConvexHull().getConvexPolygon();
+        Polygon clusterPolygon = cluster.getConvexHull().getConvexPolygon();
 
         for (StandardEntity next : gasStas) {
             GasStation sta = (GasStation) next;
@@ -106,16 +105,16 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             if (csuBu.getWaterQuantity() >= 3000)  // two cycles   ///water
                 continue;
 
-            int[] apexs = sta.getApexList();
+            int[] apexes = sta.getApexList();
             CompositeConvexHull convexHull = new CompositeConvexHull();
 
-            for (int i = 0; i < apexs.length; i += 2) {
-                convexHull.addPoint(apexs[i], apexs[i + 1]);
+            for (int i = 0; i < apexes.length; i += 2) {
+                convexHull.addPoint(apexes[i], apexes[i + 1]);
             }
 
-            Polygon po = convexHull.getConvexPolygon();
+            Polygon gasPolygon = convexHull.getConvexPolygon();
 
-            int dis = (int) Ruler.getDistance(cluster_po, po);
+            int dis = (int) Ruler.getDistance(clusterPolygon, gasPolygon);
             if (dis <= 5000)     ///distance
                 targetGasStas.add(world.getCsuBuilding(next.getID()));
         }
@@ -123,19 +122,19 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         if (targetGasStas.contains(lastTarget))
             return new FireBrigadeTarget(cluster, lastTarget);
 
-        CSUBuilding tar = null;
+        CSUBuilding targetBuilding = null;
         double minDistance = Double.MAX_VALUE;
         for (CSUBuilding next : targetGasStas) {
             double dis = world.getDistance(next.getId(), selfHuman.getID());
             if (dis < minDistance) {
                 minDistance = dis;
-                tar = next;
+                targetBuilding = next;
             }
         }
 
-        if (tar != null) {
-            this.target = tar;
-            return new FireBrigadeTarget(cluster, tar);
+        if (targetBuilding != null) {
+            this.target = targetBuilding;
+            return new FireBrigadeTarget(cluster, targetBuilding);
         } else
             return null;
     }
