@@ -7,10 +7,12 @@ import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.standard.simplePartition.Line;
 import CSU_Yunlu_2019.world.graph.GraphHelper;
+import CSU_Yunlu_2019.world.graph.MyEdge;
 import CSU_Yunlu_2019.world.object.*;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
+import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -227,6 +229,7 @@ public class CSUWorldHelper extends AbstractModule {
             csuRoad.resetPassably();
         }
         DebugHelper.setGraphEdges(selfId, graph);
+        sendMessageRoad(messageManager);
         return this;
     }
 
@@ -410,13 +413,54 @@ public class CSUWorldHelper extends AbstractModule {
     private void reflectMessage(MessageManager messageManager) {
         Set<EntityID> changedEntities = this.worldInfo.getChanged().getChangedEntities();
         changedEntities.add(this.agentInfo.getID());
-        for (CommunicationMessage message : messageManager.getReceivedMessageList(MessageBuilding.class)) {
-            MessageBuilding mb = (MessageBuilding) message;
-            if (!changedEntities.contains(mb.getBuildingID())) {
-                MessageUtil.reflectMessage(this.worldInfo, mb);
-                if (agentInfo.me() instanceof FireBrigade) {
-                    updateBuildingFuelForFireBrigade(getEntity(mb.getBuildingID(), Building.class));
+        for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
+            if (message instanceof MessageBuilding) {
+                MessageBuilding mb = (MessageBuilding) message;
+                if (!changedEntities.contains(mb.getBuildingID())) {
+                    MessageUtil.reflectMessage(this.worldInfo, mb);
+                    if (agentInfo.me() instanceof FireBrigade) {
+                        updateBuildingFuelForFireBrigade(getEntity(mb.getBuildingID(), Building.class));
+                    }
                 }
+            } else if (message instanceof MessageRoad) {
+                MessageRoad mr = (MessageRoad) message;
+                if (mr.isPassable()) {
+                    List<MyEdge> myEdgesInArea = graph.getMyEdgesInArea(mr.getRoadID());
+                    for (MyEdge edge : myEdgesInArea) {
+                        edge.setPassable(true);
+                    }
+                }
+                if (!changedEntities.contains(mr.getRoadID()) && !mr.isPassable() && !mr.isBlockadeDefined() &&
+                        !mr.getSenderID().equals(agentInfo.getID())) {
+                    List<MyEdge> myEdgesInArea = graph.getMyEdgesInArea(mr.getRoadID());
+                    for (MyEdge myEdge : myEdgesInArea) {
+                        myEdge.setPassable(false);
+                    }
+                }
+            }
+        }
+        DebugHelper.setGraphEdges(selfId, graph);
+    }
+
+    /**
+    * @Description: 发送所有MyEdges都不可通的road
+    * @Author: Guanyu-Cai
+    * @Date: 3/22/20
+    */
+    private void sendMessageRoad(MessageManager messageManager) {
+        //发送roadSeen中每条road
+        for (EntityID id : roadsSeen) {
+            Road road = (Road) worldInfo.getEntity(id);
+            List<MyEdge> myEdgesInArea = graph.getMyEdgesInArea(id);
+            boolean passable = false;
+            for (MyEdge myEdge : myEdgesInArea) {
+                if (myEdge.isPassable()) {
+                    passable = true;
+                    break;
+                }
+            }
+            if (!passable) {
+                messageManager.addMessage(new MessageRoad(true, road, null, false, false));
             }
         }
     }

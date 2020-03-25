@@ -12,7 +12,10 @@ import adf.component.module.AbstractModule;
 import javolution.util.FastMap;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.Point2D;
-import rescuecore2.standard.entities.*;
+import rescuecore2.standard.entities.Area;
+import rescuecore2.standard.entities.Edge;
+import rescuecore2.standard.entities.Road;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.geom.Line2D;
@@ -209,8 +212,46 @@ public class GraphHelper extends AbstractModule {
         return areaMyEdgesMap.get(areaId);
     }
 
+    /**
+    * @Description: 获取area上所有和node连接的MyEdge
+    * @Author: Guanyu-Cai
+    * @Date: 3/22/20
+    */
+    public List<MyEdge> getMyEdgesInArea(EntityID areaId, Node node) {
+        List<MyEdge> result = new ArrayList<>();
+        for (MyEdge edge : getMyEdgesInArea(areaId)) {
+            if (edge.getNodes().first().equals(node) || edge.getNodes().second().equals(node)) {
+                result.add(edge);
+            }
+        }
+        return result;
+    }
+
     public List<Node> getAreaNodes(EntityID areaId) {
         return areaNodesMap.get(areaId);
+    }
+
+    /**
+    * @Description: 获取area上距离self最近的node
+    * @Author: Guanyu-Cai
+    * @Date: 3/22/20
+    */
+    public Node getAreaNearestNode(EntityID areaId) {
+        return getAreaNearestNode(areaId, agentInfo.me());
+    }
+
+    public Node getAreaNearestNode(EntityID areaId, StandardEntity reference) {
+        List<Node> areaNodes = getAreaNodes(areaId);
+        double minDistance = Double.MAX_VALUE;
+        Node nearestNode = null;
+        for (Node node : areaNodes) {
+            double distance = Ruler.getDistance(node.getPosition(), worldInfo.getLocation(reference));
+            if (distance < minDistance) {
+                nearestNode = node;
+                minDistance = distance;
+            }
+        }
+        return nearestNode;
     }
 
     public Node getNodeBetweenAreas(EntityID areaId1, EntityID areaId2, Edge edge) {
