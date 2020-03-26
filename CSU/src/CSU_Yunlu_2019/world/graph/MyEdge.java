@@ -1,6 +1,8 @@
 package CSU_Yunlu_2019.world.graph;
 
+import adf.agent.info.AgentInfo;
 import rescuecore2.misc.Pair;
+import rescuecore2.standard.entities.PoliceForce;
 import rescuecore2.worldmodel.EntityID;
 
 /**
@@ -16,15 +18,17 @@ public class MyEdge {
     private int weight;
     private boolean isPassable;
     private Pair<EntityID, EntityID> neighbours;//与此area通过nodes相连的两个area
+    private AgentInfo agentInfo;
     public static final double BUILDING_EDGE_DEV_WEIGHT = 1.4;
     public static final double ON_TOO_SMALL_EDGE_DEV_WEIGHT = 20;
 
-    public MyEdge(EntityID id, Pair<Node, Node> nodes, EntityID areaId, int weight) {
+    public MyEdge(EntityID id, Pair<Node, Node> nodes, EntityID areaId, int weight, AgentInfo agentInfo) {
         this.id = id;
         this.nodes = nodes;
         this.areaId = areaId;
         this.weight = weight;
         this.isPassable = true;
+        this.agentInfo = agentInfo;
     }
 
     public void setPassable(boolean passable) {
@@ -56,11 +60,13 @@ public class MyEdge {
     }
 
     public void setEntranceEdgeWeight() {
-        this.weight *= BUILDING_EDGE_DEV_WEIGHT;
+        if (!(agentInfo.me() instanceof PoliceForce))
+            this.weight *= BUILDING_EDGE_DEV_WEIGHT;
     }
 
     public void setOnTooSmallEdgeWeight() {
-        this.weight *= ON_TOO_SMALL_EDGE_DEV_WEIGHT;
+        if (!(agentInfo.me() instanceof PoliceForce))
+            this.weight *= ON_TOO_SMALL_EDGE_DEV_WEIGHT;
     }
 
     public EntityID getAreaId() {
