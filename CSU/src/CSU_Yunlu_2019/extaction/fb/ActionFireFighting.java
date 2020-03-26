@@ -425,21 +425,23 @@ public class ActionFireFighting extends ExtAction
         EntityID replaceHydrant = null;
 //        boolean flag = true;
         for (EntityID hydrant : this.worldInfo.getEntityIDsOfType(StandardEntityURN.HYDRANT)){
+            if (!this.isOccupied(hydrant)){
+                if (this.worldInfo.getDistance(hydrant,agent.getID()) < d2){
+                    d2 = this.worldInfo.getDistance(hydrant,agent.getID());
+                    replaceHydrant = hydrant;
+                    if (this.worldInfo.getDistance(hydrant,agent.getID()) < d1){
+                        d1 = this.worldInfo.getDistance(hydrant,agent.getID());
+                    }
+                }
+            }
             if (this.worldInfo.getDistance(hydrant,agent.getID()) < scenarioInfo.getFireExtinguishMaxDistance()){
                 nearByHydrant = hydrant;
-            }
-            if (this.worldInfo.getDistance(hydrant,agent.getID()) < d2){
-                d2 = this.worldInfo.getDistance(hydrant,agent.getID());
-                replaceHydrant = hydrant;
-                if (this.worldInfo.getDistance(hydrant,agent.getID()) < d1){
-                    d1 = this.worldInfo.getDistance(hydrant,agent.getID());
-                }
             }
         }
         int cntFireBridge = 0;
         if (nearByHydrant != null){
             for (Map.Entry<EntityID, Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
-                if (this.worldInfo.getDistance(nearByHydrant, entry.getKey()) < (scenarioInfo.getFireExtinguishMaxDistance())) {
+                if (this.worldInfo.getDistance(nearByHydrant, entry.getKey()) < 1.5*scenarioInfo.getFireExtinguishMaxDistance()) {
                     cntFireBridge++;
                 }
             }
@@ -455,13 +457,9 @@ public class ActionFireFighting extends ExtAction
 //                    this.target = replaceHydrant;
 //                    List<EntityID> path = pathPlanning.getResult();
 //                    System.out.println(this.agentInfo.getID()+" change hydrant to hydrant "+replaceHydrant);
-                    this.getMoveAction(pathPlanning, agentInfo.getPosition(), replaceHydrant);
                 }
+                this.getMoveAction(pathPlanning, agentInfo.getPosition(), replaceHydrant);
             }
-        }
-        if (positionURN == REFUGE || positionURN == HYDRANT)
-        {
-            return new ActionRefill();
         }
         // TODO: 3/1/20 如何在refuge和hydrant中进行选择
         return calcRefugeAndHydrantAction(agent, pathPlanning, target);
