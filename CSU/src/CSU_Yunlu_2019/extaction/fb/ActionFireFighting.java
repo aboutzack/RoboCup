@@ -17,6 +17,7 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.config.NoSuchConfigOptionException;
+import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
@@ -210,6 +211,7 @@ public class ActionFireFighting extends ExtAction
             this.updateWater();
             return this;
         }
+
         this.result = this.calcExtinguish(agent, this.pathPlanning, this.target);
         return this;
     }
@@ -221,11 +223,35 @@ public class ActionFireFighting extends ExtAction
         EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
 
-        //当前位置的距离小于最大的灭火距离就灭火
-        if(this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)) < this.maxExtinguishDistance) {
-            //System.out.println(this.agentInfo.getID()+" is extinguishing and the distance is "+this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)));
-		    //System.out.println("\n********fireExtinguish11111*******\n");
-        	return new ActionExtinguish(target, this.maxExtinguishPower);
+
+        // TODO 灭火位置的选取
+//        System.out.println();
+        if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(target)) < this.maxExtinguishDistance ) {
+//            System.out.println(agentInfo.getID()+" 当前水量："+agent.getWater()+" 灭火水量："+this.calcExtinguishTargetWater(target));
+
+            Pair<Integer, Integer> locationAgentPosition =  this.worldInfo.getLocation(positionEntity);
+            Pair<Integer, Integer> locationAgentTarget =  this.worldInfo.getLocation(this.worldInfo.getEntity(target));
+            Pair<Integer, Integer> locationAgent =  this.worldInfo.getLocation(agentInfo.me());
+
+            //处理偏差情况
+            if (this.worldInfo.getDistance(positionEntity,this.worldInfo.getEntity(target)) < this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(target))){
+                //向target方向调整位置坐标
+//                int destinationY = (int) ((locationAgent.second()-locationAgentTarget.second())*0.05+locationAgent.second());
+//                int destinationX = (int) ((locationAgent.first()-locationAgentTarget.first())*0.05+locationAgent.first());
+//                // set MovePath
+//                pathPlanning.setDestination(target);
+//                List<EntityID> path = pathPlanning.calc().getResult();
+////                ActionMove moveAction = (ActionMove) actionExtMove.setTarget(path.get(path.size() - 1)).calc().getAction();
+//                Action adjustAction = new ActionMove(path,destinationX,destinationY);
+//                if (adjustAction != null) {
+//                    if (StandardEntityURN.BLOCKADE != positionEntity.getStandardURN()){
+//                        System.out.println(agentInfo.getID()+" is moving to new place "+agentInfo.getX()+"  "+agentInfo.getY());
+//                        return adjustAction;
+//                    }
+//                }
+            }
+//            System.out.println("checking ================= "+this.worldInfo.getDistance(agentInfo.me(),this.worldInfo.getEntity(target))+"  "+this.worldInfo.getDistance(positionEntity,this.worldInfo.getEntity(target)));
+      	    return new ActionExtinguish(target, this.maxExtinguishPower);
         }
 
         //跑出火区
@@ -382,8 +408,57 @@ public class ActionFireFighting extends ExtAction
         return agent.getWater() <= this.refillRequest;
     }
 
+    /**
+     * crf:防止聚集fb在hydrant排队等待补水的情况
+     * @param agent
+     * @param pathPlanning
+     * @param target
+     * @return
+     */
     private Action calcRefill(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {
+//        System.out.println(this.agentInfo+" is going to refill ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         StandardEntityURN positionURN = Objects.requireNonNull(this.worldInfo.getPosition(agent)).getStandardURN();
+        //判断当前位置的补水情况
+        EntityID nearByHydrant = null;
+        double d1 = 0x3f3f3f;
+        double d2 = 0x3f3f3f;
+        EntityID replaceHydrant = null;
+//        boolean flag = true;
+        for (EntityID hydrant : this.worldInfo.getEntityIDsOfType(StandardEntityURN.HYDRANT)){
+            if (this.worldInfo.getDistance(hydrant,agent.getID()) < scenarioInfo.getFireExtinguishMaxDistance()){
+                nearByHydrant = hydrant;
+            }
+            if (this.worldInfo.getDistance(hydrant,agent.getID()) < d2){
+                d2 = this.worldInfo.getDistance(hydrant,agent.getID());
+                replaceHydrant = hydrant;
+                if (this.worldInfo.getDistance(hydrant,agent.getID()) < d1){
+                    d1 = this.worldInfo.getDistance(hydrant,agent.getID());
+                }
+            }
+        }
+        int cntFireBridge = 0;
+        if (nearByHydrant != null){
+            for (Map.Entry<EntityID, Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
+                if (this.worldInfo.getDistance(nearByHydrant, entry.getKey()) < (scenarioInfo.getFireExtinguishMaxDistance())) {
+                    cntFireBridge++;
+                }
+            }
+//            System.out.println("check the num is "+cntFireBridge+" ++++++++++++++++++++");
+            if (cntFireBridge == 1){
+                if (positionURN == REFUGE || positionURN == HYDRANT)
+                {
+                    return new ActionRefill();
+                }
+            }
+            else if (cntFireBridge >= 2){
+                if (this.agentInfo.getWater() == 0){
+//                    this.target = replaceHydrant;
+//                    List<EntityID> path = pathPlanning.getResult();
+//                    System.out.println(this.agentInfo.getID()+" change hydrant to hydrant "+replaceHydrant);
+                    this.getMoveAction(pathPlanning, agentInfo.getPosition(), replaceHydrant);
+                }
+            }
+        }
         if (positionURN == REFUGE || positionURN == HYDRANT)
         {
             return new ActionRefill();
@@ -669,15 +744,15 @@ public class ActionFireFighting extends ExtAction
             }
         }
         // check around hydrant and set new hydrant target
-        if (temlist.size() > 1){
-//            System.out.println("check point ------------");
-            for (EntityID id:temlist){
-//                System.out.println(id +" is around hydrant and remain water is "+fireBrigadesWaterMap.get(id));
-                if (fireBrigadesWaterMap.get(id) == 0){
-
-                }
-            }
-        }
+//        if (temlist.size() > 1){
+//            System.out.println("check point ------------ and multinum is "+temlist.size());
+//            for (EntityID id:temlist){
+////                System.out.println(id +" is around hydrant and remain water is "+fireBrigadesWaterMap.get(id));
+//                if (fireBrigadesWaterMap.get(id) == 0){
+//                    System.out.println(this.worldInfo.getEntity(id) + "is watiing here");
+//                }
+//            }
+//        }
         return false;
     }
 
