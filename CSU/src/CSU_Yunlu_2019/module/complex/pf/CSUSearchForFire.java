@@ -22,13 +22,16 @@ public class CSUSearchForFire extends Search {
 	private Clustering clustering;
 
 	private EntityID result;
-	private Collection<EntityID> unsearchedBuildingIDs;
+	private Collection<EntityID> unsearchedRoadIDs;
+	private Collection<EntityID> searchedRoadIDs;
+	private int searchedClusterIndexes[] ;
+	private int clusterCount = 0;
 
 	public CSUSearchForFire(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
 							DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
-
-		this.unsearchedBuildingIDs = new HashSet<>();
+		
+		this.unsearchedRoadIDs = new HashSet<>();
 
 		StandardEntityURN agentURN = ai.me().getStandardURN();
 		switch (si.getMode()) {
@@ -99,48 +102,102 @@ public class CSUSearchForFire extends Search {
 			return this;
 		}
 
-		this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+		this.unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
 
-		if (this.unsearchedBuildingIDs.isEmpty()) {
+		if (this.unsearchedRoadIDs.isEmpty()) {
 			this.reset();
-			this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+			this.unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
 		}
 		return this;
 	}
 
 	@Override
 	public Search calc() {
+		if (agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()) {
+			return this;
+		}
 		this.result = null;
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
-		this.pathPlanning.setDestination(this.unsearchedBuildingIDs);
+		this.pathPlanning.setDestination(this.unsearchedRoadIDs);
 		List<EntityID> path = this.pathPlanning.calc().getResult();
-		if (path != null && path.size() > 0) {
+		if (path != null && path.size() > 1) {
 			this.result = path.get(path.size() - 1);
 		}
 		return this;
 	}
-
+	
 	private void reset() {
-		this.unsearchedBuildingIDs.clear();
-
+		this.unsearchedRoadIDs.clear();
 		Collection<StandardEntity> clusterEntities = null;
 		if (this.clustering != null) {
-			int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+			
+			int clusterIndex = this.findNextCluster();
 			clusterEntities = this.clustering.getClusterEntities(clusterIndex);
-
 		}
 		if (clusterEntities != null && clusterEntities.size() > 0) {
 			for (StandardEntity entity : clusterEntities) {
-				if (entity instanceof Building && entity.getStandardURN() != REFUGE) {
-					this.unsearchedBuildingIDs.add(entity.getID());
+				if (entity instanceof Road || entity instanceof Hydrant) {
+					this.unsearchedRoadIDs.add(entity.getID());
 				}
 			}
 		} else {
-			this.unsearchedBuildingIDs.addAll(this.worldInfo.getEntityIDsOfType(BUILDING, GAS_STATION, AMBULANCE_CENTRE,
+			this.unsearchedRoadIDs.addAll(this.worldInfo.getEntityIDsOfType(BUILDING, GAS_STATION, AMBULANCE_CENTRE,
 					FIRE_STATION, POLICE_OFFICE));
 		}
 	}
 
+	private int findNextCluster() {
+		boolean flag = false;
+		int clusterIndex ;
+		clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+		for(int i = 0 ; i < this.clusterCount ; ++i) {
+			if(this.searchedClusterIndexes[i] == clusterIndex) {
+				flag = true;
+				break;
+			}
+		}
+		if(!flag) {
+			this.searchedClusterIndexes[this.clusterCount] = clusterIndex;
+			++this.clusterCount;
+			return clusterIndex;
+		}else {
+			double min = Double.MAX_VALUE;
+			for(StandardEntity entity  : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				flag = false;
+				int index = this.clustering.getClusterIndex(entity.getID());
+				for(int i = 0 ; i < this.clusterCount ; ++i) {
+					if(this.searchedClusterIndexes[i] == index) {
+						flag = true;
+						break;
+					}
+				}
+				if(!flag) {
+					Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
+					int sumx = 0,sumy = 0,count = 0;
+					for(StandardEntity se : clutserEntities) {
+						sumx += this.worldInfo.getLocation(se).first();
+						sumy += this.worldInfo.getLocation(se).second();
+						++count;
+					}
+					double dist = this.getDistance(sumx/count, sumy/count, this.agentInfo.getX(),this.agentInfo.getY());
+					if(dist < min) {
+						clusterIndex = index;
+						min = dist;
+					}
+				}
+			}
+			this.searchedClusterIndexes[this.clusterCount] = clusterIndex;
+			++this.clusterCount;
+			return clusterIndex;
+		}
+	}
+	
+	private double getDistance(double fromX, double fromY, double toX, double toY) {
+		double dx = fromX - toX;
+		double dy = fromY - toY;
+		return Math.hypot(dx, dy);
+	}
+	
 	@Override
 	public EntityID getTarget() {
 		return this.result;
@@ -162,6 +219,7 @@ public class CSUSearchForFire extends Search {
 			return this;
 		}
 		this.worldInfo.requestRollback();
+		this.searchedClusterIndexes = new int[this.clustering.getClusterNumber()];
 		return this;
 	}
 
@@ -172,6 +230,7 @@ public class CSUSearchForFire extends Search {
 			return this;
 		}
 		this.worldInfo.requestRollback();
+		this.searchedClusterIndexes = new int[this.clustering.getClusterNumber()];
 		return this;
 	}
 }

@@ -53,18 +53,7 @@ import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
-import rescuecore2.standard.entities.AmbulanceTeam;
-import rescuecore2.standard.entities.Area;
-import rescuecore2.standard.entities.Blockade;
-import rescuecore2.standard.entities.Building;
-import rescuecore2.standard.entities.Edge;
-import rescuecore2.standard.entities.FireBrigade;
-import rescuecore2.standard.entities.Human;
-import rescuecore2.standard.entities.PoliceForce;
-import rescuecore2.standard.entities.Refuge;
-import rescuecore2.standard.entities.Road;
-import rescuecore2.standard.entities.StandardEntity;
-import rescuecore2.standard.entities.StandardEntityURN;
+import rescuecore2.standard.entities.*;
 import rescuecore2.standard.messages.StandardMessageURN;
 import rescuecore2.worldmodel.ChangeSet;
 import rescuecore2.worldmodel.Entity;
@@ -76,9 +65,8 @@ public class ActionExtClear extends ExtAction {
 	int lastTime = 0;
 	double lastx  =0 ;
 	double lasty = 0;
-
 	protected double repairDistance;
-
+	private List<guidelineHelper> judgeRoad = new ArrayList<>();
 	protected EntranceHelper entrance;
 	protected Map<EntityID, CSURoadHelper> csuRoadMap = new FastMap<>();
 
@@ -87,7 +75,6 @@ public class ActionExtClear extends ExtAction {
 
 	protected CriticalArea criticalArea = null;
 	protected Set<EntityID> stuckedAgentList = new HashSet<>();
-    private List<guidelineHelper> judgeRoad = new ArrayList<>();
 
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
@@ -125,7 +112,6 @@ public class ActionExtClear extends ExtAction {
 	
 	MessageManager messageManager=null;
 	
-	
 	public static final String KEY_JUDGE_ROAD = "ActionExtClear.judge_road";
 	public static final String KEY_START_X = "ActionExtClear.start_x";
 	public static final String KEY_START_Y = "ActionExtClear.start_y";
@@ -159,15 +145,15 @@ public class ActionExtClear extends ExtAction {
 		switch (si.getMode()) {
 		case PRECOMPUTATION_PHASE:
 			this.pathPlanning = moduleManager.getModule("ActionExtClear.PathPlanning",
-					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+					"adf.sample.module.algorithm.SamplePathPlanning");
 			break;
 		case PRECOMPUTED:
 			this.pathPlanning = moduleManager.getModule("ActionExtClear.PathPlanning",
-					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+					"adf.sample.module.algorithm.SamplePathPlanning");
 			break;
 		case NON_PRECOMPUTE:
 			this.pathPlanning = moduleManager.getModule("ActionExtClear.PathPlanning",
-					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+					"adf.sample.module.algorithm.SamplePathPlanning");
 			break;
 		}
 		this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
@@ -186,7 +172,7 @@ public class ActionExtClear extends ExtAction {
 
 		entrance = new EntranceHelper(worldInfo);
 		
-    	this.create_guideline();
+		this.create_guideline();
         this.roadsize = this.judgeRoad.size();
         precomputeData.setInteger(KEY_ROAD_SIZE, this.roadsize);
         
@@ -197,7 +183,7 @@ public class ActionExtClear extends ExtAction {
         	precomputeData.setDouble(KEY_END_Y + i, this.judgeRoad.get(i).getEndPoint().getY());
         	precomputeData.setEntityID(KEY_JUDGE_ROAD + i, this.judgeRoad.get(i).getSelfID());
         }
-        
+ 
 
 		Road road;
 		CSURoadHelper csuRoad;
@@ -225,7 +211,7 @@ public class ActionExtClear extends ExtAction {
 		}
 		this.pathPlanning.resume(precomputeData);
 		this.clustering.resume(precomputeData);
-
+		
 		entrance = new EntranceHelper(worldInfo);
 		
 		
@@ -242,7 +228,8 @@ public class ActionExtClear extends ExtAction {
         	if(! this.judgeRoad.contains(line)) this.judgeRoad.add(line);
         }
 
-    	Road road;
+
+		Road road;
 		CSURoadHelper csuRoad;
 		for (StandardEntity entity : worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
 			road = (Road) entity;
@@ -271,10 +258,9 @@ public class ActionExtClear extends ExtAction {
 		this.clustering.preparate();
 
 		entrance = new EntranceHelper(worldInfo);
-		
 		this.create_guideline();
-
-    	Road road;
+		
+		Road road;
 		CSURoadHelper csuRoad;
 		for (StandardEntity entity : worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
 			road = (Road) entity;
@@ -399,21 +385,20 @@ public class ActionExtClear extends ExtAction {
 	
 	 HashSet <Blockade> already_clear_blocked = new HashSet<>();
 	 
-	 
-	private boolean is_no_move(){
-		double currentx = this.agentInfo.getX();
-		double currenty = this.agentInfo.getY();
-		int currentTime = this.agentInfo.getTime();
-		if(currentx==lastx &&currenty == lasty&&(currentTime-this.lastTime>5)){
-			return true;
+		private boolean is_no_move(){
+			double currentx = this.agentInfo.getX();
+			double currenty = this.agentInfo.getY();
+			int currentTime = this.agentInfo.getTime();
+			if(currentx > lastx - 200 &&currentx < lastx + 200 && currenty > lasty-200 && currenty < lasty+200 && (currentTime-this.lastTime>5)){
+				this.lastTime = currentTime;
+				return true;
+			}
+			else{
+				this.lastx = currentx;
+				this.lasty = currenty;
+				return false;
+			}	
 		}
-		else{
-			this.lastx = currentx;
-			this.lasty = currenty;
-			this.lastTime = currentTime;
-		}	
-		return false;
-	}
 	 
 	protected Action randomWalk(){
 		
@@ -422,8 +407,6 @@ public class ActionExtClear extends ExtAction {
 		
 		if(this.target == null && this.lastClearTarget != null) this.target = this.lastClearTarget.getID();
 		if(this.target != null) {
-			
-
 			
 			if(this.agentInfo.getPosition().equals(this.target)){
 				Collection<Blockade> blockades = null;
@@ -456,7 +439,7 @@ public class ActionExtClear extends ExtAction {
 					new Point(location.first(), location.second()));
 			//System.out.println("new ActionMove(path)+path.size():"+path.size());
 			if(path.size() > 1) return new ActionMove(path);
-			}
+		}
 		}
 		Set<EntityID> blockedRoads = new HashSet<>();
 		
@@ -1573,6 +1556,7 @@ public class ActionExtClear extends ExtAction {
 				return this;
 			 }
 		}
+		
 		Action tmp;
 		if (isStucked((Human) (agentInfo.me()))) {
 			result = clearWhenStuck();
@@ -1683,7 +1667,7 @@ public class ActionExtClear extends ExtAction {
 			}
 		}
 		if(result==null) {
-			result = this.randomWalk();
+			result = this.clear();
 		}
 		if(result!=null) {
 			actionHistory.add(result);
@@ -1703,7 +1687,17 @@ public class ActionExtClear extends ExtAction {
 		StandardEntity entity = this.worldInfo.getEntity(this.agentInfo.getPosition());
 		if(entity instanceof Road) {// 身处的道路
 			Road road = (Road) entity;
-			this.messageManager.addMessage(new MessageRoad(true,road,null,true,true));
+			boolean passable = this.isRoadPassable(road);
+			if (passable)
+			{
+				this.messageManager.addMessage(new MessageRoad(true,road,null,true,true));
+			}
+			else
+			{
+				Collection<Blockade> blockades = worldInfo.getBlockades(road);         //找出最近的障碍物加入消息中
+				Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+				this.messageManager.addMessage(new MessageRoad(true,road,block,false,true)); //不可以通过，选择最近的障碍物加入
+			}
 		}
 	}
 	/**
@@ -1791,116 +1785,125 @@ public class ActionExtClear extends ExtAction {
 		return false;
 	}
     
-    private void create_guideline() {
-    	
-		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-			Road road = (Road) se;
-    		for(EntityID neighbour : road.getNeighbours()) {
-    			if(this.worldInfo.getEntity(neighbour) instanceof Building || this.worldInfo.getEntity(neighbour) instanceof Refuge) {
-    				guidelineHelper entrance = new guidelineHelper(this.get_longest_line(road),road);
-    				if(!this.judgeRoad.contains(entrance))	this.judgeRoad.add(entrance);
-    				for(EntityID id : road.getNeighbours()) {
-    	    			StandardEntity entity = this.worldInfo.getEntity(id);
-    	    			if(entity instanceof Road) {
-    	    				Road next = (Road) entity;
-    	    				guidelineHelper line = new guidelineHelper(this.get_longest_line(next),next);
-    	    				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
-    	    			}
-    				}
-    			}
-    		}
-		}
-    	    	
-    	StandardEntity positionEntity = this.worldInfo.getEntity(this.agentInfo.getPosition());
-    	
-    	if(positionEntity instanceof Road) {
-    		Road position = (Road) positionEntity;
-    		guidelineHelper guideline = new guidelineHelper(this.get_longest_line(position),position);
-    		if(!this.judgeRoad.contains(guideline))	this.judgeRoad.add(guideline);
-    		
-    		for(EntityID neighbour : position.getNeighbours()) {
-    			if(this.worldInfo.getEntity(neighbour) instanceof Road) {
-    				Road road = (Road) this.worldInfo.getEntity(neighbour);
-    				Edge edge = position.getEdgeTo(neighbour);
-    				Point2D start = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
-    				Point2D mid = new Point2D(road.getX(),road.getY());
-    				guidelineHelper line = new guidelineHelper(road,start,mid);
-    				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    			}
-    		}
-    		
-    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-				boolean flag = false;
-				Road otherRoads = (Road) se;
-
-    			this.pathPlanning.setFrom(position.getID());
-    			this.pathPlanning.setDestination(se.getID());
-    			List<EntityID> path = this.pathPlanning.calc().getResult();
-    			if(path!=null && path.size()>2) {
-    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
-    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
-    					if(!(entity instanceof Road)) continue;
-    					Road road = (Road) entity;
-    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
-    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
-    					Edge edge1 = before.getEdgeTo(road.getID());
-    					Edge edge2 = road.getEdgeTo(next.getID());
-    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
-    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
-        				guidelineHelper line = new guidelineHelper(road,start,end);
-        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    				}
-    			}
-    		}
-    	}
-    	
-    	else if(positionEntity instanceof Building) {
-    		Building building = (Building) positionEntity;
-    		
-    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-    			this.pathPlanning.setFrom(building.getID());
-    			this.pathPlanning.setDestination(se.getID());
-    			List<EntityID> path = this.pathPlanning.calc().getResult();
-    			if(path!=null && path.size()>2) {
-    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
-    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
-    					if(!(entity instanceof Road)) continue;
-    					Road road = (Road) entity;
-    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
-    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
-    					Edge edge1 = before.getEdgeTo(road.getID());
-    					Edge edge2 = road.getEdgeTo(next.getID());
-    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
-    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
-        				guidelineHelper line = new guidelineHelper(road,start,end);
-        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    				}
-    			}
-    		}
-    	}
-    	
-		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-			Road road = (Road) se;
-			guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
-			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
-		}
-    }
-    
-
 	private void check_same_action(){ 
-		if(!(result instanceof ActionMove && this.lastAction instanceof ActionMove) && !(result instanceof ActionClear && this.lastAction instanceof ActionClear) ) {
+		if(!(result instanceof ActionMove && this.lastAction instanceof ActionMove) 
+				&& !(result instanceof ActionClear && this.lastAction instanceof ActionClear) ) {
 			this.lastAction = result;
 			lasttime = this.agentInfo.getTime();
 		}
 		else{
 			int time = this.agentInfo.getTime();
-			if(time - lasttime > 2) {
+			if(time - lasttime > 15) {
 				result = this.randomWalk();
 				lasttime = time;
 			}
 			this.lastAction = result;
 		}
 	}
+	
+	
+	   private void create_guideline() {
+	    	
+			for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+				Road road = (Road) se;
+	    		for(EntityID neighbour : road.getNeighbours()) {
+	    			if(this.worldInfo.getEntity(neighbour) instanceof Building || this.worldInfo.getEntity(neighbour) instanceof Refuge) {
+	    				guidelineHelper entrance = new guidelineHelper(this.get_longest_line(road),road);
+	    				if(!this.judgeRoad.contains(entrance))	this.judgeRoad.add(entrance);
+	    				for(EntityID id : road.getNeighbours()) {
+	    	    			StandardEntity entity = this.worldInfo.getEntity(id);
+	    	    			if(entity instanceof Road) {
+	    	    				Road next = (Road) entity;
+	    	    				guidelineHelper line = new guidelineHelper(this.get_longest_line(next),next);
+	    	    				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+	    	    			}
+	    				}
+	    			}
+	    		}
+			}
+			
+			for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.HYDRANT)) {
+				Road road = (Road) se;
+				guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
+				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+			}
+	    	    	
+	    	StandardEntity positionEntity = this.worldInfo.getEntity(this.agentInfo.getPosition());
+	    	
+	    	if(positionEntity instanceof Road) {
+	    		Road position = (Road) positionEntity;
+	    		guidelineHelper guideline = new guidelineHelper(this.get_longest_line(position),position);
+	    		if(!this.judgeRoad.contains(guideline))	this.judgeRoad.add(guideline);
+	    		
+	    		for(EntityID neighbour : position.getNeighbours()) {
+	    			if(this.worldInfo.getEntity(neighbour) instanceof Road) {
+	    				Road road = (Road) this.worldInfo.getEntity(neighbour);
+	    				Edge edge = position.getEdgeTo(neighbour);
+	    				Point2D start = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
+	    				Point2D mid = new Point2D(road.getX(),road.getY());
+	    				guidelineHelper line = new guidelineHelper(road,start,mid);
+	    				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+	    			}
+	    		}
+	    		
+	    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+					boolean flag = false;
+					Road otherRoads = (Road) se;
+
+	    			this.pathPlanning.setFrom(position.getID());
+	    			this.pathPlanning.setDestination(se.getID());
+	    			List<EntityID> path = this.pathPlanning.calc().getResult();
+	    			if(path!=null && path.size()>2) {
+	    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+	    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+	    					if(!(entity instanceof Road)) continue;
+	    					Road road = (Road) entity;
+	    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+	    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+	    					Edge edge1 = before.getEdgeTo(road.getID());
+	    					Edge edge2 = road.getEdgeTo(next.getID());
+	    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
+	    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
+	        				guidelineHelper line = new guidelineHelper(road,start,end);
+	        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+	    				}
+	    			}
+	    		}
+	    	}
+	    	
+	    	else if(positionEntity instanceof Building) {
+	    		Building building = (Building) positionEntity;
+	    		
+	    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+	    			this.pathPlanning.setFrom(building.getID());
+	    			this.pathPlanning.setDestination(se.getID());
+	    			List<EntityID> path = this.pathPlanning.calc().getResult();
+	    			if(path!=null && path.size()>2) {
+	    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+	    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+	    					if(!(entity instanceof Road)) continue;
+	    					Road road = (Road) entity;
+	    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+	    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+	    					Edge edge1 = before.getEdgeTo(road.getID());
+	    					Edge edge2 = road.getEdgeTo(next.getID());
+	    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
+	    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
+	        				guidelineHelper line = new guidelineHelper(road,start,end);
+	        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
+	    				}
+	    			}
+	    		}
+	    	}
+	    	
+			for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+				Road road = (Road) se;
+				guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
+				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+			}
+	    }
+	    
+
 	
 	private Action clearWhenStuck() {
 		Blockade blockade = isLocateInBlockade((Human) agentInfo.me());
@@ -1913,26 +1916,6 @@ public class ActionExtClear extends ExtAction {
 				tmp = randomWalk();
 			return tmp;
 		}
-	}
-	
-	private Action noMoveAction() {
-		StandardEntity se =  this.worldInfo.getEntity(this.agentInfo.getPosition());
-		if(se instanceof Road) {
-			Road road = (Road) se;
-			Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
-					.collect(Collectors.toSet());
-			if(blockades != null) {
-				if(!blockades.isEmpty()){
-					Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
-					if(block != null) {
-						System.out.println("------------------被挡没动------------");
-						return new ActionClear(block);//(int)block.getX(),(int)block.getY());
-					}
-				}
-			}
-					
-		}
-		return null;
 	}
 
 	/**
@@ -1955,13 +1938,35 @@ public class ActionExtClear extends ExtAction {
 		}
 		return null;
 	}
+	
+	private Action noMoveAction() {
+		StandardEntity se =  this.worldInfo.getEntity(this.agentInfo.getPosition());
+		if(se instanceof Road) {
+			Road road = (Road) se;
+			Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
+					.collect(Collectors.toSet());
+			if(blockades != null) {
+				if(!blockades.isEmpty()){
+					Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+					if(block != null && this.isNearBlockade(this.agentInfo.getX(),this.agentInfo.getY(), block)) {
+//						System.out.println("------------------被挡没动------------");
+						return new ActionClear(block);//(int)block.getX(),(int)block.getY());
+					}else {
+						return this.clear();
+					}
+				}
+			}
+					
+		}
+		return null;
+	}
+	
 	/**
 	* @Description: 新的directClear
 	* @Author: Bochun-Yue
 	* @Date: 3/7/20
 	*/
 	private Action directClear() {
-//		System.out.println("----------------------direct---------------");
 		Collection<Blockade> blockades = worldInfo.getBlockades(worldInfo.getPosition(agentInfo.getID()).getID());
 		PoliceForce police = (PoliceForce) (agentInfo.me());
 		StandardEntity PositionEntity = worldInfo.getEntity(police.getPosition());
@@ -2055,9 +2060,6 @@ public class ActionExtClear extends ExtAction {
 					int dY = (int)((intersection.getY() - agentY) / 10);
 					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
 				}
-				else {
-					this.send_message();
-				}
 	        }			
 		}
 		return noAction();
@@ -2138,11 +2140,11 @@ public class ActionExtClear extends ExtAction {
 		}
 		EntityID agentPosition = policeForce.getPosition();
 		StandardEntity targetEntity = this.worldInfo.getEntity(this.target);
-		StandardEntity positionEntity = this.worldInfo.getEntity(agentPosition);
+		StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getEntity(agentPosition));
 		if (targetEntity == null || !(targetEntity instanceof Area)) {
 			return result;
 		}
-		if (positionEntity instanceof Road) {
+		if (positionEntity instanceof Road || positionEntity instanceof Hydrant) {
 			result = this.getRescueAction(policeForce, (Road) positionEntity);
 			if (result != null) {
 				return result;
@@ -2154,15 +2156,32 @@ public class ActionExtClear extends ExtAction {
 		}
 		if (agentPosition.equals(this.target)) {
 			result = this.getAreaClearAction(policeForce, targetEntity);
-		}else {
-			this.pathPlanning.setFrom(agentPosition);
-			this.pathPlanning.setDestination(this.target);
-			List<EntityID> path = this.pathPlanning.calc().getResult();
-			if (path != null && path.size() > 0) {
-				StandardEntity se = this.worldInfo.getEntity(path.get(0));
-				if(se instanceof Road) {
-					result = this.getNeighbourPositionAction(policeForce, (Area)se);
-					if(result!=null) return result;
+		} else if (((Area) targetEntity).getEdgeTo(agentPosition) != null) {
+			result = this.getNeighbourPositionAction(policeForce, (Area) targetEntity);
+		} else {
+			List<EntityID> path = this.pathPlanning.getResult(agentPosition, this.target);
+			if (path != null && path.size() > 1) {
+				int index = path.indexOf(agentPosition);
+				if (index == 0) {
+					Area area = (Area) positionEntity;
+					for (int i = 1; i < path.size(); i++) {
+						if (area.getEdgeTo(path.get(i)) != null) {
+							index = i;
+							break;
+						}
+					}
+				} else if (index >= 1) {
+					index++;
+				}
+				if (index >= 1 && index < (path.size())) {
+					StandardEntity entity = this.worldInfo.getEntity(path.get(index));
+					result = this.getNeighbourPositionAction(policeForce, (Area) entity);
+					// TODO NullPointer
+					if (result != null && result.getClass() == ActionMove.class) {
+						if (!((ActionMove) result).getUsePosition()) {
+							result = null;
+						}
+					}
 				}
 				if (result == null) {
 					result = new ActionMove(path);
@@ -2185,7 +2204,8 @@ public class ActionExtClear extends ExtAction {
 				.collect(Collectors.toSet());
         Collection<StandardEntity> agents = this.worldInfo.getEntitiesOfType(	
                 StandardEntityURN.AMBULANCE_TEAM,
-                StandardEntityURN.FIRE_BRIGADE
+                StandardEntityURN.FIRE_BRIGADE,
+                StandardEntityURN.CIVILIAN
         );
 		
 		double policeX = police.getX();
@@ -2202,7 +2222,7 @@ public class ActionExtClear extends ExtAction {
 			double humanY = human.getY();
 			ActionClear actionClear = null;
 			for (Blockade blockade : blockades) {
-				if (!this.isInside(humanX, humanY, blockade.getApexes())) {
+				if (!this.isInside(humanX, humanY, blockade.getApexes()) && !this.isNearBlockade(humanX, humanY, blockade)) {
 					continue;
 				}
 				Point2D agent = new Point2D(humanX, humanY);
@@ -2224,7 +2244,6 @@ public class ActionExtClear extends ExtAction {
 	* @Date: 3/7/20
 	*/
 	private Action getAreaClearAction(PoliceForce police, StandardEntity targetEntity) {
-//		System.out.println("---------------------area-----------------");
 		if (targetEntity instanceof Building) {
 			if (!targetEntity.equals(worldInfo.getPosition(agentInfo.getID())))
 				return null;
@@ -2311,10 +2330,7 @@ public class ActionExtClear extends ExtAction {
 					int dY = (int)((intersection.getY() - agentY) / 10);
 					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
 				}
-				else {
-					this.send_message();
-				}
-			}
+	        }
 		return null;
 	}
 	/**
@@ -2323,7 +2339,6 @@ public class ActionExtClear extends ExtAction {
 	* @Date: 3/7/20
 	*/
 	private Action getNeighbourPositionAction(PoliceForce police, Area target) {
-//		System.out.println("---------------------neighbour---------------");
 		double agentX = police.getX();
 		double agentY = police.getY();
 		StandardEntity position = Objects.requireNonNull(this.worldInfo.getPosition(police));
@@ -2331,7 +2346,7 @@ public class ActionExtClear extends ExtAction {
 		if (edge == null) {
 			return null;
 		}
-		if (position instanceof Road) {
+		if (position instanceof Road || position instanceof Hydrant) {
 			if(!edge.isPassable()) {
 				Road road = (Road) position;
 				Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
@@ -2341,7 +2356,7 @@ public class ActionExtClear extends ExtAction {
 				return this.clearToPoint(blockades, Police, mid);
 			}
 		}
-		if (target instanceof Road) {
+		if (target instanceof Road || target instanceof Hydrant) {
 			Road road = (Road) target;
 			if (!road.isBlockadesDefined() || this.isRoadPassable(road)) {
 				return new ActionMove(Lists.newArrayList(position.getID(), target.getID()));
@@ -2415,6 +2430,7 @@ public class ActionExtClear extends ExtAction {
 					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
 				}
 	        }
+
 		}
 		return new ActionMove(Lists.newArrayList(position.getID(), target.getID()));
 	}
@@ -2427,7 +2443,7 @@ public class ActionExtClear extends ExtAction {
 		Point2D agent = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
 		Point2D closest = GeometryTools2D.getClosestPointOnSegment(guideline, agent);
     	double distance = this.getDistance(closest.getX(),closest.getY(), this.agentInfo.getX(), this.agentInfo.getY());
-    	if(distance < 2000) {
+    	if(distance < 1000) {
     		return null;
     	}else {
     		Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
@@ -2524,7 +2540,18 @@ public class ActionExtClear extends ExtAction {
     	return ((X2 - X1)*(Y - Y1) - (X - X1)*(Y2 - Y1));
     }
 	
-	
+    private boolean isNearBlockade(double pX, double pY, Blockade blockade) {
+        int[] apex = blockade.getApexes();
+        for (int i = 0; i < apex.length - 4; i += 2) {
+            if(java.awt.geom.Line2D.ptLineDist(apex[i], apex[i + 1], apex[i + 2], apex[i + 3], pX, pY) < 600) {
+                return true;
+            }
+        }
+        if (java.awt.geom.Line2D.ptLineDist(apex[0], apex[1], apex[apex.length - 2], apex[apex.length - 1], pX, pY) < 600) {
+            return true;
+        }
+        return false;
+    }
 	
 	private Action getIntersectEdgeAction(double agentX, double agentY, Edge edge, Road road) {
 		double midX = (edge.getStartX() + edge.getEndX()) / 2;
@@ -2828,7 +2855,3 @@ public class ActionExtClear extends ExtAction {
 		return false;
 	}
 }
-
-
-
-
