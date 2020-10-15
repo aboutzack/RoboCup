@@ -10,3 +10,4 @@
 
 ### RoboCup ###
 *.log
+._.DS_Store
