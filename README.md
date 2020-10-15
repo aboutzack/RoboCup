@@ -8,10 +8,24 @@
 - PF 丁佳香、越铂淳、熊璟
 
 ## 相关网站
+- 2020国赛 <http://robocup.drct-caa.org.cn/index.php/race/lists?catid=14>
 - 2020世界赛 <https://rescuesim.robocup.org/robocup-2020/>
 - 往届世界赛 <https://rescuesim.robocup.org/events/past-events/>
 
 ## 项目结构
+.<br>
+├── AIT ---------------------------------- 2019年亚军队伍<br>
+├── AUR<br>
+├── control-panel<br>
+├── CSU -------------------------------- 我们的比赛代码<br>
+├── maps ------------------------------- 2019世界赛地图<br>
+├── MRL -------------------------------- 2019年冠军队伍<br>
+├── presentation ---------------------- 技术挑战赛ppt<br>
+├── rcrs-adf-sample<br>
+├── rcrs-server ------------------------ 国赛使用的server<br>
+├── tdp ---------------------------------- team description paper<br>
+└── visual-debugger ----------------- 可视化debug工具<br>
+
 - CSU/ 是学长学姐参赛的代码，我们将在这之上进行开发
 - MRL/ 是2019年冠军队伍，目前此代码在默认地图运行报错，其他地图内存爆炸
 - AIT/ 是2019年亚军队伍，此代码可以直接运行
@@ -46,7 +60,7 @@
 
 **中国赛**
 
-waiting...
+- 比赛时间：2020-11-15
 
 ## 日记
 
