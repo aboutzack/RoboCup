@@ -18,14 +18,14 @@ fi;
 
 echo "Starting run for team $NAME ($TEAM) on map $MAP on cluster $CLUSTER."
 
-if [ -f "$LOCAL_HOMEDIR/$CODEDIR/$TEAM/precompute.sh" ]; then
-    echo "Starting kernel for precomputation... in $SERVER"
+if [ -f "$CODEDIR/$TEAM/precompute.sh" ]; then
+    echo "Starting kernel for precomputation..."
 
-    ssh $REMOTE_USER@$SERVER "echo $SCRIPTDIR;$SCRIPTDIR/remoteStartKernelPrecompute.sh $MAP $TEAM" 2>&1 &
+    ssh $REMOTE_USER@$SERVER $SCRIPTDIR/remoteStartKernelPrecompute.sh $MAP $TEAM&
 
-    sleep 15
+    sleep 6
 
-    for i in -1; do
+    for i in 1 2 3; do
 	CLIENT=$(getClientHost $CLUSTER $i)
 	ssh $REMOTE_USER@$CLIENT $SCRIPTDIR/remoteStartPrecompute.sh $TEAM $SERVER $i $MAP&
     done;
@@ -41,17 +41,17 @@ echo "Starting kernel..."
 
 ssh $REMOTE_USER@$SERVER $SCRIPTDIR/remoteStartKernel.sh $MAP $TEAM&
 
-sleep 15
+sleep 8
 
 STATDIR=$LOCAL_HOMEDIR/$EVALDIR/$MAP/$TEAM
 mkdir -p $STATDIR
-cd $LOCAL_HOMEDIR/$KERNELDIR/boot
+cd $KERNELDIR/boot
 ./extract-view.sh $NAME $SERVER $STATDIR&
-cd -
+cd $HOME
 
 sleep 8
 
-for i in -1; do
+for i in 1 2 3; do
     CLIENT=$(getClientHost $CLUSTER $i)
     ssh $REMOTE_USER@$CLIENT $SCRIPTDIR/remoteStartAgents.sh $TEAM $SERVER $i $MAP&
 done;

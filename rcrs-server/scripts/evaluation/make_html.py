@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys, os, stat, glob
-import config,  statistics
+import config
 
 all_teams = config.all_teams
 team_names = config.team_names
@@ -15,7 +15,6 @@ lang="en" xml:lang="en">
 
 <head>
 <title>Results for map %(mapname)s</title>
-<meta http-equiv="refresh" content="15" >
 <style type="text/css">
   body { font-family: sans-serif; }
 
@@ -43,7 +42,7 @@ Initial score: %(init_score).2f</div>
 
 %(log_download)s
 %(table)s
-B
+
 </body>
 
 </html>
@@ -87,7 +86,7 @@ class TeamEntry(object):
         return True
 
     def get_logfile(self, mapdir):
-        files = glob.glob(os.path.join(mapdir, "*-%s*.7z" % self.name))
+        files = glob.glob(os.path.join(mapdir, "*-%s*.gz" % self.name))
         if len(files) != 1:
             #Can't identify team logfile
             raise KeyError
@@ -176,26 +175,20 @@ class MapData(object):
     def step_ranking(self, entries):
         sorted_by_score = sorted(entries, key=lambda t: -t.final_score)
         best = sorted_by_score[0].final_score
-        scores = []
-        
-        for t in sorted_by_score:
-            scores.append(t.final_score)
-        selectivMin = sorted_by_score[0].final_score - 2*(sorted_by_score[0].final_score -  statistics.mean(scores))
         n = len(entries)
-        coef = 2
-        delta = (best - selectivMin)/(coef*n)
+        delta = best/(2.0*n)
 
         def get_upper_bound(t):
             score = best
-            upper = coef*n
+            upper = 2*n
             while score > t.final_score:
                 score -= delta
                 upper -= 1
-            return upper 
+            return upper + 1
 
-        prev_rank = coef*n
+        prev_rank = 2*n
         prev_score = sorted_by_score[0].final_score
-        sorted_by_score[0].rank = coef*n
+        sorted_by_score[0].rank = 2*n
         for t in sorted_by_score[1:]:
             upper = get_upper_bound(t)
             if prev_score == t.final_score:
@@ -222,7 +215,7 @@ class MapData(object):
         yield self.turns
 
     def get_mapfile(self):
-        names = ["%s.7z" % self.mapname, "%s-map.tar.gz" % self.mapname, "%s-map.tgz" % self.mapname, "%s.tgz" % self.mapname, "%s.tar.gz" % self.mapname]
+        names = ["%s-map.tar.gz" % self.mapname, "%s-map.tgz" % self.mapname, "%s.tgz" % self.mapname, "%s.tar.gz" % self.mapname]
         for fname in names:
             if os.path.exists(fname):
                 size = os.stat(fname)[stat.ST_SIZE]
@@ -230,7 +223,7 @@ class MapData(object):
         return 0, None
 
     def get_logpackage(self):
-        path = "%s-logs.7z" % self.mapname
+        path = "%s-logs.tar" % self.mapname
         descent = 3
         while not os.path.exists(path) and descent > 0:
             path = os.path.join("..", path)
@@ -267,7 +260,7 @@ if __name__ == '__main__':
     log_download = ""
     if pack_path:
         archive_url = "http://sourceforge.net/projects/roborescue/files/logs/2011/%s/%s-all.tar" % (mapname, mapname)
-        log_download = '<a href="%s">all Download logs</a> (Size: %s)' % (archive_url, sizeof_fmt(pack_size))
+        log_download = '<a href="%s">Download all logs</a> (Size: %s)' % (archive_url, sizeof_fmt(pack_size))
 
     map_size, map_path = data.get_mapfile()
     map_download = ""
@@ -300,9 +293,9 @@ if __name__ == '__main__':
             try:
                 size, log = team.get_logfile(data.path)
                 # log_url = log
-                log_url = "%s" % (log)
+                log_url = "http://sourceforge.net/projects/roborescue/files/%s/%s/%s/download" % (config.log_location, data.mapname, log)
                 # log_url = "http://sourceforge.net/projects/roborescue/files/logs/2011/%s" % log
-                result += ['<a href="%s">Download</a> (%s)' % (log_url, sizeof_fmt(size) )]
+                result += ['<a href="%s">Download</a> (%s)' % (log_url, sizeof_fmt(size))]
             except KeyError:
                 pass
         else:

@@ -2,7 +2,6 @@
 
 . $(dirname $0)/config.sh
 
-
 for i in $CLUSTERS; do
     SERVER=$(getServerHost $i)
     RUNNING_TEAM=""
@@ -10,7 +9,6 @@ for i in $CLUSTERS; do
     TURN="-"
     eval $(ssh $REMOTE_USER@$SERVER cat $KERNELDIR/boot/$LOCKFILE_NAME 2>/dev/null)
     if [ ! -z $RUNNING_TEAM ]; then
-	COUNT[$i]=0
         if [ "$PRECOMPUTE" == "yes" ]; then
             echo " $i: $RUNNING_TEAM precomputing on $RUNNING_MAP"
 	else
@@ -21,8 +19,6 @@ for i in $CLUSTERS; do
             echo " $i: $RUNNING_TEAM running on $RUNNING_MAP (turn $TURN)"
 	fi
     else
-	COUNT[$i]=$(( ${COUNT[$i]} + 1 ))
-        echo " $i: ---"
-# free times: COUNT[$i]"
+        echo " $i: --- "
     fi
 done

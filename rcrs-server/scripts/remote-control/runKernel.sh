@@ -1,5 +1,5 @@
 #!/bin/bash
-export DISPLAY=:0
+
 . $(dirname $0)/config.sh
 
 CLUSTER=$1

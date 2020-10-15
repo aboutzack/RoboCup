@@ -1,65 +1,51 @@
-all_teams = ["AIT", "RIO", "MRL", "CSU","BAS","MIX"]
-final_teams = ["AIT", "MRL", "CSU"]
-technical_teams = ["tAIT", "tRIO", "tMRL", "tCSU"]
+all_teams = ["ANC", "APO", "CSU", "GUC", "LTI", "MIN", "MRL", "NAI", "POS", "RI1", "RAK", "SOS", "ZJU"]
+semi_teams = ["APO", "CSU", "GUC", "MIN", "MRL", "POS", "SOS", "ZJU"]
 
 team_names = {
     # "BAS" : "Baseline (no agents)",
-    "AIT" : "AIT-rescue",
-    "RIO" : "Ri-One",
-    "MRL" : "MRL",
+    "ANC" : "anct_rescue2013",
+    "APO" : "Apollo-Rescue",
     "CSU" : "CSU-YUNLU",
-    "BAS" : "baseline",
-    "MIX": "Mix",
-
-    "tAIT" : "tAIT-rescue",
-    "tRIO" : "tRi-One",
-    "tMRL" : "tMRL",
-    "tCSU" : "tCSU-YUNLU",
+    "GUC" : "GUC_ArtSapience",
+    "LTI" : "LTI-Agent-Rescue",
+    "MIN" : "MinERS",
+    "MRL" : "MRL",
+    "NAI" : "NAITO-Rescue2013",
+    "POS" : "Poseidon",
+    "RI1" : "Ri-one",
+    "RAK" : "RoboAKUT",
+    "SOS" : "S.O.S.",
+    "ZJU" : "ZJUBase"
 }
-
-
-title = "RoboCup 2019 Rescue Simulation League"
-
-autoRefresh = True
-
-daytest = {'name' : "Day test",
-        'shortname' : "daytest",
-        'maps' : ["KobeTest"],
-        'teams' : all_teams}
-
 
 day1 = {'name' : "Day 1",
         'shortname' : "Day1",
-        'maps' : ["Kobe1", "Paris1", "VC1","Sydney1"],
+        'maps' : ["Berlin1", "Eindhoven1", "Kobe1", "Paris1", "VC1"],
         'teams' : all_teams}
 
 day2 = {'name' : "Day 2",
         'shortname' : "Day2",
-        'maps' : ["SydneyS1","Joao1","Istanbul1","NY1"],
-	'merge_with' : day1,
-        'teams' : all_teams}
-
-day_technical = {'name' : "Technical",
-        'shortname' : "technical",
-        'maps' : ["tSFrio","tBerlinCSU","tKobeAIT"],
-        'teams' : technical_teams}
+        'maps' : ["Mexico1", "Kobe2", "Eindhoven2", "Istanbul1", "Paris2"],
+        'teams' : all_teams,
+        'merge_with' : day1,
+        'highlight' : 8}
 
 
-semi = {'name' : "Semi final",
-        'shortname' : "Semi",
-        'maps' : ["Eindhoven1", "Montreal1", "Sakae1","Mexico1","Berlin1","SF1","Presentation"],
-	'highlight' : 4,
-        'teams' : all_teams}
+semi = {'name' : "Semifinals",
+        'shortname' : "Semifinals",
+        'maps' : ["VC2", "Berlin2", "Kobe3", "Istanbul2", "Mexico2", "Eindhoven3", "Paris3", "Eindhoven4"],
+        'teams' : semi_teams,
+        'highlight' : 4}
 
 
-final = {'name' : "Finals",
-         'shortname' : "final",
-         'maps' : ["SydneyS2","SF2","VC2","Paris2","Eindhoven2","Berlin2","Presentation2"],
-         'teams' : final_teams, 
-         'show_ranks' : 1}
+# final = {'name' : "Finals",
+#         'shortname' : "final",
+#         'maps' : ["Eindhoven1"],
+#         'teams' : all_teams,
+#         'merge_with' : day3,
+#         'show_ranks' : 1}
 
-#rounds = [day1, day2, semi, final, technical]
-rounds = [day1,day2,semi,day_technical, final]
+rounds = [day1, day2, semi]
 
 # semi_teams = ["RAK", "SBC", "POS", "IAM", "MRL", "RI1", "SEU", "RMA"]
 # final_teams = ["POS", "IAM", "SEU", "RMA"]
@@ -90,5 +76,5 @@ rounds = [day1,day2,semi,day_technical, final]
 
 # rounds = [day1, day2, semi, final]
 
-log_location = "logs/RCAP2017"
+log_location = "logs/2013"
 add_downloads = True

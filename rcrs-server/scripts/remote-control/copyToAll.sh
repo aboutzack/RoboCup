@@ -3,7 +3,6 @@
 
 for HOST in $HOSTS; do
     echo "$HOST: "
-    scp -r $1 $REMOTE_USER@$HOST:$2 &
+    scp -r $1 $REMOTE_USER@$HOST:$2
 done
 
-wait
