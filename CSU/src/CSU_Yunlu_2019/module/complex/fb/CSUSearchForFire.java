@@ -101,8 +101,9 @@ public class CSUSearchForFire extends Search {
 	@Override
 	public Search calc() {
 		this.result = null;
-		if (unsearchedRoadIDs.isEmpty())
-			return this;
+		if (unsearchedRoadIDs.isEmpty()){
+			reset();
+		}
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
 		this.pathPlanning.setDestination(this.unsearchedRoadIDs);
 		List<EntityID> path = this.pathPlanning.calc().getResult();

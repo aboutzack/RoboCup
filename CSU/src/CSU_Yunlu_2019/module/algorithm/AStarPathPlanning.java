@@ -340,7 +340,7 @@ public class AStarPathPlanning extends PathPlanning {
             areaPath.add(destinationArea.getID());
         }
 
-        if (!((Area) worldInfo.getEntity(destinationArea.getID())).getNeighbours().contains(sourceArea)
+        if (!((Area) worldInfo.getEntity(destinationArea.getID())).getNeighbours().contains(sourceArea.getID())
                 && areaPath.size() < 3) {
             return new ArrayList<>();
         }
