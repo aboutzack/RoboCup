@@ -588,7 +588,7 @@ public class MrlBuildingDetector extends BuildingDetector {
 
         if (MrlPersonalData.DEBUG_MODE) {
             List<Integer> elementList = Util.fetchIdValueFormElements(borderElements);
-            VDClient.getInstance().drawAsync(agentInfo.getID().getValue(), "MrlBorderBuildingsLayer", (Serializable) elementList);
+            VDClient.getInstance().drawAsync(agentInfo.getID().getValue(), "BorderBuildings", (Serializable) elementList);
         }
 
 

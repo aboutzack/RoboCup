@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -123,7 +124,18 @@ public class CSUSearchForFire extends Search {
 		if (path != null && path.size() > 1) {
 			this.result = path.get(path.size() - 1);
 		}
+		visualDebug();
 		return this;
+	}
+
+	private void visualDebug() {
+		if (DebugHelper.DEBUG_MODE) {
+			try {
+				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	private void reset() {

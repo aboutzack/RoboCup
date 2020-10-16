@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
@@ -363,8 +364,19 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
         { 	
 			this.getResultWhenNull();
         }
+		visualDebug();
         return this;
     }
+
+	private void visualDebug() {
+		if (DebugHelper.DEBUG_MODE) {
+			try {
+				DebugHelper.drawDetectorTarget(worldInfo, agentInfo.getID(), result);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
     
     
     private RoadDetector getResultWhenNull() {

@@ -11,7 +11,6 @@ import CSU_Yunlu_2019.module.complex.fb.targetSelection.DirectionBasedTargetSele
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.IFireBrigadeTargetSelector;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.TargetSelectorType;
-import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import adf.agent.communication.MessageManager;
@@ -34,8 +33,9 @@ import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
-import java.io.Serializable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class CSUBuildingDetector extends BuildingDetector {
     private EntityID result;
@@ -147,10 +147,7 @@ public class CSUBuildingDetector extends BuildingDetector {
     private void visualDebug() {
         if (DebugHelper.DEBUG_MODE) {
             try {
-                Collection<StandardEntity> buildings = new ArrayList<>();
-                buildings.add(world.getEntity(result));
-                List<Integer> elementList = Util.fetchIdValueFromElements(buildings);
-                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "SampleBuildings", (Serializable) elementList);
+                DebugHelper.drawDetectorTarget(worldInfo, agentInfo.getID(), result);
             } catch (Exception e) {
                 e.printStackTrace();
             }

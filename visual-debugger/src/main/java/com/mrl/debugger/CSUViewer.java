@@ -166,6 +166,8 @@ public class CSUViewer extends StandardViewer{
             propertiesTable.setValueAt(selectedObject.getProperty(DAMAGE_URN).getValue(), i++, 1);
             propertiesTable.setValueAt("buriedness", i, 0);
             propertiesTable.setValueAt(selectedObject.getProperty(BURIEDNESS_URN).getValue(), i++, 1);
+            propertiesTable.setValueAt("travel distance", i, 0);
+            propertiesTable.setValueAt(selectedObject.getProperty(TRAVEL_DISTANCE_URN).getValue(), i++, 1);
             propertiesTable.setValueAt("stamina", i, 0);
             propertiesTable.setValueAt(selectedObject.getProperty(STAMINA_URN).getValue(), i++, 1);
             agentCombo.setSelectedItem(selectedObject);

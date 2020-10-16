@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.debugger;
 import CSU_Yunlu_2019.world.graph.GraphHelper;
 import CSU_Yunlu_2019.world.graph.MyEdge;
 import CSU_Yunlu_2019.world.graph.Node;
+import adf.agent.info.WorldInfo;
 import com.mrl.debugger.remote.VDClient;
 import com.mrl.debugger.remote.dto.EdgeDto;
 import com.mrl.debugger.remote.dto.GraphDto;
@@ -10,11 +11,12 @@ import rescuecore2.misc.Pair;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.geom.Line2D;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @author: Guanyu-Cai
+ * @author: CSU-zack
  * @Date: 03/21/2020
  */
 public class DebugHelper {
@@ -48,6 +50,36 @@ public class DebugHelper {
 
             graphDto.setEdgeDtoList(edgeDtoList);
             VDClient.getInstance().drawAsync(id.getValue(), "graphLayer", graphDto);
+        }
+    }
+
+    public static void drawDetectorTarget(WorldInfo worldInfo, EntityID agentID, EntityID target) {
+        if (DEBUG_MODE) {
+            List<Line2D> elementList = new ArrayList<>();
+            if (target != null) {
+                Pair<Integer, Integer> l1 = worldInfo.getLocation(agentID);
+                Pair<Integer, Integer> l2 = worldInfo.getLocation(target);
+                if (l1 == null || l2 == null) {
+                    return;
+                }
+                elementList.add(new Line2D.Double(l1.first(), l1.second(), l2.first(), l2.second()));
+            }
+            VDClient.getInstance().drawAsync(agentID.getValue(), "DetectorTargetLayer", (Serializable) elementList);
+        }
+    }
+
+    public static void drawSearchTarget(WorldInfo worldInfo, EntityID agentID, EntityID target) {
+        if (DEBUG_MODE) {
+            List<Line2D> elementList = new ArrayList<>();
+            if (target != null) {
+                Pair<Integer, Integer> l1 = worldInfo.getLocation(agentID);
+                Pair<Integer, Integer> l2 = worldInfo.getLocation(target);
+                if (l1 == null || l2 == null) {
+                    return;
+                }
+                elementList.add(new Line2D.Double(l1.first(), l1.second(), l2.first(), l2.second()));
+            }
+            VDClient.getInstance().drawAsync(agentID.getValue(), "SearchTargetLayer", (Serializable) elementList);
         }
     }
 }

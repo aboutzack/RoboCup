@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.*;
@@ -106,6 +107,7 @@ public class CSUSearchForFire extends Search {
 		if (path != null) {
 			this.result = path.get(path.size() - 1);
 		}
+		visualDebug();
 		return this;
 
 	}
@@ -269,6 +271,16 @@ public class CSUSearchForFire extends Search {
 					MessageUtil.reflectMessage(this.worldInfo, mpf);
 				}
 
+			}
+		}
+	}
+
+	private void visualDebug() {
+		if (DebugHelper.DEBUG_MODE) {
+			try {
+				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 	}

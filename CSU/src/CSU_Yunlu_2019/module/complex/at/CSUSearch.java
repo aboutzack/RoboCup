@@ -1,10 +1,9 @@
 package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.CSUConstants;
-import CSU_Yunlu_2019.extaction.ActionExtMove;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
-import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
 import adf.agent.develop.DevelopData;
@@ -16,7 +15,6 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
-import jdk.nashorn.internal.runtime.regexp.joni.constants.EncloseType;
 import rescuecore2.messages.Command;
 import rescuecore2.misc.Handy;
 import rescuecore2.standard.entities.*;
@@ -742,7 +740,18 @@ public class CSUSearch extends Search {
 			return this;
 		}
 
+		visualDebug();
 		return this;
+	}
+
+	private void visualDebug() {
+		if (DebugHelper.DEBUG_MODE) {
+			try {
+				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override

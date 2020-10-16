@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.at;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUDistanceSorter;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUHurtHumanClassifier;
@@ -121,7 +122,18 @@ public class CSUHumanDetector extends HumanDetector {
                 }
             }
         }
+        visualDebug();
         return this;
+    }
+
+    private void visualDebug() {
+        if (DebugHelper.DEBUG_MODE) {
+            try {
+                DebugHelper.drawDetectorTarget(worldInfo, agentInfo.getID(), result);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void updateBlockedVictims() {
