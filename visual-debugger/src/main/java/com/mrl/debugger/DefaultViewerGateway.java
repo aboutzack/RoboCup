@@ -18,9 +18,9 @@ public class DefaultViewerGateway implements ViewerGateway {
 
     private Map<String, ViewLayer> layerMap;
 
-    public DefaultViewerGateway(MrlViewer mrlViewer) {
+    public DefaultViewerGateway(CSUViewer CSUViewer) {
         this.layerMap = new HashMap<>();
-        for (ViewLayer viewLayer : mrlViewer.getViewerPanel().getLayers()) {
+        for (ViewLayer viewLayer : CSUViewer.getViewerPanel().getLayers()) {
             com.mrl.debugger.ViewLayer annotation = viewLayer.getClass().getAnnotation(com.mrl.debugger.ViewLayer.class);
             String name;
             if (annotation == null) {

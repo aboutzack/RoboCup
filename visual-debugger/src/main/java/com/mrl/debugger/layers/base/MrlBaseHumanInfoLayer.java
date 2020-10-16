@@ -1,6 +1,6 @@
 package com.mrl.debugger.layers.base;
 
-import com.mrl.debugger.MrlConstants;
+import com.mrl.debugger.CSUConstants;
 import com.mrl.debugger.StaticViewProperties;
 import com.mrl.debugger.ViewLayer;
 import rescuecore2.config.Config;
@@ -81,12 +81,12 @@ public class MrlBaseHumanInfoLayer extends MrlBaseHumanLayer {
 
     @Override
     public void initialise(Config config) {
-        iconSize = config.getIntValue(MrlConstants.ICON_SIZE_KEY, DEFAULT_ICON_SIZE);
-        useIcons = config.getBooleanValue(MrlConstants.USE_ICONS_KEY, false);
-        SAY_RANGE = config.getIntValue(MrlConstants.VOICE_RANGE_KEY);
-        VIEW_RANGE = config.getIntValue(MrlConstants.MAX_VIEW_DISTANCE_KEY);
-        CLEAR_RANGE = config.getIntValue(MrlConstants.MAX_CLEAR_DISTANCE_KEY);
-        EXTINGUISH_RANGE = config.getIntValue(MrlConstants.MAX_EXTINGUISH_DISTANCE_KEY);
+        iconSize = config.getIntValue(CSUConstants.ICON_SIZE_KEY, DEFAULT_ICON_SIZE);
+        useIcons = config.getBooleanValue(CSUConstants.USE_ICONS_KEY, false);
+        SAY_RANGE = config.getIntValue(CSUConstants.VOICE_RANGE_KEY);
+        VIEW_RANGE = config.getIntValue(CSUConstants.MAX_VIEW_DISTANCE_KEY);
+        CLEAR_RANGE = config.getIntValue(CSUConstants.MAX_CLEAR_DISTANCE_KEY);
+        EXTINGUISH_RANGE = config.getIntValue(CSUConstants.MAX_EXTINGUISH_DISTANCE_KEY);
 
         icons = new HashMap<String, Map<State, Icon>>();
         icons.put(StandardEntityURN.FIRE_BRIGADE.toString(), generateIconMap("FireBrigade"));

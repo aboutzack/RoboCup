@@ -48,10 +48,10 @@ public final class LaunchMRLViewer {
 
             ComponentLauncher launcher = new TCPComponentLauncher(host, port, config);
 
-            MrlViewer mrlViewer = new MrlViewer();
-            connect(launcher, config, mrlViewer);
+            CSUViewer CSUViewer = new CSUViewer();
+            connect(launcher, config, CSUViewer);
 
-            listenToAgents(mrlViewer);
+            listenToAgents(CSUViewer);
         } catch (IOException e) {
             Logger.error("Error connecting agents", e);
         } catch (ConfigException e) {
@@ -66,12 +66,12 @@ public final class LaunchMRLViewer {
         }
     }
 
-    private static void connect(ComponentLauncher launcher, Config config, MrlViewer mrlViewer) throws InterruptedException, ConnectionException {
+    private static void connect(ComponentLauncher launcher, Config config, CSUViewer CSUViewer) throws InterruptedException, ConnectionException {
         try {
             Logger.info("Connecting viewer ...");
-            launcher.connect(mrlViewer);
+            launcher.connect(CSUViewer);
 
-            mrlViewer.getViewerPanel().getLayers();
+            CSUViewer.getViewerPanel().getLayers();
 
 
             Logger.info("success");
@@ -81,8 +81,8 @@ public final class LaunchMRLViewer {
     }
 
 
-    public static void listenToAgents(MrlViewer mrlViewer) throws RemoteException, AlreadyBoundException {
-        ViewerGateway gateway = new DefaultViewerGateway(mrlViewer);
+    public static void listenToAgents(CSUViewer CSUViewer) throws RemoteException, AlreadyBoundException {
+        ViewerGateway gateway = new DefaultViewerGateway(CSUViewer);
         ViewerGateway stub = (ViewerGateway) UnicastRemoteObject.exportObject(gateway, 0);
 
         startRmiRegistry();

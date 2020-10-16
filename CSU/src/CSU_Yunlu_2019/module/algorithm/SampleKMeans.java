@@ -382,6 +382,9 @@ public class SampleKMeans  extends StaticClustering {
 	    private void visualDebug() {
 			int index = getClusterIndex(agentInfo.getID());
 			CompositeConvexHull convexHull = new CompositeConvexHull();
+			Collection<StandardEntity> clusterEntities = getClusterEntities(index);
+			//去除自己
+			clusterEntities.remove(agentInfo.me());
 			for (StandardEntity entity : getClusterEntities(index)) {
 				Pair<Integer, Integer> location = worldInfo.getLocation(entity);
 				convexHull.addPoint(location.first(), location.second());
@@ -391,9 +394,18 @@ public class SampleKMeans  extends StaticClustering {
 			if (polygon != null) {
 				data.add(convexHull.getConvexPolygon());
 			}
-			if (DebugHelper.DEBUG_MODE && !(agentInfo.me() instanceof FireBrigade)) {
+			if (DebugHelper.DEBUG_MODE) {
 				try {
 					DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", data);
+					if (agentInfo.me() instanceof FireBrigade){
+						DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "FBClusterConvexPolygon", data);
+					}
+					if (agentInfo.me() instanceof PoliceForce){
+						DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "PFClusterConvexPolygon", data);
+					}
+					if (agentInfo.me() instanceof AmbulanceTeam){
+						DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ATClusterConvexPolygon", data);
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

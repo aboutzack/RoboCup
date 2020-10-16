@@ -129,7 +129,7 @@ public class CSUFireClustering extends DynamicClustering {
     private void visualDebug() {
         if (DebugHelper.DEBUG_MODE) {
             try {
-                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", (Serializable) clusterConvexPolygons);
+                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "DynamicClusterConvexPolygon", (Serializable) clusterConvexPolygons);
             } catch (Exception e) {
                 e.printStackTrace();
             }
