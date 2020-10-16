@@ -22,6 +22,7 @@ import rescuecore2.standard.messages.AKSpeak;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
+import java.io.Serializable;
 import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
@@ -748,6 +749,8 @@ public class CSUSearch extends Search {
 		if (DebugHelper.DEBUG_MODE) {
 			try {
 				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+				List<Integer> elementList = Util.fetchIdValueFromElementIds(unsearchedBuildings);
+				DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "UnsearchedBuildings", (Serializable) elementList);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
 import CSU_Yunlu_2019.debugger.DebugHelper;
+import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.*;
@@ -18,6 +19,7 @@ import org.apache.log4j.Logger;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -279,6 +281,8 @@ public class CSUSearchForFire extends Search {
 		if (DebugHelper.DEBUG_MODE) {
 			try {
 				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+				List<Integer> elementList = Util.fetchIdValueFromElementIds(unsearchedRoadIDs);
+				DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "UnsearchedRoads", (Serializable) elementList);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

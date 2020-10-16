@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
 import CSU_Yunlu_2019.debugger.DebugHelper;
+import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -11,10 +12,16 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
-import rescuecore2.standard.entities.*;
+import rescuecore2.standard.entities.Hydrant;
+import rescuecore2.standard.entities.Road;
+import rescuecore2.standard.entities.StandardEntity;
+import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
 
-import java.util.*;
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
@@ -132,6 +139,8 @@ public class CSUSearchForFire extends Search {
 		if (DebugHelper.DEBUG_MODE) {
 			try {
 				DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
+				List<Integer> elementList = Util.fetchIdValueFromElementIds(unsearchedRoadIDs);
+				DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "UnsearchedRoads", (Serializable) elementList);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
