@@ -7,7 +7,7 @@ TEAM=$2
 NAME=${TEAM_NAMES[$TEAM]}
 
 export DISPLAY=:0
-
+echo `pwd`
 cd $HOME
 
 if [ -d $MAPDIR/$MAP/config ]; then
@@ -24,6 +24,8 @@ fi
 
 TIME="`date +%m%d-%H%M%S`"
 MAPNAME="`basename $MAP`"
+
+echo `pwd`
 
 KERNEL_LOGDIR=$HOME/kernel-logs/$DAY/$TIME-$NAME-$MAPNAME
 mkdir -p $KERNEL_LOGDIR
@@ -46,7 +48,9 @@ echo "RESCUE_LOGFILE=$RESCUE_LOG" >> $STATFILE_NAME
 echo "Zipping logfile..."
 mkdir -p $HOME/$LOGDIR/$DAY/kernel/
 cp $KERNEL_LOGDIR/rescue.log $HOME/$RESCUE_LOG
-gzip --best $HOME/$RESCUE_LOG
+7za a -m0=lzma2 $HOME/$RESCUE_LOG.7z $HOME/$RESCUE_LOG
+rm -f $HOME/$RESCUE_LOG
+#gzip --best $HOME/$RESCUE_LOG
 
 rm $LOCKFILE_NAME
 echo "All done"

@@ -4,6 +4,7 @@
 PATH=$PATH:$HOME/$KERNELDIR/scripts/evaluation
 
 cd $HOME/$EVALDIR
+#cd ~/logs
 
 for DIR in *; do
     if [[ -d $DIR && ! -s $DIR/index.html ]]; then

@@ -412,6 +412,8 @@ YBC：修改guideline设置方式<br>
 2020年10月17日：
 
 GYJ：阅读MRL，重构原先代码。<br>
+YYX：阅读server/scripts 了解结构
 
 2020年10月18日：
-GYQ：学习地图制作、熟悉WorldInfo模块
+GYQ：学习地图制作、熟悉WorldInfo模块<br>
+YYX: 修改scripts配置，为四台服务器配置测试环境，将测试代码上传服务器

@@ -16,7 +16,7 @@ if [ -f final-scores.txt ]; then
     rm final-scores.txt
 fi
 
-
+echo farshid
 NUM_PROCESSED=0
 for TEAM in $TEAM_SHORTHANDS; do
     NAME=${TEAM_NAMES[$TEAM]}
@@ -25,6 +25,7 @@ for TEAM in $TEAM_SHORTHANDS; do
         echo -n "\"$NAME\" ">> scores.tmp
         cat $TEAM/scores.txt >> scores.tmp
         echo >> scores.tmp
+	echo "$TEAM"
         # echo -n "$TEAM " >> final-scores.txt
         # cat $TEAM/final-score.txt >> final-scores.txt
         # echo >> final-scores.txt
@@ -37,7 +38,9 @@ for TEAM in $TEAM_SHORTHANDS; do
             cp $TEAM/snapshot-init.png snapshot-init.png
             convert -format png -thumbnail 400x300 -strip -quality 95 PNG8:snapshot-init.png snapshot-init-small.png
         fi
-        LOGFILES=$(ls $HOME/$LOGDIR/$DAY/kernel/*$NAME-$MAP.gz 2>/dev/null) 
+        LOGFILES=$(ls $HOME/$LOGDIR/$DAY/kernel/*$NAME-$MAP.7z 2>/dev/null) 
+	echo $HOME/$LOGDIR/$DAY/kernel/*$NAME-$MAP.7z
+echo === $LOGFILES
         if [[ -f "$LOGFILES" && ! -f $MAP_EVALDIR/$LOGFILES ]]; then
             cp $LOGFILES $MAP_EVALDIR
         fi;
@@ -47,11 +50,13 @@ for TEAM in $TEAM_SHORTHANDS; do
       fi
 done
 
-
+echo ali
 # create map tgz
-if [[ -d $HOME/$MAPDIR/$MAP && ! -f $MAP_EVALDIR/$MAP.tgz  ]]; then
+echo $MAP_EVALDIR
+if [[ -d $MAP_EVALDIR && -d $HOME/$MAPDIR/$MAP && ! -f $MAP_EVALDIR/$MAP.7z  ]]; then
     cd $HOME/$MAPDIR
-    tar czf $MAP_EVALDIR/$MAP.tgz $MAP
+    7za a -m0=lzma2 $MAP.7z $MAP
+    mv $MAP.7z $MAP_EVALDIR/
 fi;
 
 cd $MAP_EVALDIR
@@ -62,4 +67,4 @@ export RCR_COUNT=$NUM_PROCESSED
 echo $RCR_COUNT teams processed
 gnuplot $EVAL_SCRIPTS/plot-scores.gnu
 
-$EVAL_SCRIPTS/make_html.py $MAP > index.html
+make_html.py $MAP > index.html

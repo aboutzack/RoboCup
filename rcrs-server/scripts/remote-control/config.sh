@@ -1,9 +1,10 @@
-LOCAL_USER=rescue
-REMOTE_USER=rescue
-SOURCEFORGE_USER=mgoe
+#! /bin/bash
+LOCAL_USER=yyx
+REMOTE_USER=rcrs
+SOURCEFORGE_USER=root
 
 MAPDIR=maps
-KERNELDIR=roborescue-git
+KERNELDIR=rcrs-server
 CODEDIR=code
 SCRIPTDIR=$KERNELDIR/scripts/remote-control
 LOGDIR=logs
@@ -12,11 +13,12 @@ EVALDIR=evaluation
 
 RSYNC_OPTS=-CE
 
-CLUSTERS="1 2 3"
+CLUSTERS="1"
 
-HOSTS="c1-1 c1-2 c1-3 c1-4 c2-1 c2-2 c2-3 c2-4 c3-1 c3-2 c3-3 c3-4 control"
-SERVER_HOSTS="c1-1 c2-1 c3-1"
-CLIENT_HOSTS="c1-2 c1-3 c1-4 c2-2 c2-3 c2-4 c3-2 c3-3 c3-4"
+HOSTS="c11 c12 c13 c14"
+SERVER_HOSTS="c11"
+CLIENT_HOSTS="c12  c13  c14"
+
 
 
 # HOSTS=localhost
@@ -27,50 +29,70 @@ KERNEL_WAITING_TIME=5
 
 PRECOMPUTE_TIMEOUT=125
 
-DAY=semi
-YEAR=2013
+DAY=csu-test
+YEAR=2020
 
-TEAM_SHORTHANDS="BAS ANC APO CSU GUC LTI MIN MRL NAI POS RI1 RAK SOS ZJU"
+TEAM_SHORTHANDS="APO"
 
 declare -A TEAM_NAMES
-TEAM_NAMES[BAS]=Baseline
-TEAM_NAMES[ANC]=anct_rescue2013
 TEAM_NAMES[APO]=Apollo-Rescue
-TEAM_NAMES[CSU]=CSU-YUNLU
-TEAM_NAMES[GUC]=GUC_ArtSapience
-TEAM_NAMES[LTI]=LTI-Agent-Rescue
-TEAM_NAMES[MIN]=MinERS
-TEAM_NAMES[MRL]=MRL
-TEAM_NAMES[NAI]=NAITO-Rescue2013
-TEAM_NAMES[POS]=Poseidon
-TEAM_NAMES[RI1]=Ri-one
-TEAM_NAMES[RAK]=RoboAKUT
-TEAM_NAMES[SOS]=S.O.S.
-TEAM_NAMES[ZJU]=ZJUBase
+
+
 
 DIR=$(pwd)
 
 declare -A CONNECT_VIEWER
-CONNECT_VIEWER[1]=no
+CONNECT_VIEWER[1]=yes
 CONNECT_VIEWER[2]=yes
 CONNECT_VIEWER[3]=yes
 
 
 #return hostname of the kernel server of the given cluster
 function getServerHost() {
-    echo c$1-1
+    echo c$11
     # echo 10.10.10.$11
     # echo localhost
 }
 
 #return hostnames of the client servers of the given cluster
 function getClientHost() {
-    local i=$(($2+1))
-    echo "c$1-$i"
+
+    echo "c$12"
     # echo localhost
 }
+
+function getAllServerHosts() {
+	for C in $SERVER_HOSTS; do
+	    echo -n "$C"
+	done
+}
+
+function getAllClientHosts() {
+	for C in $CLIENT_HOSTS; do
+	    echo -n "$C"
+	done
+}
+
 
 LOCAL_HOMEDIR=/home/$LOCAL_USER
 LOCKFILE_NAME=rsl_run.lock
 LOCKFILE_NAME_PRECOMP=/home/$REMOTE_USER/rsl_precomp.lock
 STATFILE_NAME=rsl_last_run.stat
+
+
+#SERVER_HOSTS=$(getAllServerHosts);
+#CLIENT_HOSTS=$(getAllClientHosts);
+#HOSTS="$SERVER_HOSTS $CLIENT_HOSTS"
+
+
+#for HOST in $SERVER_HOSTS; do
+#	echo Kernel=$HOST
+#done
+#for HOST in $CLIENT_HOSTS; do
+#	echo Kernel=$HOST
+#done
+#for HOST in $HOSTS; do
+#	echo All=$HOST
+#done
+
+

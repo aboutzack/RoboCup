@@ -18,8 +18,15 @@ LOGFILE=$HOME/$LOGDIR/$DAY/$TEAM/$MAP-$T-${CODES[$TYPE]}-precompute.log
 mkdir -p $HOME/$LOGDIR/$DAY/$TEAM
 
 cd $HOME/$CODEDIR/$TEAM
+echo "cd $HOME/$CODEDIR/$TEAM"
 
 echo Starting precomputation on machine $(hostname)
+
+# all 
+if (( $TYPE == -1)); then
+    echo "Running: /bin/sh \"precompute.sh\" 1 0 1 0 1 0 $HOST 2>&1 | tee $LOGFILE"
+    /bin/sh "precompute.sh" 1 0 1 0 1 0 $HOST 2>&1 | tee $LOGFILE
+fi
 
 # firebrigade 
 if (( $TYPE == 1)); then

@@ -2,7 +2,7 @@
 
 import sys, os, stat, glob
 import config, make_html
-
+title=config.title
 template = """
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -11,7 +11,13 @@ template = """
 lang="en" xml:lang="en">
 
 <head>
-<title>RoboCup 2013 Rescue Simulation League Results</title>
+<title>%(title)s</title>
+<meta http-equiv="refresh" content="15" >
+<meta http-equiv="cache-control" content="max-age=0" />
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+<meta http-equiv="pragma" content="no-cache" />
 <style type="text/css">
   body { font-family: sans-serif; }
 
@@ -26,8 +32,8 @@ lang="en" xml:lang="en">
 </head>
 
 <body>
-<h1>RoboCup 2013 Rescue Simulation League Results</h1>
-
+<h1>%(title)s</h1>
+<p><a href="agent-logs">agent-logs</a></p>
 <p>Click on the map names to get detailed results and logfiles</p>
 %(map_download)s
 
@@ -154,7 +160,7 @@ if __name__ == '__main__':
         results.append("%.2f" % tot_score)
         results.append("%d" % tot_rank)
         results.append("%d" % final_rank)
-
+        results.append("<a href='agent-logs/%s/%s/'>Download</a>" % (day.shortname,team))
         classes = []
         if day.show_ranks is not None and final_rank <= day.show_ranks:
             if final_rank == 1:
@@ -188,6 +194,8 @@ if __name__ == '__main__':
         result2.append("<th>Score</th>")
         result2.append("<th>Points</th>")
         result.append('<th rowspan="2">Rank</th>')
+	result.append('<th rowspan="2">Agent Logs</th>')
+        
         return result, result2
 
     body = ""

@@ -1,13 +1,16 @@
 #!/bin/bash
 . $(dirname $0)/config.sh
 
+TEAMS=$1
 if [ "$1" == "" ]; then
     TEAMS=$TEAM_SHORTHANDS
-else
-    TEAMS=$1
 fi
 
+chmod -R 777 *
 for t in $TEAMS; do
-    cd $LOCAL_HOMEDIR/code/$TEAM/
-    ./compile.sh
+	echo $LOCAL_HOMEDIR/codes/$t/
+        cd $LOCAL_HOMEDIR/codes/$t/
+	pwd
+	./compile.sh
+	cd -
 done
