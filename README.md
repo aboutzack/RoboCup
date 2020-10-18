@@ -412,3 +412,6 @@ YBC：修改guideline设置方式<br>
 2020年10月17日：
 
 GYJ：阅读MRL，重构原先代码。<br>
+
+2020年10月18日：
+GYQ：学习地图制作、熟悉WorldInfo模块
