@@ -863,6 +863,10 @@ public class CSUWorldHelper extends AbstractModule {
         return worldInfo.getLocation(entity);
     }
 
+    public Pair<Integer, Integer> getLocation (EntityID entityID) {
+        return worldInfo.getLocation(entityID);
+    }
+
     public int getTime() {
         return agentInfo.getTime();
     }

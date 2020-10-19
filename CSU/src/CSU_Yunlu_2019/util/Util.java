@@ -10,6 +10,7 @@ import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.StandardEntity;
+import rescuecore2.worldmodel.AbstractEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
@@ -671,6 +672,14 @@ public class Util {
 	public static List<Integer> fetchIdValueFromElementIds(Collection<EntityID> elementEntityIDs) {
 		try {
 			return elementEntityIDs.stream().map(EntityID::getValue).collect(Collectors.toList());
+		} catch (Exception ex) {
+			return new ArrayList<>();
+		}
+	}
+
+	public static List<EntityID> fetchEntityIdFromElements(Collection<StandardEntity> elements) {
+		try {
+			return elements.stream().map(AbstractEntity::getID).collect(Collectors.toList());
 		} catch (Exception ex) {
 			return new ArrayList<>();
 		}

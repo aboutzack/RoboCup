@@ -7,14 +7,12 @@ import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
-import CSU_Yunlu_2019.world.object.CSURoad;
 import javolution.util.FastSet;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.util.List;
 import java.util.*;
 
 /**
@@ -139,79 +137,6 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             return null;
     }
 
-    /**
-     * Remove all buildings that this agent has seen. And also, all buildings
-     * other agent might see.
-     * first, the underlyingAgent, add buildings from getChanged()
-     * second, other agents, if position is defined, if in building add it, then add observableAreas
-     *
-     * @return a list of looked buildings
-     */
-    private List<EntityID> lookedBuildings() {
-        List<EntityID> result = new ArrayList<>();
-
-        Human agent;
-        for (StandardEntity next : world.getPlatoonAgentsWithURN(world.getWorldInfo())) {
-            agent = (Human) next;
-
-            if (agent.getID().getValue() == selfHuman.getID().getValue()) {
-                for (EntityID visible : world.getAgentInfo().getChanged().getChangedEntities()) {
-                    StandardEntity v_entity = world.getEntity(visible);
-                    if (v_entity instanceof Building) {
-                        result.add(visible);
-                    }
-                }
-            }
-
-            if (agent.isPositionDefined()) {              ///world.getSelfPosition() && agent.getPosition()
-                StandardEntity position = world.getSelfPosition();
-                List<EntityID> visible = null;
-                if (position instanceof Building) {
-                    CSUBuilding csu_b = world.getCsuBuilding(position.getID());
-                    visible = csu_b.getObservableAreas();
-                    result.add(agent.getPosition());
-
-                }
-                if (position instanceof Road) {
-                    CSURoad csu_r = world.getCsuRoad(position.getID());
-                    visible = csu_r.getObservableAreas();
-                }
-
-                if (visible != null) {
-                    for (EntityID visible_id : visible) {
-                        StandardEntity v_entity = world.getEntity(visible_id);
-                        if (v_entity instanceof Building) {
-                            result.add(visible_id);
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
-//    private Set<EntityID> unreachables(Area area) {
-//        Set<EntityID> result = new FastSet<>();
-//
-//        if (area instanceof Building) {
-//            for (Road entrance : world.getEntrance().getEntrance((Building) area)) {
-//                for (Building next : world.getEntrance().getBuilding(entrance)) {
-//                    result.add(next.getID());
-//                }
-//            }
-//        } else {
-//            List<Building> bu_s = world.getEntrance().getBuilding((Road) area);
-//            if (bu_s != null) {
-//                for (Building next : bu_s) {
-//                    result.add(next.getID());
-//                }
-//            }
-//        }
-//
-//        return result;
-//    }
-
     private void printSortedBuilding(SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings) {
         String str = null;
         for (Pair<Pair<EntityID, Double>, Double> next : sortedBuildings) {
@@ -293,72 +218,6 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             sortedBuildings.add(new Pair<Pair<EntityID, Double>, Double>(pair, csuBuilding.BUILDING_VALUE));
         }
     }
-
-    /**
-     * Classify buildings.
-     *
-     * <pre>
-     * 1.lessValueBuildings: the border buildings of dying FireCLuster
-     *
-     * 2.mapBorderBuildings: the border buildings of map border FireCLuster
-     *
-     * 3.highValueBuildings: buildings in the expand direction of its FireCluster
-     *
-     * 4.otherBuildings: the remaining border buildings of FireCluster
-     * </pre>
-     *
-     * @param lessValue a set to store less value buildings
-     * @param mapBorder a set to store map border buildings
-     * @return a set of high value buildings
-     */
-//    private Set<CSUBuilding> buildingClassifier(Set<CSUBuilding> lessValue, Set<CSUBuilding> mapBorder) {
-//        Set<CSUBuilding> highValueBuildings = new HashSet<>();
-//        List<FireCluster> fireClusters = world.getFireClustering().getClusters();
-//
-//        ConvexObject convexObject;
-//        Polygon polygon;
-//        CSUBuilding csuBuilding;
-//
-//        for (FireCluster cluster : fireClusters) {
-//            if (cluster == null)
-//                continue;
-//            if (cluster.isDying()) {
-//                for (StandardEntity next : cluster.getBorderEntities())
-//                    lessValue.add(this.world.getCsuBuilding(next.getID()));
-//                continue;
-//            }
-//            if (cluster.isBorder()) {
-//                for (StandardEntity next : cluster.getBorderEntities())
-//                    mapBorder.add(this.world.getCsuBuilding(next.getID()));
-//                continue;
-//            }
-//
-//            directionManager.findFarthestPointOfMap(cluster, controlledEntity);
-//            convexObject = cluster.getConvexObject();
-//            if (convexObject == null || convexObject.CENTER_POINT == null
-//                    || convexObject.CONVEX_POINT == null || convexObject.getConvexHullPolygon() == null)
-//                continue;
-//
-//            if (cluster.isOverCenter()) {
-//                polygon = convexObject.getDirectionRectangle();
-//            } else {
-//                polygon = convexObject.getTriangle();
-//            }
-//
-//            for (StandardEntity next : cluster.getBorderEntities()) {
-//                csuBuilding = world.getCsuBuilding(next.getID());
-//                int[] vertices = csuBuilding.getSelfBuilding().getApexList();
-//                for (int i = 0; i < vertices.length; i += 2) {
-//                    if (polygon.contains(vertices[i], vertices[i + 1])) {
-//                        highValueBuildings.add(csuBuilding);
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//
-//        return highValueBuildings;
-//    }
 
     /**
      * Translate a collection of CSUBuilding into a collection of
