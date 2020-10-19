@@ -1,6 +1,5 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
-import CSU_Yunlu_2019.debugger.DebugHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
@@ -59,10 +58,11 @@ public class CSURoadDetector extends RoadDetector {
     
 
 
-	int lastTime = 0;
-	double lastx  =0 ;
-	double lasty = 0;
-    
+    protected int lastTime = 0;
+    protected double lastx  =0 ;
+    protected double lasty = 0;
+    protected int minX, maxX, minY, maxY;
+    private List<EntityID> countedRoad = new ArrayList<>();
 
 	private Set<EntityID> entrance_of_Refuge_and_Hydrant = new HashSet<>();
 	private MessageManager messageManager =null;
@@ -364,19 +364,8 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
         { 	
 			this.getResultWhenNull();
         }
-		visualDebug();
         return this;
     }
-
-	private void visualDebug() {
-		if (DebugHelper.DEBUG_MODE) {
-			try {
-				DebugHelper.drawDetectorTarget(worldInfo, agentInfo.getID(), result);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
     
     
     private RoadDetector getResultWhenNull() {
@@ -409,7 +398,7 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
     public RoadDetector precompute(PrecomputeData precomputeData)
     {    	
     	
-    	this.create_guideline();
+    	this.createGuideline();
     	
         super.precompute(precomputeData);
         this.pathPlanning.precompute(precomputeData);
@@ -443,7 +432,7 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
         {
             return this;
         }
-        
+        this.mapInit();
         this.roadsize = precomputeData.getInteger(KEY_ROAD_SIZE);
         for(int i=0 ; i<this.roadsize ; ++i) {
         	double startx = precomputeData.getDouble(KEY_START_X + i);
@@ -502,8 +491,8 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
             return this;
         }
         
-       this.create_guideline();
-       
+       this.createGuideline();
+       this.mapInit();
        this.clustering.calc();
        List<EntityID> sortList = new ArrayList<>();
        for (EntityID id : this.clustering.getClusterEntityIDs(
@@ -712,33 +701,87 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 	        }	
 		return false;
 	}
-	/**
-	* @Description: 获取guideline
+    
+	private void mapInit() {
+        this.minX = Integer.MAX_VALUE;
+        this.maxX = Integer.MIN_VALUE;
+        this.minY = Integer.MAX_VALUE;
+        this.maxY = Integer.MIN_VALUE;
+        Pair<Integer, Integer> pos;
+        for (StandardEntity standardEntity : worldInfo.getAllEntities()) {
+            pos = worldInfo.getLocation(standardEntity);
+            if (pos.first() < this.minX)
+                this.minX = pos.first();
+            if (pos.second() < this.minY)
+                this.minY = pos.second();
+            if (pos.first() > this.maxX)
+                this.maxX = pos.first();
+            if (pos.second() > this.maxY)
+                this.maxY = pos.second();
+        }
+	}
+    
+    
+    /**
+	* @Description: 获取road中最长的edge的连线作为guideline
 	* @Author: Bochun-Yue
-	* @Date: 3/7/20
+	* @Date: 10/15/20
 	*/
-    private Line2D get_longest_line(Road road) {
+	private Line2D getProperLine(Road road) {
 		List<Edge> edges = road.getEdges();
 		List<Point2D> Points = new ArrayList<>();
 		for(Edge edge : edges) {
-			Point2D point = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
+			Point2D point = this.getMidPoint(edge);
 			Points.add(point);
 		}
+		//地图边缘的guideline
+		for(Point2D point : Points) {
+			if(point.getX() == this.maxX 
+					|| point.getX() == this.minX 
+					|| point.getY() == this.maxY 
+					|| point.getY() == this.minY) {
+				for(int i = 0 ; i < edges.size() ; ++ i) {
+					if(this.getMidPoint(edges.get(i)).equals(point)) {
+						if(i != 0 && i != edges.size()-1) {
+							Point2D start = this.getMidPoint(edges.get(i-1));
+							Point2D end = this.getMidPoint(edges.get(i+1));
+							if(start!=null && end!=null) {
+								Line2D guideline = new Line2D(start,end);
+								return guideline;
+							}
+						}else if(i == 0){
+							Point2D start = this.getMidPoint(edges.get(1));
+							Point2D end = this.getMidPoint(edges.get(edges.size()-1));
+							if(start!=null && end!=null) {
+								Line2D guideline = new Line2D(start,end);
+								return guideline;
+							}
+						}else {
+							Point2D start = this.getMidPoint(edges.get(0));
+							Point2D end = this.getMidPoint(edges.get(edges.size()-2));
+							if(start!=null && end!=null) {
+								Line2D guideline = new Line2D(start,end);
+								return guideline;
+							}
+						}
+					}
+				}
+			}
+		}
+		//非地图边缘取对边最长		
 		Point2D start = null;
 		Point2D end = null;
 		double max = Double.MIN_VALUE;
 		
-		for(int i = 0; i < Points.size(); ++i) {
-			for(int j = 0; j < Points.size(); ++j) {
-				if(j==i) continue;
-				else {
-					double dist = this.getDistance(Points.get(i).getX(), Points.get(i).getY(), Points.get(j).getX(),Points.get(j).getY());
-					if(dist > max) {
-						max = dist;
-						start = Points.get(i);
-						end = Points.get(j);
-					}
-				}
+		for(Edge edge : edges) {
+			Edge opposite = this.getOppositeEdge(road, edge);
+			Point2D p1 = this.getMidPoint(edge);
+			Point2D p2 = this.getMidPoint(opposite);
+			double dist = this.getDistance(p1.getX(),p1.getY(),p2.getX(), p2.getY());
+			if(dist > max) {
+				max = dist;
+				start = p1;
+				end = p2;
 			}
 		}
 		if(start!=null && end!=null) {
@@ -746,7 +789,7 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 			return guideline;
 		}
 		else return null;
-    }
+	}
 	/**
 	* @Description: 叉积
 	* @Author: Bochun-Yue
@@ -764,106 +807,178 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
     	return ((X2 - X1)*(Y - Y1) - (X - X1)*(Y2 - Y1));
     }
     
-    private void create_guideline() {
-    	
-		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-			Road road = (Road) se;
-    		for(EntityID neighbour : road.getNeighbours()) {
-    			if(this.worldInfo.getEntity(neighbour) instanceof Building || this.worldInfo.getEntity(neighbour) instanceof Refuge) {
-    				guidelineHelper entrance = new guidelineHelper(this.get_longest_line(road),road);
-    				if(!this.judgeRoad.contains(entrance))	this.judgeRoad.add(entrance);
-    				for(EntityID id : road.getNeighbours()) {
-    	    			StandardEntity entity = this.worldInfo.getEntity(id);
-    	    			if(entity instanceof Road) {
-    	    				Road next = (Road) entity;
-    	    				guidelineHelper line = new guidelineHelper(this.get_longest_line(next),next);
-    	    				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
-    	    			}
-    				}
-    			}
-    		}
+    private void createGuideline() {
+		//建筑入口
+	   for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
+		   Road road = (Road) se;
+		   for(EntityID neighbour : road.getNeighbours()) {
+			   if(this.worldInfo.getEntity(neighbour) instanceof Building 
+					   || this.worldInfo.getEntity(neighbour) instanceof Refuge) {
+				   Edge edgeToBuilding = road.getEdgeTo(neighbour);
+				   Point2D startPoint = this.getMidPoint(edgeToBuilding);
+				   Edge oppositeEdge = this.getOppositeEdge(road, edgeToBuilding);
+				   Point2D endPoint = this.getMidPoint(oppositeEdge);
+				   guidelineHelper guideline = new guidelineHelper(road,startPoint,endPoint);
+				   if(!this.judgeRoad.contains(guideline))	{
+					   this.judgeRoad.add(guideline);
+					   this.countedRoad.add(road.getID());
+				   }
+			   }
+		   }
 		}
-		
-		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.HYDRANT)) {
-			Road road = (Road) se;
-			guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
-			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
-		}
-    	    	
-    	StandardEntity positionEntity = this.worldInfo.getEntity(this.agentInfo.getPosition());
-    	
-    	if(positionEntity instanceof Road) {
-    		Road position = (Road) positionEntity;
-    		guidelineHelper guideline = new guidelineHelper(this.get_longest_line(position),position);
-    		if(!this.judgeRoad.contains(guideline))	this.judgeRoad.add(guideline);
-    		
-    		for(EntityID neighbour : position.getNeighbours()) {
-    			if(this.worldInfo.getEntity(neighbour) instanceof Road) {
-    				Road road = (Road) this.worldInfo.getEntity(neighbour);
-    				Edge edge = position.getEdgeTo(neighbour);
-    				Point2D start = new Point2D((edge.getStartX()+edge.getEndX())/2,(edge.getStartY()+edge.getEndY())/2);
-    				Point2D mid = new Point2D(road.getX(),road.getY());
-    				guidelineHelper line = new guidelineHelper(road,start,mid);
-    				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    			}
-    		}
-    		
-    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-				boolean flag = false;
+		   
+	   	StandardEntity positionEntity = this.worldInfo.getEntity(this.agentInfo.getPosition());
+	   	if(positionEntity instanceof Road || positionEntity instanceof Hydrant) {
+	   		
+	   		//预计算时PF所处的road，由于只有一块，故可忽略直接取最长线段作为guideline
+	   		Road position = (Road) positionEntity;
+	   		guidelineHelper guideline = new guidelineHelper(this.getProperLine(position),position);
+	   		if(!this.judgeRoad.contains(guideline)) {
+	   			this.judgeRoad.add(guideline);
+	   			this.countedRoad.add(position.getID());
+	   		}
+	   		//PF位置的neighbours
+	   		for(EntityID neighbour : position.getNeighbours()) {
+	   			if(this.worldInfo.getEntity(neighbour) instanceof Road 
+	   					|| this.worldInfo.getEntity(neighbour) instanceof Hydrant) {
+	   				Road road = (Road) this.worldInfo.getEntity(neighbour);
+	   				Edge edge = position.getEdgeTo(neighbour);
+	   				Point2D startPoint = this.getMidPoint(edge);
+					Edge oppositeEdge = this.getOppositeEdge(road, edge);
+					Point2D endPoint = this.getMidPoint(oppositeEdge);
+					guidelineHelper line = new guidelineHelper(road,startPoint,endPoint);
+					if(!this.judgeRoad.contains(line)) {
+						this.judgeRoad.add(line);
+						this.countedRoad.add(road.getID());
+					}
+	    		}
+	    	}
+			   	//根据路线计算guideline,此举可得绝大部分guideline	
+		    for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
+				if(this.countedRoad.contains(se.getID())) {
+					continue;
+				}
+		    	boolean flag = false;
 				Road otherRoads = (Road) se;
-
-    			this.pathPlanning.setFrom(position.getID());
-    			this.pathPlanning.setDestination(se.getID());
-    			List<EntityID> path = this.pathPlanning.calc().getResult();
-    			if(path!=null && path.size()>2) {
-    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
-    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
-    					if(!(entity instanceof Road)) continue;
-    					Road road = (Road) entity;
-    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
-    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
-    					Edge edge1 = before.getEdgeTo(road.getID());
-    					Edge edge2 = road.getEdgeTo(next.getID());
-    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
-    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
-        				guidelineHelper line = new guidelineHelper(road,start,end);
-        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    				}
-    			}
-    		}
-    	}
-    	
-    	else if(positionEntity instanceof Building) {
-    		Building building = (Building) positionEntity;
-    		
-    		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-    			this.pathPlanning.setFrom(building.getID());
-    			this.pathPlanning.setDestination(se.getID());
-    			List<EntityID> path = this.pathPlanning.calc().getResult();
-    			if(path!=null && path.size()>2) {
-    				for(int i = 1 ; i < path.size() - 1 ; ++i ) {
-    					StandardEntity entity = this.worldInfo.getEntity(path.get(i));
-    					if(!(entity instanceof Road)) continue;
-    					Road road = (Road) entity;
-    					Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
-    					Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
-    					Edge edge1 = before.getEdgeTo(road.getID());
-    					Edge edge2 = road.getEdgeTo(next.getID());
-    					Point2D start = new Point2D((edge1.getStartX()+edge1.getEndX())/2,(edge1.getStartY()+edge1.getEndY())/2);
-    					Point2D end = new Point2D((edge2.getStartX()+edge2.getEndX())/2,(edge2.getStartY()+edge2.getEndY())/2);
-        				guidelineHelper line = new guidelineHelper(road,start,end);
-        				if(!this.judgeRoad.contains(line))	this.judgeRoad.add(line);
-    				}
-    			}
-    		}
-    	}
-    	
-		for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+		    	this.pathPlanning.setFrom(position.getID());
+		    	this.pathPlanning.setDestination(se.getID());
+		    	List<EntityID> path = this.pathPlanning.calc().getResult();
+		    	if(path!=null && path.size()>2) {
+		    		for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+		    			StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+		    			if(!(entity instanceof Road) && !(entity instanceof Hydrant)) continue;
+		    			Road road = (Road) entity;
+		    			Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+		    			Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+		    			Edge edge1 = before.getEdgeTo(road.getID());
+		    			Edge edge2 = road.getEdgeTo(next.getID());
+		    			Point2D start = this.getMidPoint(edge1);
+		    			Point2D end = this.getMidPoint(edge2);
+		      				guidelineHelper line = new guidelineHelper(road,start,end);
+		      				if(!this.judgeRoad.contains(line))	{
+		      					this.judgeRoad.add(line);
+		      					this.countedRoad.add(entity.getID());
+		      				}
+		    		}
+		    	}
+	   		}
+	  	}
+	    	//防止用来进行计算guideline的PF在建筑内
+	   	else if(positionEntity instanceof Building) {
+	    	Building building = (Building) positionEntity;
+	    		
+	    	for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
+				if(this.countedRoad.contains(se.getID())) {
+					continue;
+				}
+				this.pathPlanning.setFrom(building.getID());
+	    		this.pathPlanning.setDestination(se.getID());
+		   		List<EntityID> path = this.pathPlanning.calc().getResult();
+		   		if(path!=null && path.size()>2) {
+		   			for(int i = 1 ; i < path.size() - 1 ; ++i ) {
+		   				StandardEntity entity = this.worldInfo.getEntity(path.get(i));
+		   				if(!(entity instanceof Road) && !(entity instanceof Hydrant)) continue;
+		   				Road road = (Road) entity;
+		   				Area before = (Area) this.worldInfo.getEntity(path.get(i-1));
+		   				Area next = (Area) this.worldInfo.getEntity(path.get(i+1));
+		   				Edge edge1 = before.getEdgeTo(road.getID());
+		   				Edge edge2 = road.getEdgeTo(next.getID());
+		   				Point2D start = this.getMidPoint(edge1);
+		   				Point2D end = this.getMidPoint(edge2);
+		  				guidelineHelper line = new guidelineHelper(road,start,end);
+	       				if(!this.judgeRoad.contains(line))	{
+	       					this.judgeRoad.add(line);
+	      					this.countedRoad.add(entity.getID());
+	       				}
+	    			}
+	    		}
+	    	}
+	   	}
+	    	
+	    //地图外圈的guideline
+	   	Collection<StandardEntity> remoteRoad = this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT);
+	   	List<EntityID> remoteRoadID = new ArrayList<>();
+	   	for(StandardEntity se : remoteRoad) {
+	   		remoteRoadID.add(se.getID());
+	   	}
+	   	remoteRoadID.removeAll(countedRoad);
+	    	
+	   	System.out.println("size:"+this.countedRoad.size());
+	   	System.out.println("remoteRoadIDsize:"+remoteRoadID.size());
+	   	for(EntityID re : remoteRoadID) {
+	   		System.out.println("RoadID:"+re.getValue());
+	   	}
+	   	System.out.println("");
+	    	
+	   	for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
 			Road road = (Road) se;
-			guidelineHelper line = new guidelineHelper(this.get_longest_line(road),road);
+			guidelineHelper line = new guidelineHelper(this.getProperLine(road),road);
 			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+		
+	   	}
+	}
+	
+	//应对建筑入口，获取建筑对面的edge   
+		private Edge getOppositeEdge(Road road,Edge original) {
+			List<Edge> edges = road.getEdges();
+			if(edges.size() == 4) {
+				for(int i = 0 ; i < 4 ; ++i) {
+					if(this.getMidPoint(edges.get(i)).equals(this.getMidPoint(original))) {
+						if(i ==0 || i ==1) {
+							return edges.get(i+2);
+						}else {
+							return edges.get(i-2);
+						}
+					}
+				}
+			}
+			Point2D roadCenter = new Point2D(road.getX(),road.getY());
+			Line2D line = new Line2D(this.getMidPoint(original),roadCenter);
+			Edge answerEdge = null;
+			double min = Double.MAX_VALUE;
+			for(int i = 0 ; i < edges.size(); ++i) {
+				Line2D edgeToLine = new Line2D(new Point2D(edges.get(i).getStartX(),edges.get(i).getStartY()),new Point2D(edges.get(i).getEndX(),edges.get(i).getEndY()));           
+				Point2D endPoint = GeometryTools2D.getIntersectionPoint(line,edgeToLine);
+				if(this.getMidPoint(edges.get(i)).equals(this.getMidPoint(original))) {
+					continue;
+				}
+				if(endPoint != null) {
+					double dist = this.getDistance(road.getX(), road.getY(), endPoint.getX(), endPoint.getY());
+					if(dist<min) {
+						min = dist;
+						answerEdge = edges.get(i);
+					}
+				}
+			}
+			return answerEdge;
+		}	
+		
+		private Point2D getMidPoint(Edge edge) {
+			double midX = (edge.getStartX()+edge.getEndX())/2;
+			double midY = (edge.getStartY()+edge.getEndY())/2;
+			Point2D point = new Point2D(midX,midY);
+			return point;
 		}
-    }
     
     
     
