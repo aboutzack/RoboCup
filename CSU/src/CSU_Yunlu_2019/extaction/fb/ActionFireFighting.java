@@ -216,7 +216,9 @@ public class ActionFireFighting extends ExtAction
         }
 
         List<Integer> elementList = Util.fetchIdValueFromElementIds(getAvailableHydrants());
-        DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "AvailableHydrants", (Serializable) elementList);
+        if (DebugHelper.DEBUG_MODE) {
+            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "AvailableHydrants", (Serializable) elementList);
+        }
 //        if (DebugHelper.DEBUG_MODE) {
 //            System.out.println("time: " +agentInfo.getTime() + ", agent: "+agentInfo.getID()+" find "+result.size()+" hydrants are occupied. They are "+result +
 //                    ". available hydrants: "+ availableHydrants);
@@ -226,6 +228,8 @@ public class ActionFireFighting extends ExtAction
             this.result = this.calcRefill(agent, this.pathPlanning, this.target);
             if (this.result != null)
             {
+                messageManager.addMessage(new MessageFireBrigade(false, ((FireBrigade) agentInfo.me()),
+                        MessageFireBrigade.ACTION_REFILL, agent.getPosition()));
                 return this;
             }
         }else {
@@ -233,14 +237,14 @@ public class ActionFireFighting extends ExtAction
              resetAvailableHydrants();
         }
 
-        if (this.needRest(agent))
-        {
-            this.result = this.calcRefugeAction(agent, this.pathPlanning, this.target, false);
-            if (this.result != null)
-            {
-                return this;
-            }
-        }
+//        if (this.needRest(agent))
+//        {
+//            this.result = this.calcRefugeAction(agent, this.pathPlanning, this.target, false);
+//            if (this.result != null)
+//            {
+//                return this;
+//            }
+//        }
 
         if (this.target == null) {
             return this;
@@ -568,7 +572,9 @@ public class ActionFireFighting extends ExtAction
         //开销从小到大排序
         ArrayList<Map.Entry<EntityID, Double>> sortedSupplyPositions = new ArrayList<>(refillTimeCost.entrySet());
         sortedSupplyPositions.sort((t0, t1) -> (int) (t0.getValue() - t1.getValue()));
-        System.out.println("agentid: " + agentInfo.getID() + ", sortedSupplyPositions: " + sortedSupplyPositions);
+        if (CSUConstants.DEBUG_WATER_REFILL) {
+            System.out.println("agentid: " + agentInfo.getID() + ", sortedSupplyPositions: " + sortedSupplyPositions);
+        }
         for (Map.Entry<EntityID, Double> sortedSupplyPosition : sortedSupplyPositions) {
             Action action = getMoveAction(pathPlanning, world.getSelfPositionId(), sortedSupplyPosition.getKey());
             if (action != null) {
