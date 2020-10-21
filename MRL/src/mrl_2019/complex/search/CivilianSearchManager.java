@@ -198,7 +198,6 @@ public class CivilianSearchManager extends Search {
 
         if (agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()) {
             return this;
-
         }
         execute();
         if (getTarget() == null) {
@@ -243,7 +242,6 @@ public class CivilianSearchManager extends Search {
         return null;
     }
 
-
     private boolean isNeedToEvaluatePath() {
         boolean need = false;
         if (targetPath == null) {
@@ -254,7 +252,6 @@ public class CivilianSearchManager extends Search {
 //        }
         return need;
     }
-
 
     private void execute() {
 
