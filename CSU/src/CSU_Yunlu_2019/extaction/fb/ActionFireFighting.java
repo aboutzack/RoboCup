@@ -24,7 +24,6 @@ import adf.component.communication.CommunicationMessage;
 import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.config.NoSuchConfigOptionException;
-import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
@@ -57,6 +56,7 @@ public class ActionFireFighting extends ExtAction
     private int areaConstant = 10;                   //面积的系数
     private int temperatureConstant = 15;            //温度的系数
     private Map<EntityID, Integer> fireBrigadesWaterMap = new HashMap<>();   //每个消防员与其相应水量的键值对
+    private Action lastResult;  //保存上次的result
 
     private ExtAction actionExtMove;
     private CSUWorldHelper world;
@@ -219,14 +219,10 @@ public class ActionFireFighting extends ExtAction
         if (DebugHelper.DEBUG_MODE) {
             DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "AvailableHydrants", (Serializable) elementList);
         }
-//        if (DebugHelper.DEBUG_MODE) {
-//            System.out.println("time: " +agentInfo.getTime() + ", agent: "+agentInfo.getID()+" find "+result.size()+" hydrants are occupied. They are "+result +
-//                    ". available hydrants: "+ availableHydrants);
-//        }
         if (this.refillFlag)
         {
             this.result = this.calcRefill(agent, this.pathPlanning, this.target);
-            if (this.result != null)
+            if (this.result != null && result instanceof ActionRefill)
             {
                 messageManager.addMessage(new MessageFireBrigade(false, ((FireBrigade) agentInfo.me()),
                         MessageFireBrigade.ACTION_REFILL, agent.getPosition()));
@@ -236,15 +232,6 @@ public class ActionFireFighting extends ExtAction
             //不需要补水时每个时刻重置没被占用的hydrant
              resetAvailableHydrants();
         }
-
-//        if (this.needRest(agent))
-//        {
-//            this.result = this.calcRefugeAction(agent, this.pathPlanning, this.target, false);
-//            if (this.result != null)
-//            {
-//                return this;
-//            }
-//        }
 
         if (this.target == null) {
             return this;
@@ -257,19 +244,13 @@ public class ActionFireFighting extends ExtAction
     /**
      * crf:火警不同情况的判断以及设定target等。
      */
-    private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {/*System.out.println("\n********fireExtinguish00000*******\n");*/
+    private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {
         EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
 
 
         // TODO 灭火位置的选取
-//        System.out.println();
         if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(target)) < this.maxExtinguishDistance ) {
-//            System.out.println(agentInfo.getID()+" 当前水量："+agent.getWater()+" 灭火水量："+this.calcExtinguishTargetWater(target));
-
-            Pair<Integer, Integer> locationAgentPosition =  this.worldInfo.getLocation(positionEntity);
-            Pair<Integer, Integer> locationAgentTarget =  this.worldInfo.getLocation(this.worldInfo.getEntity(target));
-            Pair<Integer, Integer> locationAgent =  this.worldInfo.getLocation(agentInfo.me());
 
 //            //灭同一个建筑，但是水不减，说明那个建筑烧没了
 //            if (lastTimeExtinguished && waterHistory.get(waterHistory.size() - 1).equals(waterHistory.get(waterHistory.size() - 2)) &&
@@ -473,8 +454,10 @@ public class ActionFireFighting extends ExtAction
         //如果自己之前在这里补水，且还没满，就接着补水
         if (world.getSelfPosition() instanceof Refuge || world.getSelfPosition() instanceof Hydrant &&
                 waterHistory.size() >= 2 &&
-                this.waterHistory.get(waterHistory.size()-1) > this.waterHistory.get(waterHistory.size()-2)) {
-            System.out.println("water history: "+waterHistory);
+                this.waterHistory.get(waterHistory.size() - 1) > this.waterHistory.get(waterHistory.size() - 2)) {
+            if (CSUConstants.DEBUG_WATER_REFILL) {
+                System.out.println("water history: " + waterHistory);
+            }
             return new ActionRefill();
         }
         return calcRefugeAndHydrantAction(agent, pathPlanning, target);
@@ -766,6 +749,11 @@ public class ActionFireFighting extends ExtAction
         }
         waterHistory.add(agentInfo.getWater());
     }
+
+    public int getWaterHistory(Integer time) {
+        return waterHistory.get(time - 1);
+    }
+
 }
 
 
