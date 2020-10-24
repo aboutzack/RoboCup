@@ -480,8 +480,8 @@ public class CSURoad {
 					}
 				}
 				blockadePartPoints.add(new Pair<>(blockadePartStart, edgeEnd));
-			} else {//可能是在中间堵住edge或者和edge没有接触
-				if (!intersections.isEmpty()) {
+			} else {//可能是在中间堵住edge或者和edge没有接触,至少需要两个接触点
+				if (!intersections.isEmpty() && intersections.size() > 1) {
 					//两点之间是不能通过的区域
 					Pair<Point2D, Point2D> twoFarthestPoints = getTwoFarthestPoints(intersections);
 					double distanceToFirst = Ruler.getDistance(edgeStart, twoFarthestPoints.first());
