@@ -22,6 +22,7 @@ public interface CSUConstants {
     public static final double MEAN_VELOCITY_DISTANCE = 31445.392;
     public static final int AGENT_SIZE = 1000;
     public static final int AGENT_PASSING_THRESHOLD = 725;
+    public static final int AGENT_PASSING_THRESHOLD_SMALL = 500;
     public static final int AGENT_MINIMUM_PASSING_THRESHOLD = 200;
     public static final int COLLINEAR_THRESHOLD = 10;
     public static final int TOO_SMALL_EDGE_THRESHOLD = 600;

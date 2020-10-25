@@ -105,10 +105,10 @@ public class CSURoad {
 						List<CSUBlockade> blockedEnd = new ArrayList<>();
 						for (CSUBlockade csuBlockade : csuBlockades) {
 
-							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getStart()) < CSUConstants.AGENT_PASSING_THRESHOLD) {
+							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getStart()) < CSUConstants.AGENT_PASSING_THRESHOLD_SMALL) {
 								blockedStart.add(csuBlockade);
 							}
-							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getEnd()) < CSUConstants.AGENT_PASSING_THRESHOLD) {
+							if (Ruler.getDistance(csuBlockade.getPolygon(), csuEdge.getEnd()) < CSUConstants.AGENT_PASSING_THRESHOLD_SMALL) {
 								blockedEnd.add(csuBlockade);
 							}
 						}
@@ -121,7 +121,7 @@ public class CSURoad {
 						} else {
 							for (CSUBlockade block1 : blockedStart) {
 								for (CSUBlockade block2 : blockedEnd) {
-									if (Util.isPassable(block1.getPolygon(), block2.getPolygon(), CSUConstants.AGENT_PASSING_THRESHOLD)) {
+									if (Util.isPassable(block1.getPolygon(), block2.getPolygon(), CSUConstants.AGENT_PASSING_THRESHOLD_SMALL)) {
 										csuEdge.setBlocked(true);
 										block1.addBlockedEdges(csuEdge);
 										block2.addBlockedEdges(csuEdge);
@@ -134,7 +134,7 @@ public class CSURoad {
 						for (CSUBlockade csuBlockade : csuBlockades) {
 							double distance = Ruler.getDistance(csuEdge.getLine(), csuBlockade.getPolygon());
 
-							if (distance < CSUConstants.AGENT_PASSING_THRESHOLD) {
+							if (distance < CSUConstants.AGENT_PASSING_THRESHOLD_SMALL) {
 								csuEdge.setBlocked(true);
 								csuBlockade.addBlockedEdges(csuEdge);
 							}
