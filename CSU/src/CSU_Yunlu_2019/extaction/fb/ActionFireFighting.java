@@ -222,8 +222,9 @@ public class ActionFireFighting extends ExtAction
         if (this.refillFlag)
         {
             this.result = this.calcRefill(agent, this.pathPlanning, this.target);
-            if (this.result != null && result instanceof ActionRefill)
+            if (this.result != null)
             {
+                if (this.result instanceof ActionRefill)
                 messageManager.addMessage(new MessageFireBrigade(false, ((FireBrigade) agentInfo.me()),
                         MessageFireBrigade.ACTION_REFILL, agent.getPosition()));
                 return this;
