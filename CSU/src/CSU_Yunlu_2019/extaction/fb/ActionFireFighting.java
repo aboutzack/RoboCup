@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.extaction.fb;
 
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
+import CSU_Yunlu_2019.module.complex.fb.search.SearchHelper;
 import CSU_Yunlu_2019.standard.DistanceComparator;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
@@ -60,6 +61,7 @@ public class ActionFireFighting extends ExtAction
 
     private ExtAction actionExtMove;
     private CSUWorldHelper world;
+    private SearchHelper searchHelper;
 
     public ActionFireFighting(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData) {
         super(agentInfo, worldInfo, scenarioInfo, moduleManager, developData);
@@ -97,6 +99,7 @@ public class ActionFireFighting extends ExtAction
         } else {
             world = moduleManager.getModule("WorldHelper.Default", CSUConstants.WORLD_HELPER_DEFAULT);
         }
+        searchHelper = moduleManager.getModule("SearchHelper.Default", "CSU_Yunlu_2019.module.complex.fb.search.SearchHelper");
     }
 
     @Override
@@ -235,6 +238,12 @@ public class ActionFireFighting extends ExtAction
         }
 
         if (this.target == null) {
+            return this;
+        }
+
+        //to search
+        if (worldInfo.getEntity(target) instanceof Building && searchHelper.isTimeToSearch(target)) {
+            this.result = null;
             return this;
         }
 

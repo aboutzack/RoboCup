@@ -4,8 +4,10 @@ import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.geom.PolygonScaler;
 import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
+import CSU_Yunlu_2019.module.complex.fb.tools.FileEntityIDMap;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.standard.simplePartition.Line;
+import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.graph.GraphHelper;
 import CSU_Yunlu_2019.world.graph.MyEdge;
 import CSU_Yunlu_2019.world.object.*;
@@ -28,6 +30,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
+import java.io.*;
 import java.util.List;
 import java.util.*;
 
@@ -63,6 +66,8 @@ public class CSUWorldHelper extends AbstractModule {
     protected Map<EntityID, CSUBuilding> csuBuildingMap;
     protected Map<EntityID, CSURoad> csuRoadMap;
     protected Map<EntityID, CSUHydrant> csuHydrantMap;
+    protected Map<String, Building> buildingXYMap;
+
 
     // map informs
     protected int minX, maxX, minY, maxY;
@@ -75,6 +80,7 @@ public class CSUWorldHelper extends AbstractModule {
     protected boolean isMapHuge = false; // TODO: 3/8/20 根据mapSize制定灭火策略
     protected boolean isMapMedium = false;
     protected boolean isMapSmall = false;
+    private long uniqueMapNumber;
 
     // communication conditions
     protected boolean communicationLess = false;     //不能进行无线电通讯
@@ -87,6 +93,9 @@ public class CSUWorldHelper extends AbstractModule {
 
     //sub modules
     protected GraphHelper graph;
+
+    //for search
+    private EntityID searchTarget;
 
     public CSUWorldHelper(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -116,6 +125,7 @@ public class CSUWorldHelper extends AbstractModule {
         csuBuildingMap = new HashMap<>();
         csuRoadMap = new HashMap<>();
         csuHydrantMap = new HashMap<>();
+        buildingXYMap = new HashMap<>();
 
         config = new ConfigConstants(scenarioInfo.getRawConfig(), this);
         graph = moduleManager.getModule("GraphHelper.Default", CSUConstants.GRAPH_HELPER_DEFAULT);
@@ -138,6 +148,7 @@ public class CSUWorldHelper extends AbstractModule {
             return this;
         }
         graph.precompute(precomputeData);
+        processVisibilityData(true);
         return this;
     }
 
@@ -148,6 +159,7 @@ public class CSUWorldHelper extends AbstractModule {
             return this;
         }
         graph.resume(precomputeData);
+        processVisibilityData(false);
         return this;
     }
 
@@ -158,6 +170,7 @@ public class CSUWorldHelper extends AbstractModule {
             return this;
         }
         graph.preparate();
+        processVisibilityData(false);
         return this;
     }
 
@@ -211,6 +224,7 @@ public class CSUWorldHelper extends AbstractModule {
                 if (building.isOnFire()) {
                     csuBuilding.setIgnitionTime(agentInfo.getTime());
                 }
+                csuBuilding.setLastSeenTime(agentInfo.getTime());
 
             } else if (entity instanceof Road) {
                 Road road = (Road) entity;
@@ -261,7 +275,23 @@ public class CSUWorldHelper extends AbstractModule {
         this.mapWidth = mapDimension.getWidth();
         this.mapHeight = mapDimension.getHeight();
         this.mapDiameter = Math.sqrt(Math.pow(this.mapWidth, 2.0) + Math.pow(this.mapHeight, 2.0));
+        initMapUniqueNumber();
         initMapSize();
+    }
+
+    private void initMapUniqueNumber() {
+        long sum = 0;
+        for (StandardEntity building : getBuildingsWithURN(worldInfo)) {
+            Building b = (Building) building;
+            int[] ap = b.getApexList();
+            for (int anAp : ap) {
+                if (Long.MAX_VALUE - sum <= anAp) {
+                    sum = 0;
+                }
+                sum += anAp;
+            }
+        }
+        uniqueMapNumber = sum;
     }
 
     private void initMapSize() {
@@ -305,6 +335,7 @@ public class CSUWorldHelper extends AbstractModule {
             CSUBuilding csuBuilding;
             Building building = (Building) entity;
             String xy = building.getX() + "," + building.getY();
+            buildingXYMap.put(xy, building);
             csuBuilding = new CSUBuilding(entity, this);
 
             if (entity instanceof Refuge || entity instanceof PoliceOffice
@@ -1061,5 +1092,136 @@ public class CSUWorldHelper extends AbstractModule {
             result.add(getEntity(next));
         }
         return result;
+    }
+
+    /**
+     * 初始化一个area可以从哪看到和在一个area可以看到哪些area
+     */
+    public void processVisibilityData(boolean isPrecompute) {
+
+        String visibleFromFileName = CSUConstants.PRECOMPUTE_DIRECTORY + this.getUniqueMapNumber() + ".vif";
+        String observableAreasFileName = CSUConstants.PRECOMPUTE_DIRECTORY + this.getUniqueMapNumber() + ".oba";
+
+        if (new File(visibleFromFileName).exists() && new File(observableAreasFileName).exists() &&
+                !isPrecompute) {
+            Thread loader = new Thread() {
+                @Override
+                public void run() {
+                    loadVisibilityData(visibleFromFileName, observableAreasFileName);
+                }
+            };
+            loader.start();
+        } else {
+            FileEntityIDMap visibleFrom = new FileEntityIDMap();
+            FileEntityIDMap observableAreas = new FileEntityIDMap();
+
+            CSULineOfSightPerception lineOfSightPerception = new CSULineOfSightPerception(this);
+
+
+            Collection<CSURoad> allRoads = this.getCSURoads();
+            Collection<CSUBuilding> allBuildings = this.getCSUBuildings();
+
+            for (CSURoad road : allRoads) {
+                road.setObservableAreas(lineOfSightPerception.getVisibleAreas(road.getId()));
+                observableAreas.put(road.getId().getValue(), Util.fetchIdValueFromElementIds(road.getObservableAreas()));
+            }
+            for (CSUBuilding building : allBuildings) {
+                building.setObservableAreas(lineOfSightPerception.getVisibleAreas(building.getId()));
+                observableAreas.put(building.getId().getValue(), Util.fetchIdValueFromElementIds(building.getObservableAreas()));
+            }
+
+            for (CSURoad road1 : allRoads) {
+                for (CSURoad road2 : allRoads) {
+                    if (road1.equals(road2)) continue;
+                    if (road2.getObservableAreas().contains(road1.getId())) {
+                        road1.getVisibleFrom().add(road2.getId());
+
+                    }
+                }
+                for (CSUBuilding building : allBuildings) {
+                    if (building.getObservableAreas().contains(road1.getId())) {
+                        road1.getVisibleFrom().add(building.getId());
+                    }
+                }
+                visibleFrom.put(road1.getId().getValue(), Util.fetchIdValueFromElementIds(road1.getVisibleFrom()));
+            }
+            for (CSUBuilding building1 : allBuildings) {
+                for (CSUBuilding building2 : allBuildings) {
+                    if (building1.equals(building2)) continue;
+                    if (building2.getObservableAreas().contains(building1.getId())) {
+                        building1.getVisibleFrom().add(building2.getId());
+
+                    }
+                }
+                for (CSURoad road : allRoads) {
+                    if (road.getObservableAreas().contains(building1.getId())) {
+                        building1.getVisibleFrom().add(road.getId());
+                    }
+                }
+                visibleFrom.put(building1.getId().getValue(), Util.fetchIdValueFromElementIds(building1.getVisibleFrom()));
+            }
+
+            try {
+                if (isPrecompute) {
+                    Util.writeObject(observableAreas, observableAreasFileName);
+                    Util.writeObject(visibleFrom, visibleFromFileName);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private Collection<CSUBuilding> getCSUBuildings() {
+        return csuBuildingMap.values();
+    }
+
+    private Collection<CSURoad> getCSURoads() {
+        return csuRoadMap.values();
+    }
+
+    private void loadVisibilityData(String visibleFromFileName, String observableAreasFileName) {
+        try {
+            FileEntityIDMap visibleFrom = (FileEntityIDMap) Util.readObject(visibleFromFileName);
+            FileEntityIDMap observableArea = (FileEntityIDMap) Util.readObject(observableAreasFileName);
+            for (Integer next : visibleFrom.keySet()) {
+                CSURoad road = this.getCsuRoad(new EntityID(next));
+                if (road != null) {
+                    road.setVisibleFrom(Util.fetchEntityIdFromIdValues(visibleFrom.get(next)));
+                } else {
+                    CSUBuilding building = this.getCsuBuilding(new EntityID(next));
+                    building.setVisibleFrom(Util.fetchEntityIdFromIdValues(visibleFrom.get(next)));
+                }
+            }
+            for (Integer next : observableArea.keySet()) {
+                CSURoad road = this.getCsuRoad(new EntityID(next));
+                if (road != null) {
+                    road.setObservableAreas(new ArrayList<>(Util.fetchEntityIdFromIdValues(observableArea.get(next))));
+                } else {
+                    CSUBuilding building = this.getCsuBuilding(new EntityID(next));
+                    building.setObservableAreas(new ArrayList<>(Util.fetchEntityIdFromIdValues(observableArea.get(next))));
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public long getUniqueMapNumber() {
+        return uniqueMapNumber;
+    }
+
+
+    public void setSearchTarget(EntityID searchTarget) {
+        this.searchTarget = searchTarget;
+    }
+
+    public EntityID getSearchTarget() {
+        return searchTarget;
+    }
+
+    public Building getBuildingInPoint(int x, int y) {
+        String xy = x + "," + y;
+        return buildingXYMap.get(xy);
     }
 }

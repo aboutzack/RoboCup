@@ -1,15 +1,20 @@
 package CSU_Yunlu_2019.world.object;
 
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.module.complex.fb.tools.FbUtilities;
 import CSU_Yunlu_2019.util.Util;
-import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
+import adf.launcher.ConfigKey;
 import javolution.util.FastSet;
 import rescuecore2.log.Logger;
+import rescuecore2.misc.Pair;
+import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
+import java.awt.geom.Line2D;
+import java.io.Serializable;
 import java.util.*;
 
 public class CSUBuilding {
@@ -85,12 +90,18 @@ public class CSUBuilding {
 	private double advantageRatio;
 
 	private boolean isVisible = false;
-	
+	private double hitRate = 0;
+	protected int totalHits; // totalHits * 1.0 / totalRays
+	private int lastSeenTime; //上次看到的时间
+
+
 
 	public static final EnumSet<StandardEntityConstants.Fieryness> ESTIMATED_BURNING = EnumSet
 			.of(StandardEntityConstants.Fieryness.HEATING,
 					StandardEntityConstants.Fieryness.BURNING,
 					StandardEntityConstants.Fieryness.INFERNO);
+	private Set<EntityID> visibleFrom;	//可以看到building的entity的ids
+	private List<CSULineOfSightPerception.CsuRay> lineOfSight;
 
 	public CSUBuilding() {
 		// do nothing
@@ -109,7 +120,20 @@ public class CSUBuilding {
 
 		this.lineOfSightPerception = new CSULineOfSightPerception(worldHelper);
 
+		if (DebugHelper.DEBUG_MODE && !worldHelper.getScenarioInfo().getRawConfig().getBooleanValue(ConfigKey.KEY_PRECOMPUTE, false)) {
+			Pair<Integer, Integer> location = worldHelper.getLocation(selfBuilding.getID());
+			Point2D point2D = new Point2D(location.first(), location.second());
+			Set<CSULineOfSightPerception.CsuRay> allRays = lineOfSightPerception.findRaysNotHit(point2D, new HashSet<>());
+			ArrayList<Line2D> elements = new ArrayList<>();
+			for (CSULineOfSightPerception.CsuRay allRay : allRays) {
+				rescuecore2.misc.geometry.Line2D ray = allRay.getRay();
+				elements.add(Util.convertLine2(ray));
+			}
+			DebugHelper.VD_CLIENT.drawAsync(entity.getID().getValue(), "LineOfSightLayer", elements);
+		}
+
 		this.visited = false;
+		this.visibleFrom = new HashSet<>();
 
 		this.initWalls(worldHelper);
 		this.initSimulatorValues();
@@ -173,10 +197,11 @@ public class CSUBuilding {
 	 * 
 	 * @param fireBrigadeWorld
 	 */
-	public void initWallValue(CSUFireBrigadeWorld fireBrigadeWorld) {
+	public void initWallValue(CSUWorldHelper worldHelper) {
 		int totalRays = 0; // total number of rays this building emitted
 		for (CSUWall wall : this.walls) {
 			wall.findHits(this);
+			totalHits += wall.hits;
 			totalRays += wall.rays;
 		}
 
@@ -188,6 +213,7 @@ public class CSUBuilding {
 			this.connectedBuildings.add(building);
 			this.connectedValues.add(value / (float) totalRays);
 		}
+		hitRate = totalHits * 1.0 / totalRays;
 	}
 
 	/** Get total radiated value to other buildings. */
@@ -1015,5 +1041,49 @@ public class CSUBuilding {
 				break;
 		}
 	}
-	
+
+	public Set<EntityID> getVisibleFrom() {
+		return visibleFrom;
+	}
+
+	public void setVisibleFrom(Set<EntityID> visibleFrom) {
+		this.visibleFrom = visibleFrom;
+		this.visibleFrom.add(this.getId());
+		if (DebugHelper.DEBUG_MODE && !worldHelper.getScenarioInfo().getRawConfig().getBooleanValue(ConfigKey.KEY_PRECOMPUTE, false)) {
+			List<Integer> elementIds = Util.fetchIdValueFromElementIds(visibleFrom);
+			DebugHelper.VD_CLIENT.drawAsync(this.getId().getValue(), "VisibleFromAreas", (Serializable) elementIds);
+		}
+	}
+
+	public void setObservableAreas(List<EntityID> observableAreas) {
+		this.observableAreas = observableAreas;
+		if (DebugHelper.DEBUG_MODE && !worldHelper.getScenarioInfo().getRawConfig().getBooleanValue(ConfigKey.KEY_PRECOMPUTE, false)) {
+			List<Integer> elementIds = Util.fetchIdValueFromElementIds(observableAreas);
+			DebugHelper.VD_CLIENT.drawAsync(this.getId().getValue(), "ObservableAreas", (Serializable) elementIds);
+		}
+	}
+
+	public void setLineOfSight(List<CSULineOfSightPerception.CsuRay> lineOfSight) {
+		this.lineOfSight = lineOfSight;
+	}
+
+	public List<CSULineOfSightPerception.CsuRay> getLineOfSight() {
+		return lineOfSight;
+	}
+
+	public double getHitRate() {
+		return hitRate;
+	}
+
+	public void setHitRate(double hitRate) {
+		this.hitRate = hitRate;
+	}
+
+	public int getLastSeenTime() {
+		return lastSeenTime;
+	}
+
+	public void setLastSeenTime(int lastSeenTime) {
+		this.lastSeenTime = lastSeenTime;
+	}
 }

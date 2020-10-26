@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.extaction;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import CSU_Yunlu_2019.module.complex.fb.tools.FbUtilities;
 import CSU_Yunlu_2019.standard.Ruler;
@@ -11,6 +12,7 @@ import CSU_Yunlu_2019.world.object.CSULineOfSightPerception;
 import CSU_Yunlu_2019.world.object.CSURoad;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
+import com.mrl.debugger.remote.dto.StuckDto;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
@@ -22,6 +24,7 @@ import rescuecore2.worldmodel.EntityID;
 import java.awt.*;
 import java.util.List;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author: Guanyu-Cai
@@ -78,19 +81,26 @@ public class StuckHelper {
         }
 
         Line2D guideLine = new Line2D(locationPoint, openPartCenter);
+        Point2D target = null;
+        Set<Set<CSULineOfSightPerception.CsuRay>> raysNotHits = new HashSet<>();
+        Set<CSULineOfSightPerception.CsuRay> raysNotHit1 = new HashSet<>();
+        //逃脱点有效的位置,包括当前道路和openPart相对的道路
+        Collection<CSURoad> targetValidRoads = new HashSet<>();
         //尝试直接走到openPartCenter下一个身位的位置
         if (!Util.hasIntersectLine(blockadesConvexHull.getConvexPolygon(), guideLine)) {//由于使用了凸包,会漏判一些实际能走的情况
 //            //延长AGENT_SIZE的长度
 //            Point2D endPoint = Util.improveLine(guideLine, CSUConstants.AGENT_SIZE).getEndPoint();
             //延长至视线末端
-            Point2D endPoint = Util.clipLine(guideLine, world.getConfig().maxRayDistance).getEndPoint();
-            if (CSUConstants.DEBUG_STUCK_HELPER) {
-                System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + endPoint + " planPath(0): " + path.get(0));
+            target = Util.clipLine(guideLine, world.getConfig().maxRayDistance).getEndPoint();
+            //如果超出了地图范围
+            if (target.getX() > world.getMaxX() || target.getX() < 0 || target.getY() > world.getMaxY() || target.getY() < 0) {
+                target = Util.improveLine(guideLine, CSUConstants.AGENT_SIZE).getEndPoint();
             }
-            return moveToPoint(endPoint);
+            if (CSUConstants.DEBUG_STUCK_HELPER) {
+                System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + target + " planPath(0): " + path.get(0));
+            }
+//            return moveToPoint(target);
         } else {//guideLine被挡住
-            //逃脱点有效的位置,包括当前道路和openPart相对的道路
-            Collection<CSURoad> targetValidRoads = new HashSet<>();
             CSURoad csuRoad = world.getCsuRoad(selfPosition);
             targetValidRoads.add(csuRoad);
             CSURoad oppositePassableEdgeRoad = csuRoad.getOppositePassableEdgeRoad(targetEdge);
@@ -100,11 +110,10 @@ public class StuckHelper {
 
             //a large number
             int distance = 300000;
-            Set<CSULineOfSightPerception.CsuRay> raysNotHit1 = lineOfSightPerception.findRaysNotHit(locationPoint, nearBlockades, distance);
+            raysNotHit1 = lineOfSightPerception.findRaysNotHit(locationPoint, nearBlockades, distance);
             Set<CSULineOfSightPerception.CsuRay> raysNotHit2 = lineOfSightPerception.findRaysNotHit(openPartCenter, nearBlockades, distance);
             Set<CSULineOfSightPerception.CsuRay> raysNotHit3 = lineOfSightPerception.findRaysNotHit(edgeStart, nearBlockades, distance);
             Set<CSULineOfSightPerception.CsuRay> raysNotHit4 = lineOfSightPerception.findRaysNotHit(edgeEnd, nearBlockades, distance);
-            Set<Set<CSULineOfSightPerception.CsuRay>> raysNotHits = new HashSet<>();
             raysNotHits.add(raysNotHit2);
             raysNotHits.add(raysNotHit3);
             raysNotHits.add(raysNotHit4);
@@ -115,12 +124,34 @@ public class StuckHelper {
                     if (CSUConstants.DEBUG_STUCK_HELPER) {
                         System.out.println(world.getSelfHuman().getID() + " stuckHelper succeed to point " + validIntersections.get(0) + " planPath(0): " + path.get(0));
                     }
-                    Point2D target = Util.improveLine(new Line2D(locationPoint, validIntersections.get(0)), CSUConstants.AGENT_PASSING_THRESHOLD).getEndPoint();
-                    return moveToPoint(target);
+                    target = Util.improveLine(new Line2D(locationPoint, validIntersections.get(0)), CSUConstants.AGENT_PASSING_THRESHOLD).getEndPoint();
+//                    return moveToPoint(target);
                 }
             }
         }
-        return null;
+        if (DebugHelper.DEBUG_MODE) {
+            StuckDto stuckDto = new StuckDto();
+            if (target != null) {
+                stuckDto.setAgentId(world.getSelfHuman().getID().getValue());
+                stuckDto.setBlockadesConvexHull(blockadesConvexHull.getConvexPolygon());
+                stuckDto.setTarget(Util.convertPoint(target));
+                stuckDto.setGuideLine(Util.convertLine2(guideLine));
+                HashSet<java.awt.geom.Line2D> line2DS = new HashSet<>();
+                for (Set<CSULineOfSightPerception.CsuRay> e : raysNotHits) {
+                    line2DS.addAll(e.stream().map(a -> new java.awt.geom.Line2D.Double(a.getRay().getOrigin().getX(), a.getRay().getOrigin().getY(),
+                            a.getRay().getEndPoint().getX(), a.getRay().getEndPoint().getY())).collect(Collectors.toSet()));
+                }
+                HashSet<java.awt.geom.Line2D> selfLine2DS = new HashSet<>();
+                selfLine2DS.addAll(raysNotHit1.stream().map(a -> new java.awt.geom.Line2D.Double(a.getRay().getOrigin().getX(), a.getRay().getOrigin().getY(),
+                        a.getRay().getEndPoint().getX(), a.getRay().getEndPoint().getY())).collect(Collectors.toSet()));
+                stuckDto.setRaysNotHits(line2DS);
+                stuckDto.setSelfRaysNotHits(selfLine2DS);
+                stuckDto.setOpenPartCenter(Util.convertPoint(openPartCenter));
+                stuckDto.setTargetValidRoads(Util.fetchIdValueFromElementIds(targetValidRoads.stream().map(CSURoad::getId).collect(Collectors.toSet())));
+            }
+            DebugHelper.VD_CLIENT.drawAsync(world.getSelfHuman().getID().getValue(), "StuckDtoLayer", stuckDto);
+        }
+        return moveToPoint(target);
     }
 
     /**
@@ -174,6 +205,9 @@ public class StuckHelper {
     }
 
     private Action moveToPoint(Point2D target) {
+        if (target == null) {
+            return null;
+        }
         List<EntityID> path = new ArrayList<>();
         path.add(world.getSelfPosition().getID());
         return new ActionMove(path, (int) target.getX(), (int) target.getY());

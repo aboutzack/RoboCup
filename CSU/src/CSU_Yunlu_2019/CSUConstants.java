@@ -29,4 +29,6 @@ public interface CSUConstants {
     public static final int ROAD_PASSABLY_RESET_TIME_IN_SMALL_MAP = 15;
     public static final int ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP = 20;
     public static final int ROAD_PASSABLY_RESET_TIME_IN_HUGE_MAP = 25;
+
+    public static final String PRECOMPUTE_DIRECTORY = "precomp_data/";
 }

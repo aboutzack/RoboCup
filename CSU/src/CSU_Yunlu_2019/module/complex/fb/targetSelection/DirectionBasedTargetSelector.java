@@ -14,6 +14,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * First we find the expand direction of the specified fire cluster. Then We get
@@ -47,6 +48,16 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings;
             sortedBuildings = this.calculateValue((FireCluster) targetCluster);
             sortedBuildings = fbUtilities.reRankBuildings(sortedBuildings, (FireBrigade) selfHuman);
+
+            //去除所有认为未着火的
+            Set<EntityID> changedEntities = world.getWorldInfo().getChanged().getChangedEntities();
+            sortedBuildings = sortedBuildings.stream().filter(e -> {
+                EntityID id = e.first().first();
+                return world.getEntity(id, Building.class).isTemperatureDefined() &&
+                        world.getEntity(id, Building.class).getTemperature() > 40 &&
+                        world.getEntity(id, Building.class).isFierynessDefined() &&
+                        world.getEntity(id, Building.class).getFieryness() != 8;
+            }).collect(Collectors.toCollection(() -> new TreeSet<>(fbUtilities.pairComparator_new)));
 
             if (sortedBuildings != null && !sortedBuildings.isEmpty()) {
                 this.target = world.getCsuBuilding(sortedBuildings.first().first().first());

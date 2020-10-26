@@ -12,6 +12,7 @@ import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.DynamicClustering;
 import adf.component.module.algorithm.PathPlanning;
@@ -19,6 +20,7 @@ import math.geom2d.polygon.SimplePolygon2D;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Building;
+import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
@@ -41,6 +43,7 @@ public class CSUFireClustering extends DynamicClustering {
     private ScenarioInfo scenarioInfo;
     private AgentInfo agentInfo;
     private CSUWorldHelper world;
+    private ExtAction actionFireFighting;
 
     public CSUFireClustering(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -65,6 +68,7 @@ public class CSUFireClustering extends DynamicClustering {
                 break;
         }
         world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+        actionFireFighting = moduleManager.getExtAction("TacticsFireBrigade.ActionFireFighting", "adf.sample.extaction.ActionFireFighting");
     }
 
     @Override
@@ -140,11 +144,29 @@ public class CSUFireClustering extends DynamicClustering {
         Cluster cluster;
         Cluster tempCluster;
         Set<Cluster> adjacentClusters = new HashSet<>();
-        for (StandardEntity entity : CSUWorldHelper.getBuildingsWithURN(worldInfo)) {
+        Collection<StandardEntity> consideredBuildings = CSUWorldHelper.getBuildingsWithURN(worldInfo);
+        EntityID withoutConsiderBuilding = null; //不考虑划入cluster的房子
+//        if (actionFireFighting instanceof ActionFireFighting && agentInfo.getTime() > 1) {
+//            Action lastTimeAction = agentInfo.getExecutedAction(agentInfo.getTime() - 1);
+//            int lastTimeWater = ((ActionFireFighting) actionFireFighting).getWaterHistory(agentInfo.getTime() - 1);
+//            if (lastTimeAction instanceof ActionExtinguish && lastTimeWater == agentInfo.getWater()) {
+//                //上次灭火失败了,不考虑上次的target了
+//                withoutConsiderBuilding = ((ActionExtinguish) lastTimeAction).getTarget();
+////                //因为求凸包后可能会再将这个target包含进cluster,所以设置这个房子的fireness为8
+//                Building building = (Building) worldInfo.getEntity(withoutConsiderBuilding);
+//                CSUBuilding csuBuilding = world.getCsuBuilding(withoutConsiderBuilding);
+//                building.setFieryness(8);
+//                building.setTemperature(0);
+//                csuBuilding.updateValues(building);
+//            }
+//        }
+        for (StandardEntity entity : consideredBuildings) {
             Building building = (Building) entity;
             //生成新的cluster或者合并进已有的cluster
             if (building.isFierynessDefined() && building.getFieryness() != 8
-                    && building.isTemperatureDefined() && building.getTemperature() > 50) {
+                    && building.isTemperatureDefined() && building.getTemperature() > 50
+                    && ! (building instanceof Refuge)
+                    && !(building.getID().equals(withoutConsiderBuilding))) {
                 cluster = getCluster(building.getID());
                 //还未分配cluster
                 if (cluster == null) {

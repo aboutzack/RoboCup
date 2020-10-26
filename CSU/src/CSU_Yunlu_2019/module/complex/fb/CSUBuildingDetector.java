@@ -7,6 +7,7 @@ import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.ClusterSelectorType;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.DistanceBasedClusterSelector;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.IFireBrigadeClusterSelector;
+import CSU_Yunlu_2019.module.complex.fb.search.SearchHelper;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.DirectionBasedTargetSelector;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.IFireBrigadeTargetSelector;
@@ -33,9 +34,8 @@ import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.io.Serializable;
+import java.util.*;
 
 public class CSUBuildingDetector extends BuildingDetector {
     private EntityID result;
@@ -48,6 +48,7 @@ public class CSUBuildingDetector extends BuildingDetector {
     private IFireBrigadeClusterSelector clusterSelector;
     private TargetSelectorType targetSelectorType = TargetSelectorType.DIRECTION_BASED;
     private IFireBrigadeTargetSelector targetSelector;
+    private SearchHelper searchHelper;
 
     public CSUBuildingDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -62,6 +63,7 @@ public class CSUBuildingDetector extends BuildingDetector {
                 this.clustering = moduleManager.getModule("SampleBuildingDetector.Clustering", "adf.sample.module.algorithm.SampleKMeans");
                 break;
         }
+        searchHelper = moduleManager.getModule("SearchHelper.Default", "CSU_Yunlu_2019.module.complex.fb.search.SearchHelper");
         this.world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
         world.setFireClustering((CSUFireClustering) clustering);
         registerModule(this.clustering);
@@ -76,7 +78,6 @@ public class CSUBuildingDetector extends BuildingDetector {
         if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
-
         this.reflectMessage(messageManager);
         this.clustering.updateInfo(messageManager);
         preProcessChangedEntities(messageManager);
@@ -133,12 +134,39 @@ public class CSUBuildingDetector extends BuildingDetector {
         setClusterSelector();
         setTargetSelector();
         FireCluster targetCluster = clusterSelector.selectCluster();
-        if (targetCluster != null) {
-            FireBrigadeTarget fireBrigadeTarget = targetSelector.selectTarget(targetCluster);
+        FireBrigadeTarget fireBrigadeTarget = targetSelector.selectTarget(targetCluster);
+        if (DebugHelper.DEBUG_MODE) {
+            ArrayList<Integer> elements = new ArrayList<>();
+            if (fireBrigadeTarget != null) {
+                elements.add(fireBrigadeTarget.getCsuBuilding().getId().getValue());
+            }
+            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "SampleBuildings", elements);
+        }
+        if (fireBrigadeTarget != null) {
             this.result = fireBrigadeTarget.getCsuBuilding().getId();
         } else {
-            // TODO: 3/9/20 没有着火房屋时，search重新根据距离分配cluster，防止search时大范围移动?
             this.result = null;
+            world.setSearchTarget(null);
+            return this;
+        }
+        boolean isTimeToSearch = searchHelper.isTimeToSearch(fireBrigadeTarget);
+        if (isTimeToSearch) {
+            searchHelper.setTarget(fireBrigadeTarget);
+            searchHelper.calc();
+            EntityID searchTarget = searchHelper.getResult();
+            world.setSearchTarget(searchTarget);
+            if (searchTarget != null) {
+                this.result = null;
+            }
+        } else {
+            world.setSearchTarget(null);
+        }
+        if (DebugHelper.DEBUG_MODE) {
+            List<Integer> elements = new ArrayList<>();
+            if (isTimeToSearch) {
+                elements.add(agentInfo.getID().getValue());
+            }
+            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "TimeToSearchFB", (Serializable) elements);
         }
         visualDebug();
         return this;

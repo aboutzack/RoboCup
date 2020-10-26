@@ -2,11 +2,14 @@ package CSU_Yunlu_2019.world;
 
 import CSU_Yunlu_2019.module.algorithm.fb.CSUFireClustering;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
+import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
+import adf.agent.precompute.PrecomputeData;
+import adf.component.module.AbstractModule;
 import javolution.util.FastSet;
 import rescuecore.Simulator;
 import rescuecore2.misc.Pair;
@@ -16,7 +19,10 @@ import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -30,9 +36,53 @@ public class CSUFireBrigadeWorld extends CSUWorldHelper{
     private CurrentState currentState = CurrentState.notExplored;
 
     private Set<CSUBuilding> estimatedBurningBuildings = new FastSet<CSUBuilding>();
+    private String buildingConnectedFilename;
 
     public CSUFireBrigadeWorld(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
+        buildingConnectedFilename = getUniqueMapNumber() + ".cnd";
+    }
+
+    @Override
+    public AbstractModule precompute(PrecomputeData precomputeData) {
+        super.precompute(precomputeData);
+        if (this.getCountPrecompute() >= 2) {
+            return this;
+        }
+        try {
+            long before = System.currentTimeMillis();
+            processConnected(PrecomputeData.PRECOMP_DATA_DIR.getAbsolutePath() + File.separator + buildingConnectedFilename);
+            long after = System.currentTimeMillis();
+            System.out.println("Creation of cnd took " + (after - before) + "ms");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    @Override
+    public CSUWorldHelper resume(PrecomputeData precomputeData) {
+        super.resume(precomputeData);
+        if (this.getCountResume() >= 2) {
+            return this;
+        }
+        loadCND(PrecomputeData.PRECOMP_DATA_DIR.getAbsolutePath() + File.separator + buildingConnectedFilename);
+        return this;
+    }
+
+    @Override
+    public CSUWorldHelper preparate() {
+        super.preparate();
+        if (this.getCountPreparate() >= 2) {
+            return this;
+        }
+        loadCND(PrecomputeData.PRECOMP_DATA_DIR.getAbsolutePath() + File.separator + buildingConnectedFilename);
+        return this;
+    }
+
+    @Override
+    public CSUWorldHelper updateInfo(MessageManager messageManager) {
+        return super.updateInfo(messageManager);
     }
 
     public Set<EntityID> getAreaInShape(Shape shape) {
@@ -190,5 +240,95 @@ public class CSUFireBrigadeWorld extends CSUWorldHelper{
 
     public void setFireClustering(CSUFireClustering fireClustering) {
         this.fireClustering = fireClustering;
+    }
+
+    private void loadCND(String fileName) {
+        File f = new File(fileName);
+        if (!f.exists() || !f.canRead()) {
+            processConnected();
+            return;
+        }
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(f));
+//            float rayDens = Float.parseFloat(br.readLine());
+            String nl;
+            while (null != (nl = br.readLine())) {
+                int x = Integer.parseInt(nl);
+                int y = Integer.parseInt(br.readLine());
+                int quantity = Integer.parseInt(br.readLine());
+                double hitRate = Double.parseDouble(br.readLine());
+                java.util.List<CSUBuilding> bl = new ArrayList<CSUBuilding>();
+                java.util.List<EntityID> bIDs = new ArrayList<EntityID>();
+                List<Float> weight = new ArrayList<Float>();
+                for (int c = 0; c < quantity; c++) {
+                    int ox = Integer.parseInt(br.readLine());
+                    int oy = Integer.parseInt(br.readLine());
+                    Building building =  getBuildingInPoint(ox, oy);
+                    if (building == null) {
+                        System.err.println("building not found: " + ox + "," + oy);
+                        br.readLine();
+                    } else {
+                        bl.add(getCsuBuilding(building.getID()));
+                        bIDs.add(building.getID());
+                        weight.add(Float.parseFloat(br.readLine()));
+                    }
+
+                }
+                Building b = getBuildingInPoint(x, y);
+                CSUBuilding building = getCsuBuilding(b.getID());
+                building.setConnectedBuildins(bl);
+                building.setConnectedValues(weight);
+                building.setHitRate(hitRate);
+            }
+            br.close();
+            System.out.println("Read from file:" + fileName);
+        } catch (IOException ex) {
+            processConnected();
+            ex.printStackTrace();
+        }
+    }
+
+    private void processConnected() {
+        System.out.println("  Init CND .... ");
+        getCsuBuildings().parallelStream().forEach(csuBuilding -> {
+            csuBuilding.initWallValue(this);
+        });
+    }
+
+    private void processConnected(String fileName) throws IOException {
+        System.out.println("  Creating CND Files .... ");
+        processConnected();
+        File f = new File(fileName);
+
+        f.delete();
+        f.createNewFile();
+
+        final BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+//        bw.write(rayRate + "\n");
+        getCsuBuildings().forEach(csuBuilding -> {
+
+            try {
+                bw.write(csuBuilding.getSelfBuilding().getX() + "\n");
+                bw.write(csuBuilding.getSelfBuilding().getY() + "\n");
+                bw.write(csuBuilding.getConnectedBuildings().size() + "\n");
+
+                bw.write(csuBuilding.getHitRate() + "\n");
+
+                for (int c = 0; c < csuBuilding.getConnectedBuildings().size(); c++) {
+                    CSUBuilding building = csuBuilding.getConnectedBuildings().get(c);
+                    Float val = csuBuilding.getConnectedValues().get(c);
+                    bw.write(building.getSelfBuilding().getX() + "\n");
+                    bw.write(building.getSelfBuilding().getY() + "\n");
+                    bw.write(val + "\n");
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+        });
+
+        bw.close();
+
+        System.out.println("CND is created.");
     }
 }

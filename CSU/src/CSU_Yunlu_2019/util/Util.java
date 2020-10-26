@@ -184,7 +184,17 @@ public class Util {
     }
 
     public static void writeObject(Object object, String filePath) throws IOException {
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(filePath));
+//		File file = new File(filePath);
+//		if (!file.exists()) {
+//			try {
+//				file.createNewFile();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		} else {
+//			file.
+//		}
+		ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(filePath));
         objectOutputStream.writeObject(object);
         objectOutputStream.close();
     }
@@ -587,6 +597,18 @@ public class Util {
 	}
 
 	/**
+	 * @Description: convert from rescuecore2.misc.geometry.Line2D to java.awt.geom.Line2D
+	 * @Author: CSU-zack
+	 */
+	public static java.awt.geom.Line2D convertLine2(Line2D line2D) {
+		double x1 = line2D.getOrigin().getX();
+		double y1 = line2D.getOrigin().getY();
+		double x2 = line2D.getEndPoint().getX();
+		double y2 = line2D.getEndPoint().getY();
+		return new java.awt.geom.Line2D.Double(x1, y1, x2, y2);
+	}
+
+	/**
 	 * @Description: 判断两条直线是否共线
 	 * @Author: Guanyu-Cai
 	 * @Date: 3/16/20
@@ -682,6 +704,14 @@ public class Util {
 			return elements.stream().map(AbstractEntity::getID).collect(Collectors.toList());
 		} catch (Exception ex) {
 			return new ArrayList<>();
+		}
+	}
+
+	public static Set<EntityID> fetchEntityIdFromIdValues(Collection<Integer> ids) {
+		try {
+			return ids.stream().map(EntityID::new).collect(Collectors.toSet());
+		} catch (Exception ex) {
+			return new HashSet<>();
 		}
 	}
 
@@ -857,4 +887,7 @@ public class Util {
 		return (int) Math.sqrt(dx * dx + dy * dy);
 	}
 
+	public static Point convertPoint(Point2D point2D) {
+		return new Point((int) point2D.getX(), (int) point2D.getY());
+	}
 }

@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.complex.fb.tools;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
+import javolution.util.FastMap;
 import javolution.util.FastSet;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.Area;
@@ -322,5 +323,86 @@ public class FbUtilities {
 			}
 		}
 		return newestIgniteBuilding;
+	}
+
+	public Set<EntityID> findMaximalCovering(Set<CSUBuilding> buildings) {
+		Map<EntityID, Set<CSUBuilding>> areasMap = new FastMap<EntityID, Set<CSUBuilding>>(); // visibleFrom - buildings
+		Map<CSUBuilding, Set<EntityID>> buildingsMap = new FastMap<CSUBuilding, Set<EntityID>>(); // building - visibleFroms
+
+
+		// fill buildings and possible areas map
+		for (CSUBuilding building : buildings) {
+			buildingsMap.put(building, new FastSet<EntityID>(building.getVisibleFrom()));
+			for (EntityID id : building.getVisibleFrom()) {
+				Set<CSUBuilding> bs = areasMap.get(id);
+				if (bs == null) {
+					bs = new FastSet<CSUBuilding>();
+				}
+				bs.add(building);
+				areasMap.put(id, bs);
+			}
+		}
+
+		// call maximal covering method
+
+
+		return processMatrix(buildingsMap, areasMap);
+	}
+
+	private Set<EntityID> processMatrix(Map<CSUBuilding, Set<EntityID>> buildingsMap, Map<EntityID, Set<CSUBuilding>> areasMap) {
+
+		//step one
+		Set<CSUBuilding> buildingsToRemove = new FastSet<CSUBuilding>();
+		int i = 0, j;
+		for (CSUBuilding building1 : buildingsMap.keySet()) {
+			j = 0;
+			if (!buildingsToRemove.contains(building1)) {
+				for (CSUBuilding building2 : buildingsMap.keySet()) {
+					if (i > j++ || building1.equals(building2) || buildingsToRemove.contains(building2)) { //continue;
+					} else if (buildingsMap.get(building1).containsAll(buildingsMap.get(building2))) {
+						buildingsToRemove.add(building1);
+					} else if (buildingsMap.get(building2).containsAll(buildingsMap.get(building1))) {
+						buildingsToRemove.add(building2);
+					}
+				}
+			}
+			i++;
+		}
+		for (CSUBuilding b : buildingsToRemove) {
+			buildingsMap.remove(b);
+			for (Set<CSUBuilding> bs : areasMap.values()) {
+				bs.remove(b);
+			}
+		}
+
+		// step two
+		i = 0;
+		Set<EntityID> areasToRemove = new FastSet<EntityID>();
+		for (EntityID area1 : areasMap.keySet()) {
+			j = 0;
+			if (!areasToRemove.contains(area1)) {
+				for (EntityID area2 : areasMap.keySet()) {
+					if (i > j++ || area1.equals(area2) || areasToRemove.contains(area2)) { //continue;
+					} else if (areasMap.get(area1).containsAll(areasMap.get(area2))) {
+						areasToRemove.add(area2);
+					} else if (areasMap.get(area2).containsAll(areasMap.get(area1))) {
+						areasToRemove.add(area1);
+					}
+				}
+			}
+			i++;
+		}
+		for (EntityID id : areasToRemove) {
+			areasMap.remove(id);
+			for (Set<EntityID> ids : buildingsMap.values()) {
+				ids.remove(id);
+			}
+		}
+
+		// call again
+		if (!areasToRemove.isEmpty() || !buildingsToRemove.isEmpty()) {
+			return processMatrix(buildingsMap, areasMap);
+		}
+		return areasMap.keySet();
 	}
 }

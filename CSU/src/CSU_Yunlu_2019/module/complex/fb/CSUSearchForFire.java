@@ -1,7 +1,9 @@
 package CSU_Yunlu_2019.module.complex.fb;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.Util;
+import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.information.*;
@@ -43,6 +45,7 @@ public class CSUSearchForFire extends Search {
 
 	private EntityID result;
 	private Logger logger;
+	private CSUWorldHelper world;
 
 	public CSUSearchForFire(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
@@ -56,17 +59,21 @@ public class CSUSearchForFire extends Search {
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
 						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == FIRE_BRIGADE) {
+				world = moduleManager.getModule("WorldHelper.Default", CSUConstants.WORLD_HELPER_DEFAULT);
+
+		} else if (agentURN == FIRE_BRIGADE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
 						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == POLICE_FORCE) {
+				world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+		} else if (agentURN == POLICE_FORCE) {
 				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
 						"adf.sample.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
 						"adf.sample.module.algorithm.SampleKMeans");
-			}
+				world = moduleManager.getModule("WorldHelper.FireBrigade", CSUConstants.WORLD_HELPER_FIRE_BRIGADE);
+		}
 		registerModule(this.clustering);
 		registerModule(this.pathPlanning);
 	}
@@ -100,6 +107,12 @@ public class CSUSearchForFire extends Search {
 
 	@Override
 	public Search calc() {
+		EntityID exploreTarget = world.getSearchTarget();
+		if (exploreTarget != null) {
+			this.result = exploreTarget;
+			return this;
+		}
+
 		this.result = null;
 		if (unsearchedRoadIDs.isEmpty()){
 			reset();
@@ -109,6 +122,10 @@ public class CSUSearchForFire extends Search {
 		List<EntityID> path = this.pathPlanning.calc().getResult();
 		if (path != null) {
 			this.result = path.get(path.size() - 1);
+		}
+		//可能在障碍物中间,但也有可能graphLayer存在误差
+		if (unsearchedRoadIDs != null && !unsearchedRoadIDs.isEmpty() && agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
+			this.result = unsearchedRoadIDs.get(agentInfo.getTime() % unsearchedRoadIDs.size());
 		}
 		visualDebug();
 		return this;

@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.extaction;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUSelectorTargetByDis;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.action.Action;
@@ -15,6 +16,7 @@ import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
 import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.PathPlanning;
+import com.mrl.debugger.remote.dto.StuckDto;
 import rescuecore2.config.NoSuchConfigOptionException;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
@@ -193,12 +195,14 @@ public class ActionExtMove extends ExtAction {
         if (!path.isEmpty() && !path.contains(world.getSelfPositionId())) {
             path.add(0, world.getSelfPositionId());
         }
-
-        if (agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil() && isStuck(path)) {
+        boolean stuckFlag = agentInfo.getTime() >= scenarioInfo.getKernelAgentsIgnoreuntil() && isStuck(path);
+        if (stuckFlag) {
             action = stuckHelper.calc(path);
             if (CSUConstants.DEBUG_STUCK_HELPER && action == null) {
                 System.out.println(world.getSelfHuman().getID() + " stuckHelper fail to path(0)" + path.get(0));
             }
+        } else if (DebugHelper.DEBUG_MODE) {
+            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "StuckDtoLayer", new StuckDto());
         }
         lastMoveTime = agentInfo.getTime();
         if (action == null) {

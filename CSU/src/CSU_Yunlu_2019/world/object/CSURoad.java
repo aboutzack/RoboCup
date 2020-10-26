@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.world.object;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.geom.ExpandApexes;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
@@ -9,6 +10,7 @@ import CSU_Yunlu_2019.world.graph.GraphHelper;
 import CSU_Yunlu_2019.world.graph.MyEdge;
 import CSU_Yunlu_2019.world.graph.Node;
 import adf.agent.info.AgentInfo;
+import adf.launcher.ConfigKey;
 import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
@@ -18,6 +20,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.awt.geom.Area;
+import java.io.Serializable;
 import java.util.List;
 import java.util.*;
 
@@ -50,6 +53,8 @@ public class CSURoad {
 	private int lastUpdateTime = 0;
 	private Polygon polygon;
 	private int passablyLastResetTime = 0;
+	private List<CSULineOfSightPerception.CsuRay> lineOfSight;
+	private Set<EntityID> visibleFrom;
 
 	/**
 	 * When {@link CSURoad#pfClearLines} is null, the roadCenterLine is null, too.
@@ -71,6 +76,8 @@ public class CSURoad {
 		this.csuEdges = createCsuEdges();
 
 		this.CLEAR_WIDTH = world.getConfig().repairRad;
+		this.lineOfSight = new ArrayList<>();
+		this.visibleFrom = new HashSet<>();
 		createPolygon();
 	}
 
@@ -1405,4 +1412,33 @@ public class CSURoad {
 	public List<CSUBlockade> getCsuBlockades() {
 		return this.csuBlockades;
 	}
+
+	public void setObservableAreas(List<EntityID> observableAreas) {
+		this.observableAreas = observableAreas;
+		if (DebugHelper.DEBUG_MODE && !world.getScenarioInfo().getRawConfig().getBooleanValue(ConfigKey.KEY_PRECOMPUTE, false)) {
+			List<Integer> elementIds = Util.fetchIdValueFromElementIds(observableAreas);
+			DebugHelper.VD_CLIENT.drawAsync(this.getId().getValue(), "ObservableAreas", (Serializable) elementIds);
+		}
+	}
+
+	public void setLineOfSight(List<CSULineOfSightPerception.CsuRay> rays) {
+		this.lineOfSight = rays;
+	}
+
+	public List<CSULineOfSightPerception.CsuRay> getLineOfSight() {
+		return lineOfSight;
+	}
+
+	public Set<EntityID> getVisibleFrom() {
+		return visibleFrom;
+	}
+
+	public void setVisibleFrom(Set<EntityID> visibleFrom) {
+		this.visibleFrom = visibleFrom;
+		if (DebugHelper.DEBUG_MODE && !world.getScenarioInfo().getRawConfig().getBooleanValue(ConfigKey.KEY_PRECOMPUTE, false)) {
+			List<Integer> elementIds = Util.fetchIdValueFromElementIds(visibleFrom);
+			DebugHelper.VD_CLIENT.drawAsync(this.getId().getValue(), "VisibleFromAreas", (Serializable) elementIds);
+		}
+	}
+
 }
