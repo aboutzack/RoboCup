@@ -783,13 +783,15 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 		
 		for(Edge edge : edges) {
 			Edge opposite = this.getOppositeEdge(road, edge);
-			Point2D p1 = this.getMidPoint(edge);
-			Point2D p2 = this.getMidPoint(opposite);
-			double dist = this.getDistance(p1.getX(),p1.getY(),p2.getX(), p2.getY());
-			if(dist > max) {
-				max = dist;
-				start = p1;
-				end = p2;
+			if (opposite != null) {
+				Point2D p1 = this.getMidPoint(edge);
+				Point2D p2 = this.getMidPoint(opposite);
+				double dist = this.getDistance(p1.getX(),p1.getY(),p2.getX(), p2.getY());
+				if(dist > max) {
+					max = dist;
+					start = p1;
+					end = p2;
+				}
 			}
 		}
 		if(start!=null && end!=null) {
@@ -940,8 +942,12 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 	    	
 	   	for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
 			Road road = (Road) se;
-			guidelineHelper line = new guidelineHelper(this.getProperLine(road),road);
-			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+			Line2D properLine = this.getProperLine(road);
+			if (properLine != null) {
+				guidelineHelper line = new guidelineHelper(properLine,road);
+				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+			}
+
 		
 	   	}
 	}
@@ -982,10 +988,9 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 		}	
 		
 		private Point2D getMidPoint(Edge edge) {
-			double midX = (edge.getStartX()+edge.getEndX())/2;
-			double midY = (edge.getStartY()+edge.getEndY())/2;
-			Point2D point = new Point2D(midX,midY);
-			return point;
+			double midX = (edge.getStartX() + edge.getEndX()) / 2.0;
+			double midY = (edge.getStartY() + edge.getEndY()) / 2.0;
+			return new Point2D(midX, midY);
 		}
     
     

@@ -1,36 +1,11 @@
 package CSU_Yunlu_2019.extaction.pf;
 
-import java.awt.Point;
-import java.awt.Polygon;
-import java.awt.Shape;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.Lists;
-
 import CSU_Yunlu_2019.exception.ActionCommandException;
-import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
 import CSU_Yunlu_2019.module.route.pov.POVRouter;
-import CSU_Yunlu_2019.standard.CSUEdgeHelper;
-import CSU_Yunlu_2019.standard.CSURoadHelper;
-import CSU_Yunlu_2019.standard.CriticalArea;
-import CSU_Yunlu_2019.standard.EntranceHelper;
-import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.standard.*;
 import CSU_Yunlu_2019.util.CircleQueue;
 import CSU_Yunlu_2019.util.CircleStack;
 import CSU_Yunlu_2019.util.Util;
-//import PF_CSUpfRoadDetector.sorter;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
@@ -44,8 +19,9 @@ import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
 import adf.component.extaction.ExtAction;
-import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.algorithm.Clustering;
+import adf.component.module.algorithm.PathPlanning;
+import com.google.common.collect.Lists;
 import javolution.util.FastMap;
 import rescuecore2.config.NoSuchConfigOptionException;
 import rescuecore2.misc.Pair;
@@ -58,6 +34,13 @@ import rescuecore2.standard.messages.StandardMessageURN;
 import rescuecore2.worldmodel.ChangeSet;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
+
+import java.awt.*;
+import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
+//import PF_CSUpfRoadDetector.sorter;
 
 public class ActionExtClear extends ExtAction {
 
@@ -1776,13 +1759,15 @@ public class ActionExtClear extends ExtAction {
 		
 		for(Edge edge : edges) {
 			Edge opposite = this.getOppositeEdge(road, edge);
-			Point2D p1 = this.getMidPoint(edge);
-			Point2D p2 = this.getMidPoint(opposite);
-			double dist = this.getDistance(p1.getX(),p1.getY(),p2.getX(), p2.getY());
-			if(dist > max) {
-				max = dist;
-				start = p1;
-				end = p2;
+			if (opposite != null) {
+				Point2D p1 = this.getMidPoint(edge);
+				Point2D p2 = this.getMidPoint(opposite);
+				double dist = this.getDistance(p1.getX(),p1.getY(),p2.getX(), p2.getY());
+				if(dist > max) {
+					max = dist;
+					start = p1;
+					end = p2;
+				}
 			}
 		}
 		if(start!=null && end!=null) {
@@ -1983,9 +1968,12 @@ public class ActionExtClear extends ExtAction {
 	    	
 	   	for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD,StandardEntityURN.HYDRANT)) {
 			Road road = (Road) se;
-			guidelineHelper line = new guidelineHelper(this.getProperLine(road),road);
-			if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
-		
+			Line2D properLine = this.getProperLine(road);
+			if (properLine != null) {
+				guidelineHelper line = new guidelineHelper(properLine,road);
+				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+			}
+
 	   	}
 	}
 	
@@ -2025,10 +2013,9 @@ public class ActionExtClear extends ExtAction {
 		}	
 		
 		private Point2D getMidPoint(Edge edge) {
-			double midX = (edge.getStartX()+edge.getEndX())/2;
-			double midY = (edge.getStartY()+edge.getEndY())/2;
-			Point2D point = new Point2D(midX,midY);
-			return point;
+			double midX = (edge.getStartX()+edge.getEndX()) / 2.0;
+			double midY = (edge.getStartY() + edge.getEndY()) / 2.0;
+			return new Point2D(midX,midY);
 		}
 	    
 
