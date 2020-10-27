@@ -258,7 +258,9 @@ public class CSURoad {
 		Node node1 = graph.getNode(edge1.getMiddlePoint());
 		Node node2 = graph.getNode(edge2.getMiddlePoint());
 		MyEdge myEdge = graph.getMyEdge(selfId, new Pair<>(node1, node2));
-		myEdge.setPassable(passably);
+		if (myEdge != null) {
+			myEdge.setPassable(passably);
+		}
 	}
 
 	/**
