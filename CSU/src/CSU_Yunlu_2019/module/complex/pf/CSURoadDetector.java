@@ -1,5 +1,7 @@
 package CSU_Yunlu_2019.module.complex.pf;
 
+import CSU_Yunlu_2019.debugger.DebugHelper;
+import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
@@ -24,8 +26,6 @@ import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
-
-import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -434,7 +434,8 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
         }
         this.mapInit();
         this.roadsize = precomputeData.getInteger(KEY_ROAD_SIZE);
-        for(int i=0 ; i<this.roadsize ; ++i) {
+		ArrayList<java.awt.geom.Line2D> line2DS = new ArrayList<>();
+		for(int i=0 ; i<this.roadsize ; ++i) {
         	double startx = precomputeData.getDouble(KEY_START_X + i);
         	double starty = precomputeData.getDouble(KEY_START_Y + i);
         	Point2D start = new Point2D(startx,starty);
@@ -443,9 +444,16 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
         	Point2D end = new Point2D(endx,endy);
         	Road road = (Road) this.worldInfo.getEntity(precomputeData.getEntityID(KEY_JUDGE_ROAD + i));
         	guidelineHelper line = new guidelineHelper(road,start,end);
-        	if(! this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+        	if(! this.judgeRoad.contains(line)) {
+				this.judgeRoad.add(line);
+				line2DS.add(new java.awt.geom.Line2D.Double(startx, starty, endx, endy));
+			}
         }
-        
+
+		if (DebugHelper.DEBUG_MODE){
+			DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "GuideLine", line2DS);
+		}
+
         this.clustering.calc();
         List<EntityID> sortList = new ArrayList<>();
         for (EntityID id : this.clustering.getClusterEntityIDs(
