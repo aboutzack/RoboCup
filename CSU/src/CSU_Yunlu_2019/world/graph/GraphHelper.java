@@ -181,8 +181,9 @@ public class GraphHelper extends AbstractModule {
                 return myEdge;
             }
         }
-        throw new RuntimeException("ERROR: getMyEdge(): not found myEdge in area:" + areaId +
+        System.err.println("ERROR: getMyEdge(): not found myEdge in area:" + areaId +
                 "  nodes:<" + pair.first().getId().getValue() + ", " + pair.second().getId().getValue() + ">");
+        return null;
     }
 
     public List<MyEdge> getMyEdgesBetween(Area from, Area to) {
