@@ -15,8 +15,9 @@ SERVER=$(getServerHost $CLUSTER)
 #else
     echo "killing kernel..."
     #ssh $REMOTE_USER@$SERVER "kill -9 $PID"
-    ssh $REMOTE_USER@$SERVER "killall -9 java"
-    ssh $REMOTE_USER@$SERVER rm $KERNELDIR/boot/$LOCKFILE_NAME
+    #ssh $REMOTE_USER@$SERVER "killall -9 java"
+    ssh $REMOTE_USER@$SERVER  $KERNELDIR/boot/kill.sh
+    ssh $REMOTE_USER@$SERVER rm $LOCKFILE_NAME
 #fi;
 
 echo "killing clients"

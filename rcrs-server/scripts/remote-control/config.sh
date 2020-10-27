@@ -1,6 +1,6 @@
 #! /bin/bash
-LOCAL_USER=yyx
-REMOTE_USER=rcrs
+LOCAL_USER=root
+REMOTE_USER=root
 SOURCEFORGE_USER=root
 
 MAPDIR=maps
@@ -32,10 +32,11 @@ PRECOMPUTE_TIMEOUT=125
 DAY=csu-test
 YEAR=2020
 
-TEAM_SHORTHANDS="APO"
+TEAM_SHORTHANDS="CSU"
 
 declare -A TEAM_NAMES
 TEAM_NAMES[APO]=Apollo-Rescue
+TEAM_NAMES[CSU]=CSU_YunLu
 
 
 
@@ -57,7 +58,11 @@ function getServerHost() {
 #return hostnames of the client servers of the given cluster
 function getClientHost() {
 
-    echo "c$12"
+if (( $1  == -1)); then
+	echo "c11"
+	return
+fi
+    echo "c$1$(($2 + 1))"
     # echo localhost
 }
 
@@ -74,11 +79,11 @@ function getAllClientHosts() {
 }
 
 
-LOCAL_HOMEDIR=/home/$LOCAL_USER
-LOCKFILE_NAME=rsl_run.lock
-LOCKFILE_NAME_PRECOMP=/home/$REMOTE_USER/rsl_precomp.lock
-STATFILE_NAME=rsl_last_run.stat
-
+LOCAL_HOMEDIR=/$LOCAL_USER
+LOCKFILE_NAME=/$REMOTE_USER/rsl_run.lock
+LOCKFILE_NAME_PRECOMP=/$REMOTE_USER/rsl_precomp.lock
+STATFILE_NAME=/$REMOTE_USER/rsl_last_run.stat
+SCOREFILE_NAME=/$REMOTE_USER/Score.txt
 
 #SERVER_HOSTS=$(getAllServerHosts);
 #CLIENT_HOSTS=$(getAllClientHosts);

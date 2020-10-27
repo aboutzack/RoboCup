@@ -45,5 +45,5 @@ echo "Final score is: $(cat $TEAM/final-score.txt)"
 
 echo "Rebuilding summary page for $RUNNING_MAP"
 
-mapSummary.sh $MAP
+./mapSummary.sh $MAP
 

@@ -50,7 +50,6 @@ echo === $LOGFILES
       fi
 done
 
-echo ali
 # create map tgz
 echo $MAP_EVALDIR
 if [[ -d $MAP_EVALDIR && -d $HOME/$MAPDIR/$MAP && ! -f $MAP_EVALDIR/$MAP.7z  ]]; then
@@ -61,10 +60,10 @@ fi;
 
 cd $MAP_EVALDIR
 
-transpose.py scores.tmp > scores.dat
+$EVAL_SCRIPTS/transpose.py scores.tmp > scores.dat
 export RCR_MAP=$MAP
 export RCR_COUNT=$NUM_PROCESSED
 echo $RCR_COUNT teams processed
 gnuplot $EVAL_SCRIPTS/plot-scores.gnu
 
-make_html.py $MAP > index.html
+$EVAL_SCRIPTS/make_html.py $MAP > index.html
