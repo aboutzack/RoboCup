@@ -124,7 +124,8 @@ public class CSUSearchForFire extends Search {
 			this.result = path.get(path.size() - 1);
 		}
 		//可能在障碍物中间,但也有可能graphLayer存在误差
-		if (unsearchedRoadIDs != null && !unsearchedRoadIDs.isEmpty() && agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
+		if (unsearchedRoadIDs != null && !unsearchedRoadIDs.isEmpty() && agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() &&
+				result == null) {
 			this.result = unsearchedRoadIDs.get(agentInfo.getTime() % unsearchedRoadIDs.size());
 		}
 		visualDebug();
