@@ -12,8 +12,6 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
-import rescuecore2.standard.entities.Building;
-import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
 
@@ -29,13 +27,14 @@ public class CSUSearchRebuild extends Search{
     private PathPlanning pathPlanning;
     private Clustering clustering;
     private EntityID result;
-    private Collection<EntityID> unsearchedBuildingIDs;
+    private Collection<EntityID> unvisitedBuildingIDs;
     private CSUSearchRecorder recorder;
+    private CSUSearchUtil util;
 
     public CSUSearchRebuild(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
 
-        this.unsearchedBuildingIDs = new HashSet<>();
+        this.unvisitedBuildingIDs = new HashSet<>();
 
         StandardEntityURN agentURN = ai.me().getStandardURN();
         switch (si.getMode()) {
@@ -86,28 +85,34 @@ public class CSUSearchRebuild extends Search{
         registerModule(this.pathPlanning);
         registerModule(this.clustering);
 
-        this.recorder = new CSUSearchRecorder(agentInfo,worldInfo,scenarioInfo,this.clustering,this.pathPlanning);
-        CSUSearchUtil.register(worldInfo, agentInfo);
+        this.util = new CSUSearchUtil(worldInfo, agentInfo, scenarioInfo);
+        this.recorder = new CSUSearchRecorder(agentInfo,worldInfo,scenarioInfo,clustering,pathPlanning,util);
+        unvisitedBuildingIDs = this.recorder.getATBS().getUnvisitedBuildings();
     }
 
     @Override
     public Search updateInfo(MessageManager messageManager) {
-        super.updateInfo(messageManager);
-        this.clustering.updateInfo(messageManager);
-        this.pathPlanning.updateInfo(messageManager);
-        recorder.updateInfo(messageManager, this.clustering);
-        CSUSearchRecorder.registerRecorder(recorder);//??
-
+//        CSUSearchUtil.debugOverall("当前目标为:" + this.result);
         if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
+        super.updateInfo(messageManager);
+        this.clustering.updateInfo(messageManager);
+        this.pathPlanning.updateInfo(messageManager);
+        this.recorder.updateInfo(messageManager, this.clustering);
+        this.unvisitedBuildingIDs = this.recorder.getATBS().getUnvisitedBuildings();
+        CSUSearchRecorder.registerRecorder(recorder);
 
-        this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
 
-        if (this.unsearchedBuildingIDs.isEmpty()) {
-            this.reset();
-            this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
-        }
+        util.debugSpecific(this.agentInfo.getTime()+"回合，allCivilian的大小:"+util.getCivilianIDs().size());
+
+//        this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+//
+//        if (this.unsearchedBuildingIDs.isEmpty()) {
+//            this.reset();
+//            this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
+//        }
+
         return this;
     }
 
@@ -115,17 +120,17 @@ public class CSUSearchRebuild extends Search{
     public Search calc() {
         boolean completeCalc = false;
 
-        if (agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()) {
+        if (util.creatingScene()) {
             completeCalc = true;
         }
-        if(!completeCalc && this.result == null){
+        if(!completeCalc && recorder.needToChangeTarget()){
             this.result = recorder.decideBest()? recorder.getTarget() : recorder.quickDecide();
             completeCalc = true;
         }
         if(!completeCalc){
-            int needToChangeMessage = recorder.needToChangeTarget();
+            int needToChangeMessage = recorder.motionState();
             if(needToChangeMessage != 0){
-                this.result = recorder.ChangeTarget(needToChangeMessage)? recorder.getTarget() : recorder.quickDecide();
+                this.result = recorder.isForcedToChangeTarget(needToChangeMessage)? recorder.getTarget() : recorder.quickDecide();
                 completeCalc = true;
             }
         }
@@ -142,40 +147,44 @@ public class CSUSearchRebuild extends Search{
 //            this.result = path.get(path.size() - 1);
 //        }
         visualDebug();
+        if(this.result == null && !(agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil())){
+            util.debugOverall("当前目标为空(impossible).");
+        }
+        util.debugSpecific("当前目标为"+this.result);
         return this;
     }
 
-    private void reset() {
-        this.unsearchedBuildingIDs.clear();
-
-        Collection<StandardEntity> clusterEntities = null;
-        if (this.clustering != null)
-        {
-            int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
-            clusterEntities = this.clustering.getClusterEntities(clusterIndex);
-
-        }
-        if (clusterEntities != null && clusterEntities.size() > 0)
-        {
-            for (StandardEntity entity : clusterEntities)
-            {
-                if (entity instanceof Building && entity.getStandardURN() != REFUGE)
-                {
-                    this.unsearchedBuildingIDs.add(entity.getID());
-                }
-            }
-        }
-        else
-        {
-            this.unsearchedBuildingIDs.addAll(this.worldInfo.getEntityIDsOfType(
-                    BUILDING,
-                    GAS_STATION,
-                    AMBULANCE_CENTRE,
-                    FIRE_STATION,
-                    POLICE_OFFICE
-            ));
-        }
-    }
+//    private void reset() {
+//        this.unsearchedBuildingIDs.clear();
+//
+//        Collection<StandardEntity> clusterEntities = null;
+//        if (this.clustering != null)
+//        {
+//            int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+//            clusterEntities = this.clustering.getClusterEntities(clusterIndex);
+//
+//        }
+//        if (clusterEntities != null && clusterEntities.size() > 0)
+//        {
+//            for (StandardEntity entity : clusterEntities)
+//            {
+//                if (entity instanceof Building && entity.getStandardURN() != REFUGE)
+//                {
+//                    this.unsearchedBuildingIDs.add(entity.getID());
+//                }
+//            }
+//        }
+//        else
+//        {
+//            this.unsearchedBuildingIDs.addAll(this.worldInfo.getEntityIDsOfType(
+//                    BUILDING,
+//                    GAS_STATION,
+//                    AMBULANCE_CENTRE,
+//                    FIRE_STATION,
+//                    POLICE_OFFICE
+//            ));
+//        }
+//    }
 
     @Override
     public EntityID getTarget()
@@ -219,7 +228,7 @@ public class CSUSearchRebuild extends Search{
         if (DebugHelper.DEBUG_MODE) {
             try {
                 DebugHelper.drawSearchTarget(worldInfo, agentInfo.getID(), result);
-                List<Integer> elementList = Util.fetchIdValueFromElementIds(unsearchedBuildingIDs);
+                List<Integer> elementList = Util.fetchIdValueFromElementIds(unvisitedBuildingIDs);
                 DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "UnsearchedBuildings", (Serializable) elementList);
             } catch (Exception e) {
                 e.printStackTrace();

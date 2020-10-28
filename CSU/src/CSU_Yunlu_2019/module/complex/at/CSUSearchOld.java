@@ -45,7 +45,7 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 // 7、全图搜索策略很捞，需要修改
 //8、由于最优建筑不可抢占，以及次优建筑抢占条件苛刻，如果它们的actionmove是null，则有可能永远陷入null。尝试加入逻辑修改（添加新挂起列表）
 //当前如果最优目标和次优目标不能到达，通知pf
-public class CSUSearch extends Search {
+public class CSUSearchOld extends Search {
 
 	/**
 	 * 用于测试
@@ -99,8 +99,8 @@ public class CSUSearch extends Search {
 	private EntityID result;//目标搜索建筑
 	//----------------------------------------------------------------------------------------
 
-	public CSUSearch(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
-					 DevelopData developData) {
+	public CSUSearchOld(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
+                        DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
 
 		this.burnningBuildings = new HashSet<EntityID>();
@@ -179,9 +179,9 @@ public class CSUSearch extends Search {
 		hangUpSecondary = new HashSet<EntityID>();
 		hangUpOptimal = new HashSet<EntityID>();
 		this.currentTargetPriority = 0;
-        System.out.println("--------------------");
-        System.out.println(CSUSearchUtil.getBuildingIDs());
-        System.out.println("--------------------");
+//        System.out.println("--------------------");
+//        System.out.println(CSUSearchUtil.getBuildingIDs());
+//        System.out.println("--------------------");
 	}
 
 	//更新已知平民(每回合)

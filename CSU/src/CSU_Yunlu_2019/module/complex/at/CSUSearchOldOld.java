@@ -25,7 +25,7 @@ import java.util.*;
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 //todo:存在问题：1、自己受困时不会通知pf。2、自己受伤时会陷入自己救自己死循环。3、救人人手不够时要通知pf。4、知道有人但是门口堵住时呼叫pf 5、失效建筑如何处理
-public class CSUSearchTry extends Search{
+public class CSUSearchOldOld extends Search{
 
     /**
      * 用于测试
@@ -70,8 +70,8 @@ public class CSUSearchTry extends Search{
     private EntityID result;//目标搜索建筑
     //----------------------------------------------------------------------------------------
 
-    public CSUSearchTry(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
-                     DevelopData developData) {
+    public CSUSearchOldOld(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
+                           DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
 
         this.burnningBuildings = new HashSet<EntityID>();

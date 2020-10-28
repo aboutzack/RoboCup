@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.complex.at;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
 import adf.agent.info.AgentInfo;
+import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.standard.entities.*;
@@ -33,18 +34,19 @@ public class CSUSearchUtil {
     public final static int BLOCKED_AND_BURNING = 3;
     public final static int UNKNOWN = 4;
     //debug
-    public final static boolean debug = false;
-    public final static int monitorID = 0;
-    public static WorldInfo worldInfo;
-    public static AgentInfo agentInfo;
+    public final static boolean debug = true;
+    public final int monitorID = 59932914;
+    private WorldInfo worldInfo;
+    private AgentInfo agentInfo;
+    private ScenarioInfo scenarioInfo;
 
-    public static void register(WorldInfo wi, AgentInfo ai){
-        CSUSearchUtil.worldInfo = wi;
-        CSUSearchUtil.agentInfo = ai;
-        //todo 测一下有没有共享内存。
+    public CSUSearchUtil(WorldInfo wi, AgentInfo ai, ScenarioInfo si){
+        this.worldInfo = wi;
+        this.agentInfo = ai;
+        this.scenarioInfo = si;
     }
 
-    public static Collection<StandardEntity> getAllAgents(){
+    public Collection<StandardEntity> getAllAgents(){
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.FIRE_BRIGADE,
                 StandardEntityURN.POLICE_FORCE,
@@ -54,20 +56,11 @@ public class CSUSearchUtil {
                 StandardEntityURN.AMBULANCE_CENTRE);
     }
 
-    public static Collection<StandardEntity> getAgentsByURN(StandardEntityURN urn){
+    public Collection<StandardEntity> getAgentsByURN(StandardEntityURN urn){
         return worldInfo.getEntitiesOfType(urn);
     }
 
-    public static Set<EntityID> getBuildingIDs(){
-        Set<EntityID> buildingIDs = new HashSet<>();
-        Collection<StandardEntity> buildings = getBuildingsWithURN();
-        for (StandardEntity entity : buildings) {
-            buildingIDs.add(entity.getID());
-        }
-        return buildingIDs;
-    }
-
-    public static Collection<StandardEntity> getBuildingsWithURN() {
+    public Collection<StandardEntity> getBuildings() {
         return worldInfo.getEntitiesOfType(
                 StandardEntityURN.BUILDING,
                 StandardEntityURN.REFUGE,
@@ -77,7 +70,24 @@ public class CSUSearchUtil {
                 StandardEntityURN.GAS_STATION);
     }
 
-    public static boolean isBuildingBurning(EntityID entityID){
+    public Collection<StandardEntity> getCivilians(){
+        return worldInfo.getEntitiesOfType(StandardEntityURN.CIVILIAN);
+    }
+
+    public Collection<EntityID> getCivilianIDs(){
+        return worldInfo.getEntityIDsOfType(StandardEntityURN.CIVILIAN);
+    }
+
+    public Collection<EntityID> getBuildingIDs(){
+        return worldInfo.getEntityIDsOfType(StandardEntityURN.BUILDING,
+                StandardEntityURN.REFUGE,
+                StandardEntityURN.AMBULANCE_CENTRE,
+                StandardEntityURN.POLICE_OFFICE,
+                StandardEntityURN.FIRE_STATION,
+                StandardEntityURN.GAS_STATION);
+    }
+
+    public boolean isBuildingBurning(EntityID entityID){
         StandardEntity entity = worldInfo.getEntity(entityID);
         if(entity instanceof Building){
             Building building = (Building) entity;
@@ -89,23 +99,62 @@ public class CSUSearchUtil {
         return false;
     }
 
-    public static boolean isBuildingReachable(PathPlanning pathPlanning, EntityID destination){
+    public boolean isBuildingReachable(PathPlanning pathPlanning, EntityID destination){
         EntityID from = agentInfo.getPosition();
         List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).getResult();
         return result != null && !result.isEmpty();
     }
 
-    //debug
-    public static void debugOverall(String message){
-        if(CSUConstants.DEBUG_AT_SEARCH && debug){
-            System.out.println(agentInfo.getID()+":"+message);
+    public boolean creatingScene(){
+        return agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil();
+    }
+
+    public boolean safeHangUpScope(){
+        return agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil()+5;
+    }
+
+    public Building getBuilding(EntityID id){
+        return (Building)worldInfo.getEntity(id);
+    }
+
+    public Civilian getCivilian(EntityID id){
+        return (Civilian)worldInfo.getEntity(id);
+    }
+
+    public static String getNameByPriority(int priority){
+        switch (priority){
+            case FIRST_CLASS:{
+                return "FIRST_CLASS";
+            }
+            case SECOND_CLASS:{
+                return "SECOND_CLASS";
+            }
+            case THIRD_CLASS:{
+                return "THIRD_CLASS";
+            }
+            case FORTH_CLASS:{
+                return "FORTH_CLASS";
+            }
+            case FIFTH_CLASS:{
+                return "FIFTH_CLASS";
+            }
+            default:{
+                return "UNKNOWN";
+            }
         }
     }
 
-    public static void debugSpecific(String message){
+    //debug
+    public void debugOverall(String message){
+        if(CSUConstants.DEBUG_AT_SEARCH && debug){
+            System.out.println("[第"+agentInfo.getTime()+"回合] "+agentInfo.getID()+":"+message);
+        }
+    }
+
+    public void debugSpecific(String message){
         if(CSUConstants.DEBUG_AT_SEARCH && debug){
             if(agentInfo.getID().getValue() == monitorID){
-                System.out.println(agentInfo.getID()+":"+message);
+                System.out.println("[第"+agentInfo.getTime()+"回合] "+agentInfo.getID()+":"+message);
             }
         }
     }
