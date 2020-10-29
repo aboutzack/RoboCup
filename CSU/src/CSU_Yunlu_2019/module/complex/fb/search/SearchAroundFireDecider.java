@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.fb.search;
 
+import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
 import CSU_Yunlu_2019.module.complex.fb.tools.FbUtilities;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
@@ -74,9 +75,9 @@ public class SearchAroundFireDecider {
                 }
             }
         }
-        //去除能看见的
+        //去除MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN之内看见过的buidlings
         allBuildings = allBuildings.stream().filter(e -> {
-            return !world.getBuildingsSeen().contains(e.getId());
+            return world.getTime() - e.getLastSeenTime() > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
         }).collect(Collectors.toSet());
 
         searchTargets = fbUtilities.findMaximalCovering(allBuildings);

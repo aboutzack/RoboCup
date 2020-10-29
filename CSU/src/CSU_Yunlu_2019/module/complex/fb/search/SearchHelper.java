@@ -25,7 +25,6 @@ public class SearchHelper extends AbstractModule {
     private CSUFireBrigadeWorld world;
     private SearchAroundFireDecider searchAroundFireDecider;
     private PathPlanning pathPlanning;
-    private static final int MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN = 4;
     private FireBrigadeTarget target;
     private EntityID result;
 
@@ -79,7 +78,7 @@ public class SearchHelper extends AbstractModule {
         int lastSeenTime = world.getCsuBuilding(target).getLastSeenTime();
 //        return (world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN) &&
 //                (distance < scenarioInfo.getFireExtinguishMaxDistance());
-        return world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
+        return world.getTime() - lastSeenTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
     }
 
     public void setTarget(FireBrigadeTarget fireBrigadeTarget) {
