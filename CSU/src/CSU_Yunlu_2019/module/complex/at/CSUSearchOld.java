@@ -32,7 +32,10 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
  * @author: Yiji-Gao
  * @Date: 03/09/2020
  */
-
+/**
+ * 所有removeBuilding方法都不适用，因为如果移出了Set，就丢失了他的优先级
+ * 代替方法：每次calc之前判断其在不在burningBuilding等里
+ */
 //todo:存在问题：1、自己受困时不会通知pf。(完成)
 // 2、自己受伤时会陷入自己救自己死循环。
 // 3、救人人手不够时要通知。
@@ -42,7 +45,7 @@ import static rescuecore2.standard.entities.StandardEntityURN.*;
 // 7、全图搜索策略很捞，需要修改
 //8、由于最优建筑不可抢占，以及次优建筑抢占条件苛刻，如果它们的actionmove是null，则有可能永远陷入null。尝试加入逻辑修改（添加新挂起列表）
 //当前如果最优目标和次优目标不能到达，通知pf
-public class CSUSearch extends Search {
+public class CSUSearchOld extends Search {
 
 	/**
 	 * 用于测试
@@ -96,8 +99,8 @@ public class CSUSearch extends Search {
 	private EntityID result;//目标搜索建筑
 	//----------------------------------------------------------------------------------------
 
-	public CSUSearch(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
-					 DevelopData developData) {
+	public CSUSearchOld(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
+                        DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
 
 		this.burnningBuildings = new HashSet<EntityID>();
@@ -176,6 +179,9 @@ public class CSUSearch extends Search {
 		hangUpSecondary = new HashSet<EntityID>();
 		hangUpOptimal = new HashSet<EntityID>();
 		this.currentTargetPriority = 0;
+//        System.out.println("--------------------");
+//        System.out.println(CSUSearchUtil.getBuildingIDs());
+//        System.out.println("--------------------");
 	}
 
 	//更新已知平民(每回合)
@@ -238,9 +244,8 @@ public class CSUSearch extends Search {
 		}
 	}
 
-	//更新最优建筑(每回合)(根据knownCivilians)
+	//更新最优建筑(每回合)(根据knownCivilians)  ok
 	private void updateOptimalBuildings(){
-
 		Collection<EntityID> civlianIDs = Handy.objectsToIDs(knownCivilians);
 		for (EntityID civID : civlianIDs) {
 			if (worldInfo.getPosition((Human) worldInfo.getEntity(civID)).getStandardURN() == BUILDING){
@@ -259,7 +264,7 @@ public class CSUSearch extends Search {
 		this.removeSearchedBuildings(optimalBuildings);
 	}
 
-	//更新次优建筑(每回合)(根据heardCivilians)
+	//更新次优建筑(每回合)(根据heardCivilians)  ok
 	private void updateSecondaryBuildings(){
 		if(!heardCivilians.isEmpty()){
 			for (EntityID entityID: unsearchedBuildings){
@@ -274,7 +279,7 @@ public class CSUSearch extends Search {
 		this.removeSearchedBuildings(secondaryBuildings);
 	}
 
-	//更新普通建筑(其他没有搜过的建筑)(每回合)//todo 测试移出最优和次优的效果
+	//更新普通建筑(其他没有搜过的建筑)(每回合)
 	private void updateUnsearchedBuildings(){
 		/**
 		 * 3/7/2020破损为0不搜，neighbor不搜，正在烧不搜。
@@ -793,7 +798,7 @@ public class CSUSearch extends Search {
 	}
 
 
-	//重新获取unsearchedBuildingIDs（同一聚类的building）
+	//重新获取unsearchedBuildingIDs（同一聚类的building） ok
 	private void reset(){
 		if(CSUConstants.DEBUG_AT_SEARCH){
 //			System.out.println("unsearched为空，重新获取.");
@@ -862,7 +867,6 @@ public class CSUSearch extends Search {
 
 	//次级目标:获取声音范围内的building加入列表(权值 = 4)
 	private boolean calcSecondaryTarget(){
-		//this.result = null;
 		this.pathPlanning.setFrom(this.agentInfo.getPosition());
 		this.pathPlanning.setDestination(secondaryBuildings);
 		if(!secondaryBuildings.isEmpty()){
@@ -993,12 +997,12 @@ public class CSUSearch extends Search {
 		return false;
 	}
 
-	//获取听到的消息
+	//获取听到的消息    ok
 	public Collection<Command> getHeard(){
 		return agentInfo.getHeard();
 	}
 
-	//取得所有已知的智能体(用于筛选civilian)
+	//取得所有已知的智能体(用于筛选civilian)  ok
 	private Collection<StandardEntity> getAgentsOfAllTypes() {
 		return worldInfo.getEntitiesOfType(
 				StandardEntityURN.FIRE_BRIGADE,
@@ -1031,7 +1035,6 @@ public class CSUSearch extends Search {
 			}
 		}
 	}
-
 
 	//更新搜过的建筑（根据和建筑的距离）
 	//删去搜过的建筑
@@ -1255,4 +1258,5 @@ public class CSUSearch extends Search {
 		}
 		return nearestPF;
 	}
+
 }
