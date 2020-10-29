@@ -1,9 +1,9 @@
 #! /bin/bash
 
 . $(dirname $0)/config.sh
-
-MAPS="Berlin1 Berlin2 Eindhoven1 Eindhoven2 Istanbul1 Joao1 Kobe1 Mexico1 Montreal1 NY1 Paris1 Paris2 Sakae1 SF1 SF2 Sydney1 SydneyS1 tBerlinCSU tKobeAIT tSFrio VC1 VC2"
-#MAPS="SydneyS2"
+#Berlin1 Berlin2 Eindhoven1 SydneyS2
+#MAPS="Eindhoven2 Istanbul1 Joao1 Kobe1 Mexico1 Montreal1 Paris1 Paris2 Sakae1 SF1 SF2 Sydney1 SydneyS1 tBerlinCSU tKobeAIT tSFrio VC1 VC2"
+MAPS="Eindhoven1 Eindhoven2 Eindhoven3 Istanbul3 Joao1 Kobe1 Montreal1 Montreal2 Montreal3 NY2 NY3 Paris1 Paris2 Sakae1 Sakae3 SF2 VC1 VC2 VC3"
 
 
 

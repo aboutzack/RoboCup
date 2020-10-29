@@ -41,22 +41,20 @@ echo "PID=$!" >> $LOCKFILE_NAME
 
 wait
 
+echo "RUNNING_TEAM=$TEAM in $MAP">>$SCOREFILE_NAME
+echo "-----------------------------------------------------------------------------------">>$SCOREFILE_NAME
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!I AM HERE !  I AM HERE!!  I AM  HERE !!!I AM HERE  for grep!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+cat  $KERNEL_LOGDIR/kernel.log | grep "Score" | tail -2 >>  $SCOREFILE_NAME
+echo "-----------------------------------------------------------------------------------">>$SCOREFILE_NAME
 echo "RUNNING_TEAM=$TEAM" >> $STATFILE_NAME
 echo "RUNNING_MAP=$MAP" >> $STATFILE_NAME
 echo "LOGFILE=$KERNEL_LOGDIR" >> $STATFILE_NAME
 
-cd $KERNEL_LOGDIR
 echo "----------------------------------------------------------------------------------" >>$SCOREFILE_NAME
-echo  "$NAME($TEAM) in $MAP">>$SCOREFILE_NAME
-echo "-----------------------------------------------------------------------------------">>$SCOREFILE_NAME
-echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!I AM HERE !  I AM HERE!!  I AM  HERE !!!I AM HERE  for grep!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-cat  ./kernel.log | grep "Score" >>  $SCOREFILE_NAME
-echo "-----------------------------------------------------------------------------------">>$SCOREFILE_NAME
 
-cd ..
 
 echo "Deleting logfile...."
-rm -r  ./*$TIME-$NAME-$MAPNAME*
+rm   $KERNEL_LOGDIR/*
 
 #echo "Zipping logfile..."
 #mkdir -p $HOME/$LOGDIR/$DAY/kernel/

@@ -46,11 +46,10 @@ echo "PRECOMPUTE=yes" >> $STATFILE_NAME
 echo "RUNNING_MAP=$MAP" >> $STATFILE_NAME
 echo "RESCUE_LOGFILE=$KERNEL_LOGDIR" >> $STATFILE_NAME
 
-cd $KERNEL_LOGDIR
-cd ..
+ 
 
 echo "Deleting logfile...."
-rm -r  ./*$TIME-$NAME-$MAPNAME*
+rm   $KERNEL_LOGDIR/*
 
 #echo "Zipping logfile..."
 #mkdir -p $HOME/$LOGDIR/$DAY/kernel/
