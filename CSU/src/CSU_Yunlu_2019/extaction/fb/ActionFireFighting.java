@@ -8,9 +8,9 @@ import CSU_Yunlu_2019.standard.DistanceComparator;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
+import CSU_Yunlu_2019.world.object.CSURoad;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
-import adf.agent.action.common.ActionRest;
 import adf.agent.action.fire.ActionExtinguish;
 import adf.agent.action.fire.ActionRefill;
 import adf.agent.communication.MessageManager;
@@ -239,158 +239,101 @@ public class ActionFireFighting extends ExtAction {
         return this;
     }
 
-    /**
-     * crf:火警不同情况的判断以及设定target等。
-     */
     private Action calcExtinguish(FireBrigade agent, PathPlanning pathPlanning, EntityID target) {
         EntityID agentPosition = agent.getPosition();
         StandardEntity positionEntity = Objects.requireNonNull(this.worldInfo.getPosition(agent));
 
-
-        // TODO 灭火位置的选取
+        //如果能直接灭到火
         if (this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(target)) < this.maxExtinguishDistance) {
-
-//            //灭同一个建筑，但是水不减，说明那个建筑烧没了
-//            if (lastTimeExtinguished && waterHistory.get(waterHistory.size() - 1).equals(waterHistory.get(waterHistory.size() - 2)) &&
-//                    targetHistory.get(targetHistory.size() - 1).equals(targetHistory.get(targetHistory.size() - 2))) {
-//                ((Building)worldInfo.getEntity(target)).setFieryness(8);
-//
-//            }else{
-//                return new ActionExtinguish(target, this.maxExtinguishPower);
-//            }
-//            //如果上次也在灭火
-            //处理偏差情况
-            if (this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)) < this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(target))) {
-                //向target方向调整位置坐标
-//                int destinationY = (int) ((locationAgent.second()-locationAgentTarget.second())*0.05+locationAgent.second());
-//                int destinationX = (int) ((locationAgent.first()-locationAgentTarget.first())*0.05+locationAgent.first());
-//                // set MovePath
-//                pathPlanning.setDestination(target);
-//                List<EntityID> path = pathPlanning.calc().getResult();
-////                ActionMove moveAction = (ActionMove) actionExtMove.setTarget(path.get(path.size() - 1)).calc().getAction();
-//                Action adjustAction = new ActionMove(path,destinationX,destinationY);
-//                if (adjustAction != null) {
-//                    if (StandardEntityURN.BLOCKADE != positionEntity.getStandardURN()){
-//                        System.out.println(agentInfo.getID()+" is moving to new place "+agentInfo.getX()+"  "+agentInfo.getY());
-//                        return adjustAction;
-//                    }
-//                }
-            }
-//            System.out.println("checking ================= "+this.worldInfo.getDistance(agentInfo.me(),this.worldInfo.getEntity(target))+"  "+this.worldInfo.getDistance(positionEntity,this.worldInfo.getEntity(target)));
             return new ActionExtinguish(target, Math.min(agentInfo.getWater(), this.maxExtinguishPower));
         }
 
-        //跑出火区
-        StandardEntity standardEntity = this.worldInfo.getEntity(agentPosition);
-        if (standardEntity instanceof Building && ((Building) standardEntity).isOnFire()) {
-            List<StandardEntity> noBuilding = new ArrayList<>();
-            for (StandardEntity en : this.worldInfo.getAllEntities()) {
-                if (!(en instanceof Building)) {
-                    noBuilding.add(en);
+        //如果所在area能灭到火
+        if (this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(target)) < this.maxExtinguishDistance) {
+            ArrayList<EntityID> path = new ArrayList<>();
+            path.add(positionEntity.getID());
+            if (positionEntity instanceof Building) {
+                //走到中心
+                return new ActionMove(path, ((Building) positionEntity).getX(), ((Building) positionEntity).getY());
+            }
+            if (positionEntity instanceof Road) {
+                CSURoad road = world.getCsuRoad(positionEntity);
+                if (!road.isRoadCenterBlocked()) {
+                    //走到中心
+                    return new ActionMove(path, ((Road) positionEntity).getX(), ((Road) positionEntity).getY());
                 }
             }
-            if (noBuilding.isEmpty()) {
-                return this.getMoveAction(pathPlanning, agentPosition, target);
-            } else {
-                noBuilding.sort(new DistanceSorter(this.worldInfo, this.agentInfo.me()));
-                return this.getMoveAction(pathPlanning, agentPosition, noBuilding.get(0).getID());
-            }
         }
-
-        //如果火警在避难所
-        if (StandardEntityURN.REFUGE == positionEntity.getStandardURN()) {
-//            System.out.println(agent.getID()+" is in a refuge=========");
-            if (agent.getWater() < 0.9 * maxExtinguishPower) {
-                return new ActionRefill();
-            }
-            Action action = this.getMoveAction(pathPlanning, agentPosition, target);
-            if (action != null) {
-                return action;
-            }
-        }
-
-        //ROAD且target为null:寻找范围fb并跟随
-        if (StandardEntityURN.ROAD == positionEntity.getStandardURN()) {
-//            System.out.println(agent.getID()+" is on a road and its target is "+this.target);
-            if (this.target == null) {
-                for (Map.Entry<EntityID, Integer> entry : this.fireBrigadesWaterMap.entrySet()) {
-                    if (this.worldInfo.getDistance(standardEntity, this.worldInfo.getEntity(entry.getKey())) < 4 * scenarioInfo.getFireExtinguishMaxDistance())
-                        this.setTarget(this.worldInfo.getEntity(entry.getKey()).getID());
-//                    System.out.println("fb id = "+entry.getKey()+"       water ="+entry.getValue());
-                }
-                return new ActionRest();
-            }
-        }
-
-
-//        List<StandardEntity> neighbourBuilding = new ArrayList<>();
-//        StandardEntity entity = this.worldInfo.getEntity(target);
-//        if (entity instanceof Building)
-//        {
-//            if (this.worldInfo.getDistance(positionEntity, entity) < this.maxExtinguishDistance)
-//            {
-//                neighbourBuilding.add(entity);
-//            }
-//        }
 
         //找出着火的和温度达到40以上的建筑
         List<StandardEntity> dangerBuilding = new ArrayList<>();
         List<StandardEntity> burningBuilding = new ArrayList<>();
-        for (EntityID entityID : this.worldInfo.getChanged().getChangedEntities()) {
-            if (this.worldInfo.getDistance(positionEntity, this.worldInfo.getEntity(entityID)) < this.maxExtinguishDistance) {
+        for(EntityID entityID : this.worldInfo.getChanged().getChangedEntities()){
+            if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(entityID)) < this.maxExtinguishDistance){
 
-                if (this.worldInfo.getEntity(entityID) instanceof Building) {
-                    if (((Building) (this.worldInfo.getEntity(entityID))).isOnFire() &&
-                            ((Building) (this.worldInfo.getEntity(entityID))).isFierynessDefined() &&
-                            ((Building) (this.worldInfo.getEntity(entityID))).getFieryness() != 8) {
+                if (this.worldInfo.getEntity(entityID) instanceof  Building){
+                    if(((Building)(this.worldInfo.getEntity(entityID))).isOnFire() &&
+                            ((Building)(this.worldInfo.getEntity(entityID))).isFierynessDefined() &&
+                            ((Building)(this.worldInfo.getEntity(entityID))).getFieryness() != 8){
                         burningBuilding.add(this.worldInfo.getEntity(entityID));
                     }
-                    if (((Building) (this.worldInfo.getEntity(entityID))).getTemperature() > 40) {
+                    if(((Building)(this.worldInfo.getEntity(entityID))).getTemperature() > 40){
                         dangerBuilding.add(this.worldInfo.getEntity(entityID));
                     }
                 }
             }
-
         }
 
-        //如果在blockade中
-        if (StandardEntityURN.BLOCKADE == positionEntity.getStandardURN()) {
-//            System.out.println(agent+"--------------");
-            //给pf 发送信息
-            if (dangerBuilding.size() > 0) {
-                FierynessSorter fierynessSorter = new FierynessSorter();
-                Collections.sort(dangerBuilding, fierynessSorter);   //未测试
-                //System.out.println("\n********fireExtinguish22222*******\n");
-                return new ActionExtinguish(dangerBuilding.get(0).getID(),
-                        Math.min(this.calcExtinguishTargetWater(dangerBuilding.get(0).getID()), agent.getWater()));
-            }
-        }
-
-        //有正在燃烧的建筑物,水量够灭火，不够补水
-        // TODO: 2020/10/17 如果看不见而且灭了怎么办
+        //灭火范围内有正在燃烧的建筑物,水量够灭火，不够补水
         if (burningBuilding.size() > 0) {
             FierynessSorter fierynessSorter = new FierynessSorter();
             Collections.sort(burningBuilding, fierynessSorter);   //未测试
+            return new ActionExtinguish(burningBuilding.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
+        }
 
-            //neighbourBuilding.sort(new DistanceSorter(this.worldInfo, agent));
-            if (calcExtinguishTargetWater(burningBuilding.get(0).getID()) > agent.getWater()) {
-                return this.getMoveAction(pathPlanning, agentPosition, calcRefillWaterTarget().getID());
-            } else {
-//                System.out.println("********fireExtinguish3333333*******");
-                return new ActionExtinguish(burningBuilding.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
-            }
-        }
+
+        //寻找能灭到target的火的，并且中心没被堵住的
         List<StandardEntity> objectsInRange = new ArrayList<>(worldInfo.getObjectsInRange(target, maxExtinguishDistance));
-        Collections.sort(objectsInRange, new DistanceComparator(worldInfo.getEntity(target), worldInfo));
+        //buildings和中心没被堵住的路
+        objectsInRange = objectsInRange.stream().filter(e -> {
+            if (e instanceof Building) {
+                return true;
+            }
+            if (e instanceof Road) {
+                CSURoad csuRoad = world.getCsuRoad(e);
+                return !csuRoad.isRoadCenterBlocked();
+            }
+            return false;
+        }).collect(Collectors.toList());
+        objectsInRange.sort(new DistanceComparator(worldInfo.getEntity(target), worldInfo));
         for (StandardEntity entity : objectsInRange) {
-            if (entity instanceof Area) {
-                Action moveAction = getMoveAction(pathPlanning, agentPosition, entity.getID());
-                if (moveAction != null) {
-                    return moveAction;
-                }
+            Action moveAction = getMoveAction(pathPlanning, agentPosition, entity.getID());
+            if (moveAction != null) {
+                return moveAction;
             }
         }
+
+        System.err.println("can't find position to extinguish: " + target.getValue());
         return null;
+
+
+//        //跑出火区
+//        StandardEntity standardEntity = this.worldInfo.getEntity(agentPosition);
+//        if (standardEntity instanceof Building && ((Building) standardEntity).isOnFire()) {
+//            List<StandardEntity> noBuilding = new ArrayList<>();
+//            for (StandardEntity en : this.worldInfo.getAllEntities()) {
+//                if (!(en instanceof Building)) {
+//                    noBuilding.add(en);
+//                }
+//            }
+//            if (noBuilding.isEmpty()) {
+//                return this.getMoveAction(pathPlanning, agentPosition, target);
+//            } else {
+//                noBuilding.sort(new DistanceSorter(this.worldInfo, this.agentInfo.me()));
+//                return this.getMoveAction(pathPlanning, agentPosition, noBuilding.get(0).getID());
+//            }
+//        }
+//
     }
 
     private Action getMoveAction(PathPlanning pathPlanning, EntityID from, EntityID target) {
@@ -564,19 +507,19 @@ public class ActionFireFighting extends ExtAction {
             EntityID lastLastEntity = ((ActionMove) lastLastAction).getPath().get(((ActionMove) lastLastAction).getPath().size() - 1);
             EntityID thisEntity = ((ActionMove) action).getPath().get(((ActionMove) action).getPath().size() - 1);
             Action tryAction = getMoveAction(pathPlanning, world.getSelfPositionId(), lastEntity);
-            if (tryAction != null && !lastEntity.equals(thisEntity) && supplyPositions.contains(lastEntity)) {
+            if (tryAction != null && !lastEntity.equals(thisEntity) && supplyPositions.contains(lastEntity) && supplyPositions.contains(thisEntity)) {
                 //如果前两个time也是move到补水处，且加上这次的移动，是a->b->a这样的，就接着向b走
                 if (lastLastEntity.equals(thisEntity)) {
                     action = tryAction;
-                    System.out.println("agent: " + agentInfo.getID() + "解决refill徘徊问题");
+//                    System.out.println("agent: " + agentInfo.getID() + "解决refill徘徊问题");
                 } else if (!lastEntity.equals(thisEntity)) {
                     //如果上个补水处和这个补水处cost相差2以内
                     Double lastEntityCost = refillTimeCost.get(lastEntity);
                     Double thisEntityCost = refillTimeCost.get(thisEntity);
                     if (Math.abs(thisEntityCost - lastEntityCost) < 2) {
-                        action = getMoveAction(pathPlanning, world.getSelfPositionId(), lastEntity);
+                        action = tryAction;
                     }
-                    System.out.println("agent: " + agentInfo.getID() + "解决refill徘徊问题");
+//                    System.out.println("agent: " + agentInfo.getID() + "解决refill徘徊问题");
                 }
             }
         }
@@ -786,7 +729,3 @@ public class ActionFireFighting extends ExtAction {
     }
 
 }
-
-
-
-
