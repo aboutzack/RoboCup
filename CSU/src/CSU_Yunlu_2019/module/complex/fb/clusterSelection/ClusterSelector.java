@@ -16,6 +16,7 @@ public abstract class ClusterSelector implements IFireBrigadeClusterSelector{
     protected CSUFireClustering clustering;
     protected List<Cluster> clusters;
     protected List<Polygon> polygons;
+    protected Integer lastClusterId;
 
     protected ClusterSelector (CSUFireBrigadeWorld world) {
         this.world = world;

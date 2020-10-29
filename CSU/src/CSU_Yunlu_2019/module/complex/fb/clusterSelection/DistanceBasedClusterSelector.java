@@ -1,8 +1,12 @@
 package CSU_Yunlu_2019.module.complex.fb.clusterSelection;
 
+import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
+
+import java.awt.*;
 
 /**
  * @description: 根据距离选择cluster
@@ -21,19 +25,40 @@ public class DistanceBasedClusterSelector extends ClusterSelector {
     */
     @Override
     public FireCluster selectCluster() {
-        if (polygons.size() > 0) {
-            double minDistance = Double.MAX_VALUE;
-            int nearestClusterIndex = 0;
-            for (int i = 0; i < polygons.size(); i++) {
-                double distance = Ruler.getDistance(polygons.get(i), world.getSelfLocation(), true);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestClusterIndex = i;
-                }
-            }
-            return (FireCluster) clusters.get(nearestClusterIndex);
-        } else {
+        int myNearestClusterIndex = clustering.getMyNearestClusterIndex();
+        Cluster nearestCluster;
+        if (myNearestClusterIndex >= 0) {
+            nearestCluster = clusters.get(myNearestClusterIndex);
+        }else {
+            lastClusterId = null;
             return null;
         }
+
+        //防止在两个cluster之间来回切换
+        if (lastClusterId != null) {
+            Cluster lastCluster = null;
+            Polygon lastPolygon = null;
+
+            for (Cluster cluster : clusters) {
+                if (cluster.getId() == lastClusterId) {
+                    lastCluster = cluster;
+                    lastPolygon = cluster.getConvexHull().getConvexPolygon();
+                    break;
+                }
+            }
+            if (lastCluster != null && lastPolygon != null) {
+                double lastDistance = Ruler.getDistance(lastPolygon, world.getSelfLocation(), true);
+                double thisDistance = Ruler.getDistance(nearestCluster.getConvexHull().getConvexPolygon(), world.getSelfLocation(), true);
+                if (Math.abs(lastDistance / CSUConstants.MEAN_VELOCITY_DISTANCE - thisDistance / CSUConstants.MEAN_VELOCITY_DISTANCE) < 3) {
+                    lastClusterId = lastCluster.getId();
+                    System.out.println("agent: " + world.getSelfHuman().getID() + " 解决dynamic cluster徘徊问题");
+                    return (FireCluster) lastCluster;
+                }
+            }
+        }
+
+
+        lastClusterId = nearestCluster.getId();
+        return (FireCluster) nearestCluster;
     }
 }
