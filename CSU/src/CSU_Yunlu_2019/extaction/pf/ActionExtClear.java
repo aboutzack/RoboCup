@@ -209,7 +209,7 @@ public class ActionExtClear extends ExtAction {
         	double endy = precomputeData.getDouble(KEY_END_Y + i);
         	Point2D end = new Point2D(endx,endy);
         	Road road = (Road) this.worldInfo.getEntity(precomputeData.getEntityID(KEY_JUDGE_ROAD + i));
-        	guidelineHelper line = new guidelineHelper(road,start,end);
+        	guidelineHelper line = new guidelineHelper(road,start,end,false);
         	if(! this.judgeRoad.contains(line)) this.judgeRoad.add(line);
         }
 
@@ -1854,7 +1854,7 @@ public class ActionExtClear extends ExtAction {
 				   Point2D startPoint = this.getMidPoint(edgeToBuilding);
 				   Edge oppositeEdge = this.getOppositeEdge(road, edgeToBuilding);
 				   Point2D endPoint = this.getMidPoint(oppositeEdge);
-				   guidelineHelper guideline = new guidelineHelper(road,startPoint,endPoint);
+				   guidelineHelper guideline = new guidelineHelper(road,startPoint,endPoint,true);
 				   if(!this.judgeRoad.contains(guideline))	{
 					   this.judgeRoad.add(guideline);
 					   this.countedRoad.add(road.getID());
@@ -1868,7 +1868,7 @@ public class ActionExtClear extends ExtAction {
 	   		
 	   		//预计算时PF所处的road，由于只有一块，故可忽略直接取最长线段作为guideline
 	   		Road position = (Road) positionEntity;
-	   		guidelineHelper guideline = new guidelineHelper(this.getProperLine(position),position);
+	   		guidelineHelper guideline = new guidelineHelper(this.getProperLine(position),position,false);
 	   		if(!this.judgeRoad.contains(guideline)) {
 	   			this.judgeRoad.add(guideline);
 	   			this.countedRoad.add(position.getID());
@@ -1882,7 +1882,7 @@ public class ActionExtClear extends ExtAction {
 	   				Point2D startPoint = this.getMidPoint(edge);
 					Edge oppositeEdge = this.getOppositeEdge(road, edge);
 					Point2D endPoint = this.getMidPoint(oppositeEdge);
-					guidelineHelper line = new guidelineHelper(road,startPoint,endPoint);
+					guidelineHelper line = new guidelineHelper(road,startPoint,endPoint,false);
 					if(!this.judgeRoad.contains(line)) {
 						this.judgeRoad.add(line);
 						this.countedRoad.add(road.getID());
@@ -1910,7 +1910,7 @@ public class ActionExtClear extends ExtAction {
 		    			Edge edge2 = road.getEdgeTo(next.getID());
 		    			Point2D start = this.getMidPoint(edge1);
 		    			Point2D end = this.getMidPoint(edge2);
-		      				guidelineHelper line = new guidelineHelper(road,start,end);
+		      				guidelineHelper line = new guidelineHelper(road,start,end,false);
 		      				if(!this.judgeRoad.contains(line))	{
 		      					this.judgeRoad.add(line);
 		      					this.countedRoad.add(entity.getID());
@@ -1941,7 +1941,7 @@ public class ActionExtClear extends ExtAction {
 		   				Edge edge2 = road.getEdgeTo(next.getID());
 		   				Point2D start = this.getMidPoint(edge1);
 		   				Point2D end = this.getMidPoint(edge2);
-		  				guidelineHelper line = new guidelineHelper(road,start,end);
+		  				guidelineHelper line = new guidelineHelper(road,start,end,false);
 	       				if(!this.judgeRoad.contains(line))	{
 	       					this.judgeRoad.add(line);
 	      					this.countedRoad.add(entity.getID());
@@ -1970,7 +1970,7 @@ public class ActionExtClear extends ExtAction {
 			Road road = (Road) se;
 			Line2D properLine = this.getProperLine(road);
 			if (properLine != null) {
-				guidelineHelper line = new guidelineHelper(properLine,road);
+				guidelineHelper line = new guidelineHelper(properLine,road,false);
 				if(!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
 			}
 
