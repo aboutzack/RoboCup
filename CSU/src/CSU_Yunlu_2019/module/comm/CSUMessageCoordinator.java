@@ -1,19 +1,12 @@
 package CSU_Yunlu_2019.module.comm;
 
+import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.debugger.CountMessage;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.StandardMessage;
 import adf.agent.communication.standard.bundle.StandardMessagePriority;
-import adf.agent.communication.standard.bundle.centralized.MessageReport;
-import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
-import adf.agent.communication.standard.bundle.centralized.CommandFire;
-import adf.agent.communication.standard.bundle.centralized.CommandPolice;
-import adf.agent.communication.standard.bundle.centralized.CommandScout;
-import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import adf.agent.communication.standard.bundle.information.MessageBuilding;
-import adf.agent.communication.standard.bundle.information.MessageCivilian;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
+import adf.agent.communication.standard.bundle.centralized.*;
+import adf.agent.communication.standard.bundle.information.*;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
@@ -24,6 +17,13 @@ import rescuecore2.standard.entities.StandardEntityURN;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @see CSUChannelSubscriber
+ *
+ * 根据优先级向分配到的channels依次发送消息
+ *
+ * @author CSU-zack
+ */
 public class CSUMessageCoordinator extends MessageCoordinator {
 
 
@@ -88,16 +88,42 @@ public class CSUMessageCoordinator extends MessageCoordinator {
             }
         }
 
+        if (CSUConstants.DEBUG_MESSAGE_COUNT) {
+            CountMessage.countFBMessage.addAndGet((long) Math.ceil(fireBrigadeMessages.stream().mapToLong(
+                    CommunicationMessage::getByteArraySize).sum() / 8.0));
+            CountMessage.countPFMessage.addAndGet((long) Math.ceil(policeMessages.stream().mapToLong(
+                    CommunicationMessage::getByteArraySize).sum() / 8.0));
+            CountMessage.countATMessage.addAndGet((long) Math.ceil(ambulanceMessages.stream().mapToLong(
+                    CommunicationMessage::getByteArraySize).sum() / 8.0));
+            if (agentInfo.getTime() % 20 == 0) {
+                System.out.println("time: " + agentInfo.getTime() + " avgFbMessageBytes: " +
+                        CountMessage.countFBMessage.doubleValue() / agentInfo.getTime() / CSUChannelSubscriber.getScenarioAgents(scenarioInfo));
+                System.out.println("time: " + agentInfo.getTime() + " avgPfMessageBytes: " +
+                        CountMessage.countPFMessage.doubleValue() / agentInfo.getTime() / CSUChannelSubscriber.getScenarioAgents(scenarioInfo));
+                System.out.println("time: " + agentInfo.getTime() + " avgAtMessageBytes: " +
+                        CountMessage.countATMessage.doubleValue() / agentInfo.getTime() / CSUChannelSubscriber.getScenarioAgents(scenarioInfo));
+            }
+        }
+
         if (scenarioInfo.getCommsChannelsCount() > 1) {
             // send radio messages if there are more than one communication channel
             int[] channelSize = new int[scenarioInfo.getCommsChannelsCount() - 1];
 
-            setSendMessages(scenarioInfo, StandardEntityURN.POLICE_FORCE, agentInfo, worldInfo, policeMessages,
-                    channelSendMessageList, channelSize);
-            setSendMessages(scenarioInfo, StandardEntityURN.AMBULANCE_TEAM, agentInfo, worldInfo, ambulanceMessages,
-                    channelSendMessageList, channelSize);
-            setSendMessages(scenarioInfo, StandardEntityURN.FIRE_BRIGADE, agentInfo, worldInfo, fireBrigadeMessages,
-                    channelSendMessageList, channelSize);
+            List<StandardEntityURN> priority = CSUChannelSubscriber.getPriority(scenarioInfo);
+
+            //可能有重合的channel,因此按照优先级发送消息
+            for (StandardEntityURN urn : priority) {
+                if (urn == StandardEntityURN.FIRE_BRIGADE || urn == StandardEntityURN.FIRE_STATION) {
+                    setSendMessages(scenarioInfo, StandardEntityURN.FIRE_BRIGADE, agentInfo, worldInfo, fireBrigadeMessages,
+                            channelSendMessageList, channelSize);
+                } else if (urn == StandardEntityURN.POLICE_FORCE || urn == StandardEntityURN.POLICE_OFFICE) {
+                    setSendMessages(scenarioInfo, StandardEntityURN.POLICE_FORCE, agentInfo, worldInfo, policeMessages,
+                            channelSendMessageList, channelSize);
+                } else if (urn == StandardEntityURN.AMBULANCE_TEAM || urn == StandardEntityURN.AMBULANCE_CENTRE) {
+                    setSendMessages(scenarioInfo, StandardEntityURN.AMBULANCE_TEAM, agentInfo, worldInfo, ambulanceMessages,
+                            channelSendMessageList, channelSize);
+                }
+            }
         }
 
         ArrayList<StandardMessage> voiceMessageLowList = new ArrayList<>();
@@ -140,7 +166,7 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         int[] channels = new int[maxChannelCount];
 
         for (int i = 0; i < maxChannelCount; i++) {
-            channels[i] = CSUChannelSubscriber.getChannelNumber(agentType, i, numChannels);
+            channels[i] = CSUChannelSubscriber.getChannelNumber(agentType, i, numChannels, agentInfo, worldInfo, scenarioInfo);
         }
         return channels;
     }
@@ -168,27 +194,34 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         int[] channels = getChannelsByAgentType(agentType, agentInfo, worldInfo, scenarioInfo, channelIndex);
         int channel = channels[channelIndex];
         int channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
+        int allocatedCapacity = channelCapacity / CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
         // start from HIGH, NORMAL, to LOW
-        for (int i = StandardMessagePriority.values().length-1; i >= 0; i--) {
+        for (int i = StandardMessagePriority.values().length - 1; i >= 0; i--) {
             for (CommunicationMessage msg : messages) {
                 StandardMessage smsg = (StandardMessage) msg;
+                // getByteArraySize实际返回bit大小,channels的bandwidth单位是byte
+                int byteSize = smsg.getByteArraySize() / 8;
                 if (smsg.getSendingPriority() == StandardMessagePriority.values()[i]) {
-                    channelSize[channel-1] += smsg.getByteArraySize();
-                    if (channelSize[channel-1] > channelCapacity) {
-                        channelSize[channel-1] -= smsg.getByteArraySize();
-                        channelIndex++;
-                        if (channelIndex < channels.length) {
-                            channel = channels[channelIndex];
-                            channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
-                            channelSize[channel-1] += smsg.getByteArraySize();
-                        } else {
-                            // if there is no new channel for that message types, just break
+                    //寻找空闲的channel发送消息
+                    while (channelIndex < channels.length) {
+                        channelSize[channel - 1] += byteSize;
+                        if (channelSize[channel - 1] > allocatedCapacity) {
+                            channelSize[channel - 1] -= byteSize;
+                            channelIndex++;
+                            if (channelIndex < channels.length) {
+                                channel = channels[channelIndex];
+                                channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
+                                allocatedCapacity = channelCapacity / CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
+                            }
+                        } else if (!channelSendMessageList.get(channel).contains(smsg)) {
+                            channelSendMessageList.get(channel).add(smsg);
                             break;
                         }
                     }
-                    channelSendMessageList.get(channel).add(smsg);
+
                 }
             }
         }
+//        System.out.println(agentType+": "+channelSendMessageList);
     }
 }

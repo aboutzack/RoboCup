@@ -12,6 +12,8 @@ public interface CSUConstants {
     public static final boolean DEBUG_DIRECTION_BASED_TARGET_SELECTOR = false;
     public static final boolean DEBUG_STUCK_HELPER = false;
     public static final boolean DEBUG_WATER_REFILL = false;
+    public static final boolean DEBUG_MESSAGE_COUNT = false;
+    public static final boolean DEBUG_CHANNEL_SUBSCRIBE = false;
 
     //防止target.cfg未正确配置
     public static final String WORLD_HELPER_DEFAULT = "CSU_Yunlu_2019.world.CSUWorldHelper";
@@ -30,6 +32,27 @@ public interface CSUConstants {
     public static final int ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP = 20;
     public static final int ROAD_PASSABLY_RESET_TIME_IN_HUGE_MAP = 25;
     public static final int MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN = 4;
+    public static final double MEAN_FB_MESSAGE_BYTE_SIZE = 36.733;
+    public static final double MEAN_PF_MESSAGE_BYTE_SIZE = 40.8623;
+    public static final double MEAN_AT_MESSAGE_BYTE_SIZE = 44.182;
+
+    /** Config key for the number of fire brigades in the scenario. */
+    public static final String FIRE_BRIGADE_COUNT_KEY = "scenario.agents.fb";
+
+    /** Config key for the number of ambulance teams in the scenario. */
+    public static final String AMBULANCE_TEAM_COUNT_KEY = "scenario.agents.at";
+
+    /** Config key for the number of police forces in the scenario. */
+    public static final String POLICE_FORCE_COUNT_KEY = "scenario.agents.pf";
+
+    /** Config key for the number of fire stations in the scenario. */
+    public static final String FIRE_STATION_COUNT_KEY = "scenario.agents.fs";
+
+    /** Config key for the number of ambulance centres in the scenario. */
+    public static final String AMBULANCE_CENTRE_COUNT_KEY = "scenario.agents.ac";
+
+    /** Config key for the number of police offices in the scenario. */
+    public static final String POLICE_OFFICE_COUNT_KEY = "scenario.agents.po";
 
 
     public static final String PRECOMPUTE_DIRECTORY = "precomp_data/";
