@@ -3,12 +3,14 @@ package CSU_Yunlu_2019.module.complex.pf;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
+import adf.agent.communication.standard.bundle.information.MessageRoad;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.Search;
@@ -16,9 +18,11 @@ import rescuecore2.standard.entities.Hydrant;
 import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
+import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -34,69 +38,70 @@ public class CSUSearchForFire extends Search {
 	private Collection<EntityID> searchedRoadIDs;
 	private int searchedClusterIndexes[] ;
 	private int clusterCount = 0;
+	private MessageManager messageManager =null;
 
 	public CSUSearchForFire(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
 							DevelopData developData) {
 		super(ai, wi, si, moduleManager, developData);
-		
+
 		this.unsearchedRoadIDs = new HashSet<>();
 
 		StandardEntityURN agentURN = ai.me().getStandardURN();
 		switch (si.getMode()) {
-		case PRECOMPUTATION_PHASE:
-			if (agentURN == AMBULANCE_TEAM) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == FIRE_BRIGADE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == POLICE_FORCE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
-						"adf.sample.module.algorithm.SampleKMeans");
-			}
-			break;
-		case PRECOMPUTED:
-			if (agentURN == AMBULANCE_TEAM) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == FIRE_BRIGADE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == POLICE_FORCE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
-						"adf.sample.module.algorithm.SampleKMeans");
-			}
-			break;
-		case NON_PRECOMPUTE:
-			if (agentURN == AMBULANCE_TEAM) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == FIRE_BRIGADE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
-						"adf.sample.module.algorithm.SampleKMeans");
-			} else if (agentURN == POLICE_FORCE) {
-				this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
-						"adf.sample.module.algorithm.SamplePathPlanning");
-				this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
-						"adf.sample.module.algorithm.SampleKMeans");
-			}
-			break;
+			case PRECOMPUTATION_PHASE:
+				if (agentURN == AMBULANCE_TEAM) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == FIRE_BRIGADE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == POLICE_FORCE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
+							"adf.sample.module.algorithm.SampleKMeans");
+				}
+				break;
+			case PRECOMPUTED:
+				if (agentURN == AMBULANCE_TEAM) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == FIRE_BRIGADE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == POLICE_FORCE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
+							"adf.sample.module.algorithm.SampleKMeans");
+				}
+				break;
+			case NON_PRECOMPUTE:
+				if (agentURN == AMBULANCE_TEAM) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Ambulance",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Ambulance",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == FIRE_BRIGADE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Fire",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Fire",
+							"adf.sample.module.algorithm.SampleKMeans");
+				} else if (agentURN == POLICE_FORCE) {
+					this.pathPlanning = moduleManager.getModule("SampleSearch.PathPlanning.Police",
+							"adf.sample.module.algorithm.SamplePathPlanning");
+					this.clustering = moduleManager.getModule("SampleSearch.Clustering.Police",
+							"adf.sample.module.algorithm.SampleKMeans");
+				}
+				break;
 		}
 
 		registerModule(this.pathPlanning);
@@ -116,6 +121,9 @@ public class CSUSearchForFire extends Search {
 			this.reset();
 			this.unsearchedRoadIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
 		}
+		this.messageManager = messageManager;
+		this.pathPlanning.updateInfo(messageManager);
+		this.clustering.updateInfo(messageManager);
 		return this;
 	}
 
@@ -146,12 +154,12 @@ public class CSUSearchForFire extends Search {
 			}
 		}
 	}
-	
+
 	private void reset() {
 		this.unsearchedRoadIDs.clear();
 		Collection<StandardEntity> clusterEntities = null;
 		if (this.clustering != null) {
-			
+
 			int clusterIndex = this.findNextCluster();
 			clusterEntities = this.clustering.getClusterEntities(clusterIndex);
 		}
@@ -182,28 +190,59 @@ public class CSUSearchForFire extends Search {
 			++this.clusterCount;
 			return clusterIndex;
 		}else {
-			double min = Double.MAX_VALUE;
-			for(StandardEntity entity  : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-				flag = false;
-				int index = this.clustering.getClusterIndex(entity.getID());
-				for(int i = 0 ; i < this.clusterCount ; ++i) {
-					if(this.searchedClusterIndexes[i] == index) {
-						flag = true;
-						break;
+//			double min = Double.MAX_VALUE;
+//			for(StandardEntity entity  : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+//				flag = false;
+//				int index = this.clustering.getClusterIndex(entity.getID());
+//				for(int i = 0 ; i < this.clusterCount ; ++i) {
+//					if(this.searchedClusterIndexes[i] == index) {
+//						flag = true;
+//						break;
+//					}
+//				}
+//				if(!flag) {
+//					Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
+//					int sumx = 0,sumy = 0,count = 0;
+//					for(StandardEntity se : clutserEntities) {
+//						sumx += this.worldInfo.getLocation(se).first();
+//						sumy += this.worldInfo.getLocation(se).second();
+//						++count;
+//					}
+//					double dist = this.getDistance(sumx/count, sumy/count, this.agentInfo.getX(),this.agentInfo.getY());
+//					if(dist < min) {
+//						clusterIndex = index;
+//						min = dist;
+//					}
+//				}
+//			}
+
+			List<EntityID> blockedRoad = new ArrayList<>();
+			this.addMessageRoad(blockedRoad);
+			clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+			if(blockedRoad != null && !blockedRoad.isEmpty()){
+				double bestRate = Double.MAX_VALUE;
+				for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)){
+					double rate = 0;
+					double allRoad = 0;
+					double blocked = 0;
+					int index = this.clustering.getClusterIndex(se.getID());
+					Collection<StandardEntity> clusterEntities = this.clustering.getClusterEntities(index);
+					for(StandardEntity entity : clusterEntities){
+						if(entity instanceof Road || entity instanceof Hydrant){
+							allRoad++;
+							if(blockedRoad.contains(entity.getID())){
+								blocked++;
+							}
+						}
 					}
-				}
-				if(!flag) {
-					Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
-					int sumx = 0,sumy = 0,count = 0;
-					for(StandardEntity se : clutserEntities) {
-						sumx += this.worldInfo.getLocation(se).first();
-						sumy += this.worldInfo.getLocation(se).second();
-						++count;
-					}
-					double dist = this.getDistance(sumx/count, sumy/count, this.agentInfo.getX(),this.agentInfo.getY());
-					if(dist < min) {
-						clusterIndex = index;
-						min = dist;
+					if(blocked == 0){
+						continue;
+					}else{
+						rate = allRoad / blocked;
+						if(rate < bestRate){
+							bestRate = rate;
+							clusterIndex = index;
+						}
 					}
 				}
 			}
@@ -212,13 +251,27 @@ public class CSUSearchForFire extends Search {
 			return clusterIndex;
 		}
 	}
-	
+
+	void addMessageRoad(List<EntityID> blockedRoad){
+		if(messageManager.getReceivedMessageList() != null
+				&& !messageManager.getReceivedMessageList().isEmpty()) {
+			for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
+				Class<? extends CommunicationMessage> messageClass = message.getClass();
+				if (messageClass == MessageRoad.class) {
+					MessageRoad messageRoad = (MessageRoad) message;
+					blockedRoad.add(messageRoad.getRoadID());
+				}
+			}
+		}
+	}
+
+
 	private double getDistance(double fromX, double fromY, double toX, double toY) {
 		double dx = fromX - toX;
 		double dy = fromY - toY;
 		return Math.hypot(dx, dy);
 	}
-	
+
 	@Override
 	public EntityID getTarget() {
 		return this.result;

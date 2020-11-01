@@ -68,7 +68,6 @@ public class GuidelineCreator extends AbstractModule {
         }
         this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
                 "adf.sample.module.algorithm.SampleKMeans");
-
     }
 
 

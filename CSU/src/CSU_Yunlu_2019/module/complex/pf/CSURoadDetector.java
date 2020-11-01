@@ -2,11 +2,15 @@ package CSU_Yunlu_2019.module.complex.pf;
 
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
+import CSU_Yunlu_2019.extaction.pf.ActionExtClear;
 import CSU_Yunlu_2019.module.complex.pf.GuidelineCreator;
+import CSU_Yunlu_2019.standard.simplePartition.Line;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
 import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
+import adf.agent.communication.standard.bundle.information.MessageBuilding;
+import adf.agent.communication.standard.bundle.information.MessageCivilian;
 import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
 import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
 import adf.agent.communication.standard.bundle.information.MessageRoad;
@@ -24,19 +28,22 @@ import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
+import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static rescuecore2.standard.entities.StandardEntityURN.*;
 //import PF_CSUpfRoadDetector.sorter;
 
 /**
-* @Description: 具有优先级的RoadDetector
-* @Author: Bochun-Yue
-* @Date: 2/25/20
-*/
+ * @Description: 具有优先级的RoadDetector
+ * @Author: Bochun-Yue
+ * @Date: 2/25/20
+ */
 
 public class CSURoadDetector extends RoadDetector {
 	public static final String KEY_JUDGE_ROAD = "RoadDetector.judge_road";
@@ -45,333 +52,351 @@ public class CSURoadDetector extends RoadDetector {
 	public static final String KEY_END_X = "RoadDetector.end_x";
 	public static final String KEY_END_Y = "RoadDetector.end_y";
 	public static final String KEY_ROAD_SIZE = "RoadDetector.road_size";
-	
+	public static final String KEY_ISENTRANCE = "ActionExtClear.is_entrance";
+
 	private int roadsize;
-	
-    private Set<EntityID> targetAreas = new HashSet<>();
-    private PathPlanning pathPlanning;
-    private Clustering clustering;
-    private EntityID first_mission = null;
-    private boolean mission_flag = false;
-    private boolean needFirstMission = false;
-    private EntityID result = null;
-    private boolean have_police_office = false;
-    
+
+	private Set<EntityID> targetAreas = new HashSet<>();
+	private PathPlanning pathPlanning;
+	private Clustering clustering;
+	private EntityID result = null;
 
 
-    protected int lastTime = 0;
-    protected double lastx  =0 ;
-    protected double lasty = 0;
-    protected int minX, maxX, minY, maxY;
-    private List<EntityID> countedRoad = new ArrayList<>();
-
-	private Set<EntityID> entrance_of_Refuge_and_Hydrant = new HashSet<>();
-	private MessageManager messageManager =null;
+	protected int lastTime = 0;
+	public List<guidelineHelper> judgeRoad = new ArrayList<>();
+	private Set<EntityID> SOSroad = new HashSet<>();
+	private Set<EntityID> topLevelBlockedRoad = new HashSet<>();
+	private Set<EntityID> midLevelBlockedRoad = new HashSet<>();
+	private Set<EntityID> lowLevelBlockedRoad = new HashSet<>();
+	private Set<EntityID> noNeedToClear = new HashSet<>();
+	private MessageManager messageManager = null;
 	private GuidelineCreator guidelineCreator;
-    
-    
-    public CSURoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData)
-    {
-        super(ai, wi, si, moduleManager, developData);
-        switch (scenarioInfo.getMode())
-        {
-            case PRECOMPUTATION_PHASE:
-            	this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-    					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
-            	this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
-						"adf.sample.module.algorithm.SampleKMeans");
-                break;
-            case PRECOMPUTED:
-            	this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-    					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+
+
+	public CSURoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
+		super(ai, wi, si, moduleManager, developData);
+		switch (scenarioInfo.getMode()) {
+			case PRECOMPUTATION_PHASE:
+				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
-                break;
-            case NON_PRECOMPUTE:
-            	this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-    					"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+				break;
+			case PRECOMPUTED:
+				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
-                break;
-        }
-        registerModule(this.pathPlanning);
-        registerModule(this.clustering);
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default","CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
-		this.have_police_office = !wi.getEntityIDsOfType(StandardEntityURN.POLICE_OFFICE).isEmpty();
-        this.result = null;
-    }
-    private boolean is_area_blocked(EntityID id){
+				break;
+			case NON_PRECOMPUTE:
+				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
+						"adf.sample.module.algorithm.SampleKMeans");
+				break;
+		}
+		registerModule(this.pathPlanning);
+		registerModule(this.clustering);
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
+		this.result = null;
+	}
+
+	private boolean is_area_blocked(EntityID id) {
 		Road road = (Road) this.worldInfo.getEntity(id);
-		if(!road.isBlockadesDefined()||this.isRoadPassable(road))  return false;
+		if (!road.isBlockadesDefined() || this.isRoadPassable(road)) return false;
 		return true;
 	}
-	
- 
-    private class DistanceIDSorter implements Comparator<EntityID> {
-        private WorldInfo worldInfo;
-        private EntityID reference;
 
-        DistanceIDSorter(WorldInfo worldInfo, EntityID reference) {
-            this.worldInfo = worldInfo;
-            this.reference = reference;
-        }
 
-        DistanceIDSorter(WorldInfo worldInfo, StandardEntity reference) {
-            this.worldInfo = worldInfo;
-            this.reference = reference.getID();
-        }
+	private class DistanceIDSorter implements Comparator<EntityID> {
+		private WorldInfo worldInfo;
+		private EntityID reference;
 
-        public int compare(EntityID a, EntityID b) {
-            int d1 = this.worldInfo.getDistance(this.reference, a);
-            int d2 = this.worldInfo.getDistance(this.reference, b);
-            return d1 - d2;
-        }
-    }
-
-private StandardEntity getNearEntityByLine(WorldInfo world, List<StandardEntity> srcEntityList, int targetX,
-		int targetY) {
-	StandardEntity result = null;
-	for (StandardEntity entity : srcEntityList) {
-		result = ((result != null) ? this.compareLineDistance(world, targetX, targetY, result, entity) : entity);
-	}
-	return result;
-}
-
-private StandardEntity compareLineDistance(WorldInfo worldInfo, int targetX, int targetY, StandardEntity first,
-		StandardEntity second) {
-	Pair<Integer, Integer> firstLocation = worldInfo.getLocation(first);
-	Pair<Integer, Integer> secondLocation = worldInfo.getLocation(second);
-	double firstDistance = getDistance(firstLocation.first(), firstLocation.second(), targetX, targetY);
-	double secondDistance = getDistance(secondLocation.first(), secondLocation.second(), targetX, targetY);
-	return (firstDistance < secondDistance ? first : second);
-}
-
-private double getDistance(double fromX, double fromY, double toX, double toY) {
-	double dx = fromX - toX;
-	double dy = fromY - toY;
-	return Math.hypot(dx, dy);
-}
-
-private double getDistance(EntityID from, EntityID to) {
-	return (double) worldInfo.getDistance(from, to);
-}
-	
-/**
-* @Description: human与障碍的最短距离，方便判断civilian是否被堵
-* @Author: Bochun-Yue
-* @Date: 2/25/20
-*/
-
-private double getDistance(Human human,Road road) {
-	Collection<Blockade> blockades = this.worldInfo.getBlockades(road);
-	Point2D basePoint = new Point2D(human.getX(),human.getY());
-	double nearest = Double.MAX_VALUE;
-	
-	for (Blockade blockade : blockades) {
-		if(blockade.getShape().contains(human.getX(), human.getY())) {
-			return 0;
+		DistanceIDSorter(WorldInfo worldInfo, EntityID reference) {
+			this.worldInfo = worldInfo;
+			this.reference = reference;
 		}
-		List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
-		for(Point2D closest: Points) {
-	        double d = GeometryTools2D.getDistance(basePoint, closest);
-	        if (d < nearest) {
-	            nearest = d;
-	        }
+
+		DistanceIDSorter(WorldInfo worldInfo, StandardEntity reference) {
+			this.worldInfo = worldInfo;
+			this.reference = reference.getID();
+		}
+
+		public int compare(EntityID a, EntityID b) {
+			int d1 = this.worldInfo.getDistance(this.reference, a);
+			int d2 = this.worldInfo.getDistance(this.reference, b);
+			return d1 - d2;
 		}
 	}
-	return nearest;
-}
 
-private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference) {
-    if (IDs.isEmpty()) {
-        return null;
-    }
-    double minDistance = Double.MAX_VALUE;
-    EntityID closestID = null;
-    for (EntityID id : IDs) {
-        double distance = this.getDistance(reference, id);
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestID = id;
-        }
-    }
-    return closestID;
-}
+	private double getDistance(double fromX, double fromY, double toX, double toY) {
+		double dx = fromX - toX;
+		double dy = fromY - toY;
+		return Math.hypot(dx, dy);
+	}
+
+	private double getDistance(EntityID from, EntityID to) {
+		return (double) worldInfo.getDistance(from, to);
+	}
+
+	/**
+	 * @Description: human与障碍的最短距离，方便判断civilian是否被堵
+	 * @Author: Bochun-Yue
+	 * @Date: 2/25/20
+	 */
+
+	private double getDistance(Human human, Road road) {
+		Collection<Blockade> blockades = this.worldInfo.getBlockades(road);
+		Point2D basePoint = new Point2D(human.getX(), human.getY());
+		double nearest = Double.MAX_VALUE;
+
+		for (Blockade blockade : blockades) {
+			if (blockade.getShape().contains(human.getX(), human.getY())) {
+				return 0;
+			}
+			List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
+			for (Point2D closest : Points) {
+				double d = GeometryTools2D.getDistance(basePoint, closest);
+				if (d < nearest) {
+					nearest = d;
+				}
+			}
+		}
+		return nearest;
+	}
+
+	private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference) {
+		if (IDs.isEmpty()) {
+			return null;
+		}
+		double minDistance = Double.MAX_VALUE;
+		EntityID closestID = null;
+		for (EntityID id : IDs) {
+			double distance = this.getDistance(reference, id);
+			if (distance < minDistance) {
+				minDistance = distance;
+				closestID = id;
+			}
+		}
+		return closestID;
+	}
 
 	//摘于MRL
 	private RoadDetector getRoadDetector(EntityID positionID, Set<EntityID> entityIDSet) {
-        this.pathPlanning.setFrom(positionID);
-        this.pathPlanning.setDestination(entityIDSet);
-        List<EntityID> path = this.pathPlanning.calc().getResult();
-        if (path != null && path.size() > 0) {
-            this.result = path.get(path.size() - 1);
-        }
-        return this;
-    }
-
-	/**
-	* @Description: 寻找警察到目标的路线
-	* @Author: Bochun-Yue
-	* @Date: 2/25/20
-	*/
-
-	private RoadDetector getPathTo(EntityID positionIDfrom, EntityID positionIDto) {
-		this.pathPlanning.setFrom(positionIDfrom);
-        this.pathPlanning.setDestination(positionIDto);
-        List<EntityID> path = this.pathPlanning.calc().getResult();
-        if (path != null && path.size() > 0) {
-            this.result = path.get(path.size() - 1);
-        }
-        return this;
+		this.pathPlanning.setFrom(positionID);
+		this.pathPlanning.setDestination(entityIDSet);
+		List<EntityID> path = this.pathPlanning.calc().getResult();
+		if (path != null && path.size() > 0) {
+			this.result = path.get(path.size() - 1);
+		}
+		return this;
 	}
 
 	/**
-	* @Description: 最近的警察去refuge（如果存在），防止FB无法及时补水
-	* @Author: Bochun-Yue
-	* @Date: 3/9/20
-	*/
+	 * @Description: 寻找警察到目标的路线
+	 * @Author: Bochun-Yue
+	 * @Date: 2/25/20
+	 */
+
+	private RoadDetector getPathTo(EntityID positionIDfrom, EntityID positionIDto) {
+		this.pathPlanning.setFrom(positionIDfrom);
+		this.pathPlanning.setDestination(positionIDto);
+		List<EntityID> path = this.pathPlanning.calc().getResult();
+		if (path != null && path.size() > 0) {
+			this.result = path.get(path.size() - 1);
+		}
+		return this;
+	}
+
+	/**
+	 * @Description: 最近的警察去refuge（如果存在），防止FB无法及时补水
+	 * @Author: Bochun-Yue
+	 * @Date: 3/9/20
+	 */
 
 	boolean search_flag = false;
 	boolean arrive_flag = false;
 	StandardEntity nearest_refuge = null;
+
 	private void Find_Refuge() {
 		//检测离每个refuge最近的警察
-		if(!this.search_flag) {
-			for(StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
+		if (!this.search_flag) {
+			for (StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
 				boolean nearest_flag = true;
 				Refuge refuge = (Refuge) SE;
-				double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(),refuge.getX(),refuge.getY());
-				for(StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), refuge.getX(), refuge.getY());
+				for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
 					PoliceForce police = (PoliceForce) se;
-					double dist = this.getDistance(police.getX(),police.getY(),refuge.getX(),refuge.getY());
-					if(dist < distance) {
+					double dist = this.getDistance(police.getX(), police.getY(), refuge.getX(), refuge.getY());
+					if (dist < distance) {
 						nearest_flag = false;
 						break;
 					}
 				}
-				if(nearest_flag) {
+				if (nearest_flag) {
 					this.nearest_refuge = SE;
 					break;
-				}else {
+				} else {
 					continue;
 				}
 			}
 		}
-		this.search_flag=true;
+		this.search_flag = true;
 	}
-	
+
 	private RoadDetector Get_To_Refuge(EntityID positionID) {
-		if(!arrive_flag) {
+		if (!arrive_flag) {
 			this.Find_Refuge();
-			if(this.nearest_refuge!=null) {
+			if (this.nearest_refuge != null) {
 				Refuge refuge = (Refuge) nearest_refuge;
-				if(this.agentInfo.getPosition().getValue()==refuge.getID().getValue()) {
+				if (this.agentInfo.getPosition().getValue() == refuge.getID().getValue()) {
 					this.arrive_flag = true;
 					return null;
-				}
-				else {
+				} else {
 					return this.getPathTo(positionID, refuge.getID());
 				}
 			}
 		}
 		return null;
 	}
-	
-	/**
-	* @Description: 具有优先级路线的RoadDetector
-	* @Author: Bochun-Yue
-	* @Date: 2/25/20
-	*/
-	
-    @Override
-    public RoadDetector calc()
-    {    	
-	
-    	EntityID positionID = this.agentInfo.getPosition();
-		this.update_roads();
-		
-		if(agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() && !this.arrive_flag) this.Get_To_Refuge(positionID);
 
-		if(nearest_refuge !=null && this.result != null && !this.arrive_flag) {
-			if(nearest_refuge.getID().getValue()==this.result.getValue()) {
+	/**
+	 * @Description: 具有优先级路线的RoadDetector
+	 * @Author: Bochun-Yue
+	 * @Date: 2/25/20
+	 */
+
+	@Override
+	public RoadDetector calc() {
+
+		EntityID positionID = this.agentInfo.getPosition();
+		this.update_roads();
+
+		if (agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() + 5 && !this.arrive_flag)
+			this.Get_To_Refuge(positionID);
+
+		if (nearest_refuge != null && this.result != null && !this.arrive_flag) {
+			if (nearest_refuge.getID().getValue() == this.result.getValue()) {
 				return this;
 			}
-		}		
+		}
 
-		
-		if(this.result!=null && this.StuckedAgentOrRefuge_BlockedRoad.contains(this.result)){    
+
+		if (this.result != null && this.SOSroad.contains(this.result)) {
+			if (this.SOSroad.contains(this.agentInfo.getPosition())) {
+				this.SOSroad.remove(this.agentInfo.getPosition());
+				return null;
+			}
 			return this;
 		}
-		
-		if(!this.StuckedAgentOrRefuge_BlockedRoad.isEmpty()) {
-            List<EntityID> sortList = new ArrayList<>(this.StuckedAgentOrRefuge_BlockedRoad);
-            sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
-            List<EntityID> nearPolice = new ArrayList<>();
-            for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-            	nearPolice.add(se.getID());
-            }
-            for (int i = 0;i < sortList.size();++i) {
-                EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
-                if (id.equals(this.agentInfo.getID())) {
-                    return this.getPathTo(positionID, sortList.get(i));
-                } 
-            }
-		}	
-		
-		if(this.result!=null && this.priorityRoads.contains(this.result)){   
+
+		if (!this.SOSroad.isEmpty()) {
+			List<EntityID> sortList = new ArrayList<>(this.SOSroad);
+			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+			List<EntityID> nearPolice = new ArrayList<>();
+			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				nearPolice.add(se.getID());
+			}
+			for (int i = 0; i < sortList.size(); ++i) {
+				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
+				if (id.equals(this.agentInfo.getID())) {
+					return this.getPathTo(positionID, sortList.get(i));
+				}
+			}
+		}
+
+
+		if (this.result != null && this.topLevelBlockedRoad.contains(this.result)) {
 			return this;
 		}
-		
-		if(!this.priorityRoads.isEmpty()){
-            List<EntityID> sortList = new ArrayList<>(this.priorityRoads);
-            sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
-            List<EntityID> nearPolice = new ArrayList<>();
-            for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-            	nearPolice.add(se.getID());
-            }
-            for (int i = 0;i < sortList.size();++i) {
-                EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
-                if (id.equals(this.agentInfo.getID())) {
-                    return this.getPathTo(positionID, sortList.get(i));
-                } 
-            }
-		}				
-		
-		if(this.result!=null && this.targetAreas.contains(this.result)){   
+
+		if (!this.topLevelBlockedRoad.isEmpty()) {
+			List<EntityID> sortList = new ArrayList<>(this.topLevelBlockedRoad);
+			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+			List<EntityID> nearPolice = new ArrayList<>();
+			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				nearPolice.add(se.getID());
+			}
+			for (int i = 0; i < sortList.size(); ++i) {
+				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
+				if (id.equals(this.agentInfo.getID())) {
+					return this.getPathTo(positionID, sortList.get(i));
+				}
+			}
+		}
+
+		if (this.result != null && this.midLevelBlockedRoad.contains(this.result)) {
 			return this;
 		}
-		
-		
-		StandardEntity position =  this.worldInfo.getEntity(this.agentInfo.getPosition());
-		if(position instanceof Road) {
+
+		if (!this.midLevelBlockedRoad.isEmpty()) {
+			List<EntityID> sortList = new ArrayList<>(this.midLevelBlockedRoad);
+			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+			List<EntityID> nearPolice = new ArrayList<>();
+			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				nearPolice.add(se.getID());
+			}
+			for (int i = 0; i < sortList.size(); ++i) {
+				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
+				if (id.equals(this.agentInfo.getID())) {
+					return this.getPathTo(positionID, sortList.get(i));
+				}
+			}
+		}
+
+
+		if (this.result != null && this.lowLevelBlockedRoad.contains(this.result)) {
+			return this;
+		}
+
+		if (!this.lowLevelBlockedRoad.isEmpty()) {
+			List<EntityID> sortList = new ArrayList<>(this.lowLevelBlockedRoad);
+			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+			List<EntityID> nearPolice = new ArrayList<>();
+			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				nearPolice.add(se.getID());
+			}
+			for (int i = 0; i < sortList.size(); ++i) {
+				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
+				if (id.equals(this.agentInfo.getID())) {
+					return this.getPathTo(positionID, sortList.get(i));
+				}
+			}
+		}
+
+
+		StandardEntity position = this.worldInfo.getEntity(this.agentInfo.getPosition());
+		if (position instanceof Road) {
 			Road road = (Road) position;
-			if(this.isRoadPassable(road)) {
+			if (this.isRoadPassable(road)) {
 				this.result = null;
 				return this;
 			}
-		}else if(position instanceof Building){
+		} else if (position instanceof Building) {
 			this.result = null;
 			return this;
 		}
-		
-		if (this.result == null)	
-        { 	
+
+
+		if (this.result == null) {
 			this.getResultWhenNull();
-        }
-        return this;
-    }
+		}
+		return this;
+	}
 
 
 	private RoadDetector getResultWhenNull() {
-		if(this.agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
+		if (this.agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
 			//选择FB、AT
 			Set<EntityID> fireBrigadeEntityIDSet = new HashSet<>();
 			Set<EntityID> ambulanceEntityIDSet = new HashSet<>();
-			for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE)) {
-				fireBrigadeEntityIDSet.add(se.getID());
+			for (StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE)) {
+				FireBrigade fb = (FireBrigade) se;
+				fireBrigadeEntityIDSet.add(fb.getPosition());
 			}
-			for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.AMBULANCE_TEAM)) {
-				ambulanceEntityIDSet.add(se.getID());
+			for (StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.AMBULANCE_TEAM)) {
+				AmbulanceTeam at = (AmbulanceTeam) se;
+				ambulanceEntityIDSet.add(at.getPosition());
 			}
 			if (fireBrigadeEntityIDSet != null && !fireBrigadeEntityIDSet.isEmpty()) {
 				return getRoadDetector(this.agentInfo.getPosition(), fireBrigadeEntityIDSet);
@@ -462,9 +487,9 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 					}
 				}
 
-			}else {
+			} else {
 				//in case of null cluster
-				for (StandardEntity e : this.worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE, StandardEntityURN.BUILDING, StandardEntityURN.GAS_STATION)) {
+				for (StandardEntity e : this.worldInfo.getEntitiesOfType(REFUGE, BUILDING, GAS_STATION)) {
 					for (EntityID id : ((Building) e).getNeighbours()) {
 						StandardEntity neighbour = this.worldInfo.getEntity(id);
 						if (neighbour instanceof Road) {
@@ -473,7 +498,7 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 					}
 				}
 			}
-			if(this.targetAreas!=null && !this.targetAreas.isEmpty()) {
+			if (this.targetAreas != null && !this.targetAreas.isEmpty()) {
 				this.targetAreas.removeAll(this.noNeedToClear);
 				this.pathPlanning.setFrom(this.agentInfo.getPosition());
 				this.pathPlanning.setDestination(this.targetAreas);
@@ -487,41 +512,36 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 //		System.out.println("ID:"+this.agentInfo.getID()+"   return null");
 		return null;
 	}
-    
-    private boolean inRange(PoliceForce a,PoliceForce b) {
-    	return (a.getX() - 3000 < b.getX())&&(a.getX() + 3000 > b.getX())&&(a.getY() - 3000 < b.getY())&&(a.getY() + 3000 > b.getY());
-    }
 
-    @Override
-    public EntityID getTarget()
-    {
-        return this.result;
-    }
+	private boolean inRange(PoliceForce a, PoliceForce b) {
+		return (a.getX() - 3000 < b.getX()) && (a.getX() + 3000 > b.getX()) && (a.getY() - 3000 < b.getY()) && (a.getY() + 3000 > b.getY());
+	}
 
 	@Override
-	public RoadDetector precompute(PrecomputeData precomputeData)
-	{
+	public EntityID getTarget() {
+		return this.result;
+	}
+
+	@Override
+	public RoadDetector precompute(PrecomputeData precomputeData) {
 
 		super.precompute(precomputeData);
 		this.pathPlanning.precompute(precomputeData);
 		this.clustering.precompute(precomputeData);
 		this.guidelineCreator.precompute(precomputeData);
-		if (this.getCountPrecompute() >= 2)
-		{
+		if (this.getCountPrecompute() >= 2) {
 			return this;
 		}
 		return this;
 	}
 
 	@Override
-	public RoadDetector resume(PrecomputeData precomputeData)
-	{
+	public RoadDetector resume(PrecomputeData precomputeData) {
 		super.resume(precomputeData);
 		this.pathPlanning.resume(precomputeData);
 		this.clustering.resume(precomputeData);
 		//this.clustering.resume(precomputeData);
-		if (this.getCountResume() >= 2)
-		{
+		if (this.getCountResume() >= 2) {
 			return this;
 		}
 		this.guidelineCreator.resume(precomputeData);
@@ -531,251 +551,266 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 	}
 
 	@Override
-	public RoadDetector preparate()
-	{
+	public RoadDetector preparate() {
 
 		super.preparate();
 		this.pathPlanning.preparate();
 		this.clustering.preparate();
-		if (this.getCountPreparate() >= 2)
-		{
+		if (this.getCountPreparate() >= 2) {
 			return this;
 		}
 		this.guidelineCreator.preparate();
 		return this;
 	}
+
 	@Override
-	public RoadDetector updateInfo(MessageManager messageManager)
-	{
-		this.messageManager=messageManager;
+	public RoadDetector updateInfo(MessageManager messageManager) {
+		this.messageManager = messageManager;
 		super.updateInfo(messageManager);
-		if (this.getCountUpdateInfo() >= 2)
-		{
+		if (this.getCountUpdateInfo() >= 2) {
 			return this;
 		}
 		this.Reflect_Message();
 		this.pathPlanning.updateInfo(messageManager);
 		this.clustering.updateInfo(messageManager);
 		this.guidelineCreator.updateInfo(messageManager);
+
 		return this;
 	}
 
 
-    private List<guidelineHelper> judgeRoad = new ArrayList<>();
-    private Set<EntityID> StuckedAgentOrRefuge_BlockedRoad = new HashSet<>();
-    private Set<EntityID> priorityRoads = new HashSet<>();
-    private Set<EntityID> unpassable_Road = new HashSet<>();
-    private Set<EntityID> noNeedToClear = new HashSet<>();
-    private Set<EntityID> blockedRoads = new HashSet<>();
-    
-    
-    private Set<EntityID> get_all_Bloacked_Entrance_of_Building(Building building) {
+	private Set<EntityID> get_all_Bloacked_Entrance_of_Building(Building building) {
 		Set<EntityID> all_Bloacked_Entrance = new HashSet<>();
 		EntityID buildingID = building.getID();
 		get_all_Bloacked_Entrance_result(all_Bloacked_Entrance, buildingID);
 		return all_Bloacked_Entrance;
 
 	}
-    
-    private void get_all_Bloacked_Entrance_result(Set<EntityID> all_Bloacked_Entrance, EntityID id) {
+
+	private void get_all_Bloacked_Entrance_result(Set<EntityID> all_Bloacked_Entrance, EntityID id) {
 		Area area = (Area) this.worldInfo.getEntity(id);
 		//Road road = (Road) this.worldInfo.getEntity(id);
 		for (EntityID neighbor : area.getNeighbours()) {
 			Entity entity = this.worldInfo.getEntity(neighbor);
-			if (entity instanceof Road ) {
+			if (entity instanceof Road) {
 				Road road = (Road) entity;
-				if(!this.isRoadPassable(road))
-				all_Bloacked_Entrance.add(neighbor);
+				if (!this.isRoadPassable(road))
+					all_Bloacked_Entrance.add(neighbor);
 			}
 		}
 	}
 
 	/**
-	* @Description: 路况更新，对于路线优先级的判别
-	* @Author: Bochun-Yue
-	* @Date: 2/25/20
-	*/
-    
-    private void update_roads() {
+	 * @Description: 路况更新，对于路线优先级的判别
+	 * @Author: Bochun-Yue
+	 * @Date: 2/25/20
+	 */
+
+	private void update_roads() {
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
-    		StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(id);
-    		//refuge
-			if (entity != null && entity instanceof Refuge){		
-				this.StuckedAgentOrRefuge_BlockedRoad.addAll(this.get_all_Bloacked_Entrance_of_Building((Building) entity));	
+			StandardEntity entity = (StandardEntity) this.worldInfo.getEntity(id);
+			//refuge
+			if (entity != null && entity instanceof Refuge) {
+				this.topLevelBlockedRoad.addAll(this.get_all_Bloacked_Entrance_of_Building((Building) entity));
 			}
 		}
-		for (EntityID id: this.worldInfo.getChanged().getChangedEntities()) {
-			StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(id);
+		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
+			StandardEntity entity = (StandardEntity) this.worldInfo.getEntity(id);
 			//hydrant
-			if (entity != null  &&  !this.noNeedToClear.contains(entity.getID()) && entity instanceof Hydrant) {
+			if (entity != null && !this.noNeedToClear.contains(entity.getID()) && entity instanceof Hydrant) {
 				Road road = (Road) entity;
-				if(!this.isRoadPassable(road)) {
-					this.priorityRoads.add(road.getID());
+				if (!this.isRoadPassable(road)) {
+					this.topLevelBlockedRoad.add(road.getID());
 				}
 			}
 		}
-    	
+
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
 			StandardEntity entity = this.worldInfo.getEntity(id);
 			//firebrigade和ambulanceteam
-			if (entity instanceof FireBrigade||entity instanceof AmbulanceTeam) {
+			if (entity instanceof FireBrigade || entity instanceof AmbulanceTeam) {
 				Human human = (Human) entity;
 				EntityID position = human.getPosition();
 				StandardEntity positionEntity = this.worldInfo.getEntity(position);
 				if (positionEntity instanceof Road) {
 					//堵了埋了或者离blockade距离小于1000
-					if (this.is_agent_stucked(human, (Road) positionEntity)||this.is_agent_Buried(human, (Road) positionEntity)) {
-						this.StuckedAgentOrRefuge_BlockedRoad.add(position);
+					if (this.is_agent_stucked(human, (Road) positionEntity) || this.is_agent_Buried(human, (Road) positionEntity)) {
+						this.topLevelBlockedRoad.add(position);
 					}
 				} else if (positionEntity instanceof Building) {
 					Set<EntityID> entrances = this.get_all_Bloacked_Entrance_of_Building((Building) positionEntity);
 					// if(entrances.size() == (Area)positionEntity.getEdge())
-					this.StuckedAgentOrRefuge_BlockedRoad.addAll(entrances);
+					this.topLevelBlockedRoad.addAll(entrances);
 				}
 			}
 			//civilian
 			else if (entity instanceof Civilian) {
 				Human human = (Human) entity;
-				if (!human.isPositionDefined() || !human.isHPDefined()||human.getHP()<1000) {
-	                continue;
-	            }
+				if (!human.isPositionDefined() || !human.isHPDefined() || human.getHP() < 1000) {
+					continue;
+				}
 				EntityID position = human.getPosition();
 				StandardEntity positionEntity = this.worldInfo.getEntity(position);
 				if (positionEntity instanceof Road) {
 					//堵了埋了或者离blockade距离小于1000
-					if (this.is_agent_stucked(human, (Road) positionEntity)||this.is_agent_Buried(human, (Road) positionEntity)) {
-						this.StuckedAgentOrRefuge_BlockedRoad.add(position);
+					if (this.is_agent_stucked(human, (Road) positionEntity) || this.is_agent_Buried(human, (Road) positionEntity)) {
+						this.midLevelBlockedRoad.add(position);
 					}
 				} else if (!(positionEntity instanceof Refuge) && positionEntity instanceof Building) {
 					Set<EntityID> entrances = this.get_all_Bloacked_Entrance_of_Building((Building) positionEntity);
-					this.StuckedAgentOrRefuge_BlockedRoad.addAll(entrances);
+					this.lowLevelBlockedRoad.addAll(entrances);
 				}
 			}
 		}
-			//road 
+//			road
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
 			StandardEntity entity = this.worldInfo.getEntity(id);
 			if (entity instanceof Road) {
 				Road road = (Road) entity;
-					if (this.isRoadPassable(road)) {
-						this.StuckedAgentOrRefuge_BlockedRoad.remove(road.getID());
-						this.priorityRoads.remove(road.getID());
-						continue;
-					}
-					boolean BuildFlag=true;
-					for(EntityID eid : road.getNeighbours()) {
-						StandardEntity ent = (StandardEntity)this.worldInfo.getEntity(eid);
-						if(ent instanceof Building) {
-							BuildFlag=false;
-							break;
-						}
-					}
-					if(BuildFlag) this.priorityRoads.add(road.getID());
+				if (this.isRoadPassable(road)) {
+					this.topLevelBlockedRoad.remove(road.getID());
+					this.midLevelBlockedRoad.remove(road.getID());
+					this.lowLevelBlockedRoad.remove(road.getID());
+					this.noNeedToClear.add(road.getID());
+					continue;
+				}
+//				else{
+//					Boolean buildingFlag = false;
+//					for(EntityID neighbourid : road.getNeighbours()){
+//						StandardEntity neighbour = this.worldInfo.getEntity(neighbourid);
+//						if(neighbour instanceof Building){
+//							buildingFlag = true;
+//							break;
+//						}
+//					}
+//					if(!buildingFlag){
+//						this.midLevelBlockedRoad.add(road.getID());
+//					}
+//				}
 			}
 		}
-    }
+	}
+
 	/**
-	* @Description: 道路可否通过，以guideline是否被覆盖为判断标准
-	* @Author: Bochun-Yue
-	* @Date: 3/7/20
-	*/
-    private boolean isRoadPassable(Road road) {
-    	if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
+	 * @Description: 道路可否通过，以guideline是否被覆盖为判断标准
+	 * @Author: Bochun-Yue
+	 * @Date: 3/7/20
+	 */
+	private boolean isRoadPassable(Road road) {
+		if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
 			return true;
 		}
 		Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
-				.collect(Collectors.toSet());	
-			Line2D guideline = null;
-			for(guidelineHelper r : this.judgeRoad) {
-				if(r.getSelfID().equals(road.getID())) {
-					guideline = r.getGuideline();
-				}
+				.collect(Collectors.toSet());
+		Line2D guideline = null;
+		for (guidelineHelper r : this.judgeRoad) {
+			if (r.getSelfID().equals(road.getID())) {
+				guideline = r.getGuideline();
 			}
-			if (guideline != null) {
-				if(road.getID().getValue() == 263) {
-					System.out.println("---------------------("+guideline.getOrigin().getX()+","+guideline.getOrigin().getY()+")---------------");
-					System.out.println("---------------------("+guideline.getEndPoint().getX()+","+guideline.getEndPoint().getY()+")---------------");
-
-				}
-				for (Blockade blockade : blockades) {
-					List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
-					for(int i =0;i<Points.size();++i) {
-						if(i!=Points.size()-1) {
-							double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
-							double crossProduct2 = this.getCrossProduct(guideline, Points.get(i+1));
-							if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
-								Line2D line = new Line2D(Points.get(i),Points.get(i+1));
-								Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
-								if(intersect!=null) {
-									return false;
-								}
+		}
+		if (guideline != null) {
+			for (Blockade blockade : blockades) {
+				List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
+				for (int i = 0; i < Points.size(); ++i) {
+					if (i != Points.size() - 1) {
+						double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
+						double crossProduct2 = this.getCrossProduct(guideline, Points.get(i + 1));
+						if (crossProduct1 < 0 && crossProduct2 > 0 || crossProduct1 > 0 && crossProduct2 < 0) {
+							Line2D line = new Line2D(Points.get(i), Points.get(i + 1));
+							Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
+							if (intersect != null) {
+								return false;
 							}
 						}
-						else {
-							double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
-							double crossProduct2 = this.getCrossProduct(guideline, Points.get(0));
-							if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
-								Line2D line = new Line2D(Points.get(i),Points.get(0));
-								Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
-								if(intersect!=null) {
-									return false;
-								}
+					} else {
+						double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
+						double crossProduct2 = this.getCrossProduct(guideline, Points.get(0));
+						if (crossProduct1 < 0 && crossProduct2 > 0 || crossProduct1 > 0 && crossProduct2 < 0) {
+							Line2D line = new Line2D(Points.get(i), Points.get(0));
+							Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
+							if (intersect != null) {
+								return false;
 							}
 						}
 					}
 				}
-				return true;
-	        }	
+			}
+			return true;
+		}
 		return false;
+	}
+
+	/**
+	 * @Description: 叉积
+	 * @Author: Bochun-Yue
+	 * @Date: 3/7/20
+	 */
+	private double getCrossProduct(Line2D line, Point2D point) {
+
+		double X = point.getX();
+		double Y = point.getY();
+		double X1 = line.getOrigin().getX();
+		double Y1 = line.getOrigin().getY();
+		double X2 = line.getEndPoint().getX();
+		double Y2 = line.getEndPoint().getY();
+
+		return ((X2 - X1) * (Y - Y1) - (X - X1) * (Y2 - Y1));
 	}
 
 
 	/**
-	* @Description: 叉积
-	* @Author: Bochun-Yue
-	* @Date: 3/7/20
-	*/
-    private double getCrossProduct(Line2D line , Point2D point) {
-    	
-    	double X = point.getX();
-    	double Y = point.getY();
-    	double X1 = line.getOrigin().getX();
-    	double Y1 = line.getOrigin().getY();
-    	double X2 = line.getEndPoint().getX();
-    	double Y2 = line.getEndPoint().getY();
-    	
-    	return ((X2 - X1)*(Y - Y1) - (X - X1)*(Y2 - Y1));
-    }
+	 * @Description: 根据changedEntities的信息进行通讯等操作
+	 * @Date: 2/28/20
+	 */
+	private void preProcessChangedEntities(MessageManager messageManager) {
+		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
+			StandardEntity entity = worldInfo.getEntity(id);
+			if (entity != null && entity instanceof Building) {
+				Building building = (Building) worldInfo.getEntity(id);
+				if (building.isFierynessDefined() && building.getFieryness() > 0 && building.getFieryness() != 4) {
+					messageManager.addMessage(new MessageBuilding(true, building));
+					messageManager.addMessage(new MessageBuilding(false, building));
+				}
+			} else if (entity != null && entity instanceof Civilian) {
+				Civilian civilian = (Civilian) entity;
+				if ((civilian.isHPDefined() && civilian.getHP() > 1000 && civilian.isDamageDefined() && civilian.getDamage() > 0)
+						|| ((civilian.isPositionDefined() && !(worldInfo.getEntity(civilian.getPosition()) instanceof Refuge))
+						&& (worldInfo.getEntity(civilian.getPosition()) instanceof Building))) {
+					messageManager.addMessage(new MessageCivilian(true, civilian));
+					messageManager.addMessage(new MessageCivilian(false, civilian));
+				}
+			}
+		}
+	}
 
-    
-    
-    private boolean is_inside_blocks(Human human, Blockade blockade) {
 
-    	if (blockade.isApexesDefined() && human.isXDefined() && human.isYDefined()) {
-    		if (blockade.getShape().contains(human.getX(), human.getY())) {
-    			return true;
-    		}
-    	}
-    	return false;
-    }
+	private boolean is_inside_blocks(Human human, Blockade blockade) {
 
-    private boolean is_agent_stucked(Human agent, Road road) {
-    	Collection<Blockade> blockades = this.worldInfo.getBlockades(road);
-    	for (Blockade blockade : blockades) {
-    		if (this.is_inside_blocks(agent, blockade)) {
-    			return true;
-    		}
-    	}
-    	return false;
-    }
+		if (blockade.isApexesDefined() && human.isXDefined() && human.isYDefined()) {
+			if (blockade.getShape().contains(human.getX(), human.getY())) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-    private boolean is_agent_Buried(Human human, Road road) {
+	private boolean is_agent_stucked(Human agent, Road road) {
+		Collection<Blockade> blockades = this.worldInfo.getBlockades(road);
+		for (Blockade blockade : blockades) {
+			if (this.is_inside_blocks(agent, blockade)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-    	if (human.isBuriednessDefined() && human.getBuriedness() > 0)
-    		return true;
-    	return false;
-    }
-	
+	private boolean is_agent_Buried(Human human, Road road) {
+
+		if (human.isBuriednessDefined() && human.getBuriedness() > 0)
+			return true;
+		return false;
+	}
+
 	private void Reflect_Message() {
 
 		// reflectMessage
@@ -797,126 +832,128 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 	}
 
 	private void reflectMessage(MessageRoad messageRoad, Collection<EntityID> changedEntities) {
-		
-			if (messageRoad.isBlockadeDefined() && !changedEntities.isEmpty() && !changedEntities.contains(messageRoad.getBlockadeID())) {
-				MessageUtil.reflectMessage(this.worldInfo, messageRoad);
-			}
-			if (messageRoad.isPassable()) {
-				this.blockedRoads.remove(messageRoad.getRoadID());
-				this.noNeedToClear.add(messageRoad.getRoadID());
-			}
+
+		if (messageRoad.isBlockadeDefined() && !changedEntities.isEmpty() && !changedEntities.contains(messageRoad.getBlockadeID())) {
+			MessageUtil.reflectMessage(this.worldInfo, messageRoad);
+		}
+		Road road = (Road) this.worldInfo.getEntity(messageRoad.getRoadID());
+		if (this.isRoadPassable(road)) {
+			this.topLevelBlockedRoad.remove(messageRoad.getRoadID());
+			this.midLevelBlockedRoad.remove(messageRoad.getRoadID());
+			this.noNeedToClear.add(messageRoad.getRoadID());
+		}
 	}
 
 	private void reflectMessage(MessageAmbulanceTeam messageAmbulanceTeam) {
-		if (messageAmbulanceTeam.getPosition() == null) {
-			return;
-		}
-		if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_RESCUE) {
-			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
-			if (position != null && position instanceof Building) {
-			this.noNeedToClear.addAll(((Building) position).getNeighbours());
-			this.targetAreas.removeAll(((Building) position).getNeighbours());
-			}
-		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_LOAD) {
-			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
-			if (position != null && position instanceof Building) {
-				this.targetAreas.removeAll(((Building) position).getNeighbours());
-			this.noNeedToClear.addAll(((Building) position).getNeighbours());
-}
-		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_MOVE) {
-			if (messageAmbulanceTeam.getTargetID() == null) {
-				return;
-			}
-			StandardEntity target = this.worldInfo.getEntity(messageAmbulanceTeam.getTargetID());
-			if (target instanceof Building) {
-				for (EntityID id : ((Building) target).getNeighbours()) {
-					StandardEntity neighbour = this.worldInfo.getEntity(id);
-					if (neighbour instanceof Road) {
-						if(this.is_area_blocked(id)) {
-//					 		this.StuckedAgentOrRefuge_BlockedRoad.add(id);
-							this.priorityRoads.add(id);
-						}
-					}
-				}
-			} else if (target instanceof Human) {
-				Human human = (Human) target;
-				if (human.isPositionDefined()) {
-					StandardEntity position = this.worldInfo.getPosition(human);
-					if (position instanceof Building) {
-						for (EntityID id : ((Building) position).getNeighbours()) {
-							StandardEntity neighbour = this.worldInfo.getEntity(id);
-							if (neighbour instanceof Road) {
-								if(this.is_area_blocked(id)) {
-									this.priorityRoads.add(id);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+//		if (messageAmbulanceTeam.getPosition() == null) {
+//			return;
+//		}
+//		if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_RESCUE) {
+//			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
+//			if (position != null && position instanceof Building) {
+//			this.noNeedToClear.addAll(((Building) position).getNeighbours());
+//			this.targetAreas.removeAll(((Building) position).getNeighbours());
+//			}
+//		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_LOAD) {
+//			StandardEntity position = this.worldInfo.getEntity(messageAmbulanceTeam.getPosition());
+//			if (position != null && position instanceof Building) {
+//				this.targetAreas.removeAll(((Building) position).getNeighbours());
+//			this.noNeedToClear.addAll(((Building) position).getNeighbours());
+//}
+//		} else if (messageAmbulanceTeam.getAction() == MessageAmbulanceTeam.ACTION_MOVE) {
+//			if (messageAmbulanceTeam.getTargetID() == null) {
+//				return;
+//			}
+//			StandardEntity target = this.worldInfo.getEntity(messageAmbulanceTeam.getTargetID());
+//			if (target instanceof Building) {
+//				for (EntityID id : ((Building) target).getNeighbours()) {
+//					StandardEntity neighbour = this.worldInfo.getEntity(id);
+//					if (neighbour instanceof Road) {
+//						if(this.is_area_blocked(id)) {
+////					 		this.topLevelBlockedRoad.add(id);
+//							this.midLevelBlockedRoad.add(id);
+//						}
+//					}
+//				}
+//			} else if (target instanceof Human) {
+//				Human human = (Human) target;
+//				if (human.isPositionDefined()) {
+//					StandardEntity position = this.worldInfo.getPosition(human);
+//					if (position instanceof Building) {
+//						for (EntityID id : ((Building) position).getNeighbours()) {
+//							StandardEntity neighbour = this.worldInfo.getEntity(id);
+//							if (neighbour instanceof Road) {
+//								if(this.is_area_blocked(id)) {
+//									this.midLevelBlockedRoad.add(id);
+//								}
+//							}
+//						}
+//					}
+//				}
+//			}
+//		}
 	}
 
 	private void reflectMessage(MessageFireBrigade messageFireBrigade) {
-		if (messageFireBrigade.getTargetID() == null) {
-			return;
-		}
-		if (messageFireBrigade.getAction() == MessageFireBrigade.ACTION_REFILL) {
-			StandardEntity target = this.worldInfo.getEntity(messageFireBrigade.getTargetID());
-			if (target instanceof Building) {
-				for (EntityID id : ((Building) target).getNeighbours()) {
-					StandardEntity neighbour = this.worldInfo.getEntity(id);
-					if (neighbour instanceof Road) {
-						if(this.is_area_blocked(id)) {
-							this.priorityRoads.add(id);
-						}
-					}
-				}
-			} else if (target.getStandardURN() == StandardEntityURN.HYDRANT) {
-				this.entrance_of_Refuge_and_Hydrant.add(target.getID());
-			}
-		}
+//		if (messageFireBrigade.getTargetID() == null) {
+//			return;
+//		}
+//		if (messageFireBrigade.getAction() == MessageFireBrigade.ACTION_REFILL) {
+//			StandardEntity target = this.worldInfo.getEntity(messageFireBrigade.getTargetID());
+//			if (target instanceof Building) {
+//				for (EntityID id : ((Building) target).getNeighbours()) {
+//					StandardEntity neighbour = this.worldInfo.getEntity(id);
+//					if (neighbour instanceof Road) {
+//						if(this.is_area_blocked(id)) {
+//							this.midLevelBlockedRoad.add(id);
+//						}
+//					}
+//				}
+//			} else if (target.getStandardURN() == StandardEntityURN.HYDRANT) {
+//				this.entrance_of_Refuge_and_Hydrant.add(target.getID());
+//			}
+//		}
 	}
 
 	private void reflectMessage(MessagePoliceForce messagePoliceForce) {
-		if (messagePoliceForce.getAction() == MessagePoliceForce.ACTION_CLEAR) {
-			if (messagePoliceForce.getAgentID().getValue() != this.agentInfo.getID().getValue()) {
-				if (messagePoliceForce.isTargetDefined()) {
-					EntityID targetID = messagePoliceForce.getTargetID();
-					if (targetID == null) {
-						return;
-					}
-					StandardEntity entity = this.worldInfo.getEntity(targetID);
-					if (entity == null) {
-						return;
-					}
-
-					if (entity instanceof Area) {
-						this.priorityRoads.remove(targetID);
-						this.noNeedToClear.add(targetID);
-						if (this.result != null && this.result.getValue() == targetID.getValue()) {
-							if (this.agentInfo.getID().getValue() < messagePoliceForce.getAgentID().getValue()) {
-								this.result = null;
-								//this.result = this.get_new_result();
-							}
-						}
-					} else if (entity.getStandardURN() == StandardEntityURN.BLOCKADE) {
-						EntityID position = ((Blockade) entity).getPosition();
-						if(position!=null) {
-							this.priorityRoads.remove(targetID);
-							this.noNeedToClear.add(targetID);
-							if (this.result != null && this.result.getValue() == position.getValue()) {
-								if (this.agentInfo.getID().getValue() < messagePoliceForce.getAgentID().getValue()) {
-									this.result = null;
-									//this.result = this.get_new_result();
-								}
-							}
-						}
-					}
-
-				}
-			}
-		}
+//		if (messagePoliceForce.getAction() == MessagePoliceForce.ACTION_CLEAR) {
+//			if (messagePoliceForce.getAgentID().getValue() != this.agentInfo.getID().getValue()) {
+//				if (messagePoliceForce.isTargetDefined()) {
+//					EntityID targetID = messagePoliceForce.getTargetID();
+//					if (targetID == null) {
+//						return;
+//					}
+//					StandardEntity entity = this.worldInfo.getEntity(targetID);
+//					if (entity == null) {
+//						return;
+//					}
+//
+//					if (entity instanceof Area) {
+//						this.midLevelBlockedRoad.remove(targetID);
+//						this.noNeedToClear.add(targetID);
+//						if (this.result != null && this.result.getValue() == targetID.getValue()) {
+//							if (this.agentInfo.getID().getValue() < messagePoliceForce.getAgentID().getValue()) {
+//								this.result = null;
+//								//this.result = this.get_new_result();
+//							}
+//						}
+//					} else if (entity.getStandardURN() == StandardEntityURN.BLOCKADE) {
+//						EntityID position = ((Blockade) entity).getPosition();
+//						if(position!=null) {
+//							this.midLevelBlockedRoad.remove(targetID);
+//							this.noNeedToClear.add(targetID);
+//							if (this.result != null && this.result.getValue() == position.getValue()) {
+//								if (this.agentInfo.getID().getValue() < messagePoliceForce.getAgentID().getValue()) {
+//									this.result = null;
+//									//this.result = this.get_new_result();
+//								}
+//							}
+//						}
+//					}
+//
+//				}
+//			}
+//		}
 	}
 
 	private void reflectMessage(CommandPolice commandPolice) {
@@ -931,20 +968,17 @@ private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference
 				return;
 			}
 			StandardEntity target = this.worldInfo.getEntity(commandPolice.getTargetID());
-			if (target instanceof Area) {
+			if (target instanceof Road || target instanceof Hydrant) {
 				Road road = (Road) target;
-				if(!this.isRoadPassable(road)) {
-					this.StuckedAgentOrRefuge_BlockedRoad.add(target.getID());
-				}
+				this.SOSroad.add(target.getID());
 			} else if (target.getStandardURN() == StandardEntityURN.BLOCKADE) {
 				Blockade blockade = (Blockade) target;
 				if (blockade.isPositionDefined()) {
 					StandardEntity position = worldInfo.getEntity(blockade.getPosition());
-					if(position != null) {
-						if(position instanceof Road) {
+					if (position != null) {
+						if (position instanceof Road || position instanceof Hydrant) {
 							Road road = (Road) position;
-							if(!this.isRoadPassable(road))
-								this.StuckedAgentOrRefuge_BlockedRoad.add(blockade.getPosition());
+							this.SOSroad.add(blockade.getPosition());
 						}
 					}
 				}
