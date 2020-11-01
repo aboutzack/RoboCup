@@ -50,7 +50,6 @@ public class ActionExtClear extends ExtAction {
 	protected double lasty = 0;
 	protected double repairDistance;
 	private List<guidelineHelper> judgeRoad = new ArrayList<>();
-	protected EntranceHelper entrance;
 	HashSet <Blockade> already_clear_blocked = new HashSet<>();
 	protected Map<EntityID, CSURoadHelper> csuRoadMap = new FastMap<>();
 	private Action lastAction = null;
@@ -83,16 +82,6 @@ public class ActionExtClear extends ExtAction {
 	protected List<EntityID> lastCyclePath;
 
 	private Blockade lastClearTarget = null;
-
-	public static final String KEY_JUDGE_ROAD = "ActionExtClear.judge_road";
-	public static final String KEY_START_X = "ActionExtClear.start_x";
-	public static final String KEY_START_Y = "ActionExtClear.start_y";
-	public static final String KEY_END_X = "ActionExtClear.end_x";
-	public static final String KEY_END_Y = "ActionExtClear.end_y";
-	public static final String KEY_ROAD_SIZE = "ActionExtClear.road_size";
-	public static final String KEY_ISENTRANCE = "ActionExtClear.is_entrance";
-
-	private int roadsize;
 
 	public ActionExtClear(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
 						  DevelopData developData) {
@@ -1476,12 +1465,18 @@ public class ActionExtClear extends ExtAction {
 		if (position instanceof Building) {
 			Building loc = (Building) position;
 
-			Set<Road> entrances = entrance.getEntrance(loc);
+			Set<Road> entrances = new HashSet<>();
+			for(EntityID id : loc.getNeighbours()){
+				StandardEntity neighbour = this.worldInfo.getEntity(id);
+				if(neighbour instanceof Road || neighbour instanceof Hydrant){
+					Road road = (Road) neighbour;
+					entrances.add(road);
+				}
+			}
 			int size = entrances.size();
 			int count = 0;
-			for (Road next : entrance.getEntrance(loc)) {
-				CSURoadHelper road = csuRoadMap.get(next.getID());
-				if (road.isNeedlessToClear())
+			for (Road next : entrances) {
+				if (this.isRoadPassable(next))
 					continue;
 				count++;
 			}
