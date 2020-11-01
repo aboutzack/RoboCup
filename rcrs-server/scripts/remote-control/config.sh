@@ -8,6 +8,7 @@ REMOTE_USER=root
 #REMOTE_USER=home/yyx
 
 
+
 MAPDIR=maps
 KERNELDIR=rcrs-server
 CODEDIR=code
