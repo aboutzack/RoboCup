@@ -1,7 +1,12 @@
 #! /bin/bash
+#  当本地用户和远程用户都是root用户时
 LOCAL_USER=root
 REMOTE_USER=root
-SOURCEFORGE_USER=root
+
+# 当本地用户或者远程用户为普通用户时
+#LOCAL_USER=home/yyx
+#REMOTE_USER=home/yyx
+
 
 MAPDIR=maps
 KERNELDIR=rcrs-server
