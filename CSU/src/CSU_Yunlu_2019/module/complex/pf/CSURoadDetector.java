@@ -5,6 +5,7 @@ import CSU_Yunlu_2019.extaction.pf.guidelineHelper;
 import CSU_Yunlu_2019.extaction.pf.ActionExtClear;
 import CSU_Yunlu_2019.module.complex.pf.GuidelineCreator;
 import CSU_Yunlu_2019.standard.simplePartition.Line;
+import CSU_Yunlu_2019.CSUConstants;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
@@ -62,7 +63,7 @@ public class CSURoadDetector extends RoadDetector {
 	private EntityID result = null;
 
 
-	protected int lastTime = 0;
+	private final double timeThreshold = 15;
 	public List<guidelineHelper> judgeRoad = new ArrayList<>();
 	private Set<EntityID> SOSroad = new HashSet<>();
 	private Set<EntityID> topLevelBlockedRoad = new HashSet<>();
@@ -129,41 +130,12 @@ public class CSURoadDetector extends RoadDetector {
 		}
 	}
 
-	private double getDistance(double fromX, double fromY, double toX, double toY) {
+	private double getManhattanDistance(double fromX, double fromY, double toX, double toY) {
 		double dx = fromX - toX;
 		double dy = fromY - toY;
-		return Math.hypot(dx, dy);
+		return Math.abs(dx) + Math.abs(dy);
 	}
 
-	private double getDistance(EntityID from, EntityID to) {
-		return (double) worldInfo.getDistance(from, to);
-	}
-
-	/**
-	 * @Description: human与障碍的最短距离，方便判断civilian是否被堵
-	 * @Author: Bochun-Yue
-	 * @Date: 2/25/20
-	 */
-
-	private double getDistance(Human human, Road road) {
-		Collection<Blockade> blockades = this.worldInfo.getBlockades(road);
-		Point2D basePoint = new Point2D(human.getX(), human.getY());
-		double nearest = Double.MAX_VALUE;
-
-		for (Blockade blockade : blockades) {
-			if (blockade.getShape().contains(human.getX(), human.getY())) {
-				return 0;
-			}
-			List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
-			for (Point2D closest : Points) {
-				double d = GeometryTools2D.getDistance(basePoint, closest);
-				if (d < nearest) {
-					nearest = d;
-				}
-			}
-		}
-		return nearest;
-	}
 
 	private EntityID getClosestEntityID(Collection<EntityID> IDs, EntityID reference) {
 		if (IDs.isEmpty()) {
@@ -172,7 +144,7 @@ public class CSURoadDetector extends RoadDetector {
 		double minDistance = Double.MAX_VALUE;
 		EntityID closestID = null;
 		for (EntityID id : IDs) {
-			double distance = this.getDistance(reference, id);
+			double distance = this.worldInfo.getDistance(reference, id);
 			if (distance < minDistance) {
 				minDistance = distance;
 				closestID = id;
@@ -221,23 +193,38 @@ public class CSURoadDetector extends RoadDetector {
 	private void Find_Refuge() {
 		//检测离每个refuge最近的警察
 		if (!this.search_flag) {
-			for (StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
-				boolean nearest_flag = true;
-				Refuge refuge = (Refuge) SE;
-				double distance = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), refuge.getX(), refuge.getY());
-				for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-					PoliceForce police = (PoliceForce) se;
-					double dist = this.getDistance(police.getX(), police.getY(), refuge.getX(), refuge.getY());
-					if (dist < distance) {
-						nearest_flag = false;
+			if (scenarioInfo.getCommsChannelsCount() > 1) {
+				for (StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
+					boolean nearest_flag = true;
+					Refuge refuge = (Refuge) SE;
+					double distance = this.getManhattanDistance(this.agentInfo.getX(), this.agentInfo.getY(), refuge.getX(), refuge.getY());
+					for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+						PoliceForce police = (PoliceForce) se;
+						double dist = this.getManhattanDistance(police.getX(), police.getY(), refuge.getX(), refuge.getY());
+						if (dist < distance) {
+							nearest_flag = false;
+							break;
+						}
+					}
+					if (nearest_flag) {
+						this.nearest_refuge = SE;
 						break;
+					} else {
+						continue;
 					}
 				}
-				if (nearest_flag) {
-					this.nearest_refuge = SE;
-					break;
-				} else {
-					continue;
+			} else {
+				Collection<StandardEntity> clusterEntities = null;
+				if (this.clustering != null) {
+					int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+					if (clusterIndex != -1) {
+						clusterEntities = this.clustering.getClusterEntities(clusterIndex);
+					}
+					for (StandardEntity SE : worldInfo.getEntitiesOfType(StandardEntityURN.REFUGE)) {
+						if (clusterEntities.contains(SE.getID())) {
+							this.nearest_refuge = SE;
+						}
+					}
 				}
 			}
 		}
@@ -281,31 +268,23 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
-
+		//SOSroad
 		if (this.result != null && this.SOSroad.contains(this.result)) {
 			if (this.SOSroad.contains(this.agentInfo.getPosition())) {
 				this.SOSroad.remove(this.agentInfo.getPosition());
-				return null;
+				this.noNeedToClear.add(this.agentInfo.getID());
 			}
 			return this;
 		}
 
 		if (!this.SOSroad.isEmpty()) {
+			System.out.println(this.agentInfo.getID().getValue() + "有SOStarget");
 			List<EntityID> sortList = new ArrayList<>(this.SOSroad);
 			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
-			List<EntityID> nearPolice = new ArrayList<>();
-			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-				nearPolice.add(se.getID());
-			}
-			for (int i = 0; i < sortList.size(); ++i) {
-				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
-				if (id.equals(this.agentInfo.getID())) {
-					return this.getPathTo(positionID, sortList.get(i));
-				}
-			}
+			return this.getPathTo(positionID, sortList.get(sortList.size() - 1));
 		}
 
-
+		//topLevelBlockedRoad
 		if (this.result != null && this.topLevelBlockedRoad.contains(this.result)) {
 			return this;
 		}
@@ -325,6 +304,8 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
+
+		//midLevelBlockedRoad
 		if (this.result != null && this.midLevelBlockedRoad.contains(this.result)) {
 			return this;
 		}
@@ -344,7 +325,7 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
-
+		//lowLevelBlockedRoad
 		if (this.result != null && this.lowLevelBlockedRoad.contains(this.result)) {
 			return this;
 		}
@@ -510,7 +491,7 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 //		System.out.println("ID:"+this.agentInfo.getID()+"   return null");
-		return null;
+		return this;
 	}
 
 	private boolean inRange(PoliceForce a, PoliceForce b) {
@@ -668,6 +649,9 @@ public class CSURoadDetector extends RoadDetector {
 			if (entity instanceof Road) {
 				Road road = (Road) entity;
 				if (this.isRoadPassable(road)) {
+					if(road.getID().getValue() == 25648){
+						System.out.println("Road直接可通");
+					}
 					this.topLevelBlockedRoad.remove(road.getID());
 					this.midLevelBlockedRoad.remove(road.getID());
 					this.lowLevelBlockedRoad.remove(road.getID());
@@ -832,14 +816,16 @@ public class CSURoadDetector extends RoadDetector {
 	}
 
 	private void reflectMessage(MessageRoad messageRoad, Collection<EntityID> changedEntities) {
-
 		if (messageRoad.isBlockadeDefined() && !changedEntities.isEmpty() && !changedEntities.contains(messageRoad.getBlockadeID())) {
 			MessageUtil.reflectMessage(this.worldInfo, messageRoad);
 		}
-		Road road = (Road) this.worldInfo.getEntity(messageRoad.getRoadID());
-		if (this.isRoadPassable(road)) {
+		if (messageRoad.isPassable()) {
+			if(messageRoad.getRoadID().getValue() == 25648){
+				System.out.println("messageRoad直接可通");
+			}
 			this.topLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.midLevelBlockedRoad.remove(messageRoad.getRoadID());
+			this.lowLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.noNeedToClear.add(messageRoad.getRoadID());
 		}
 	}
@@ -956,11 +942,44 @@ public class CSURoadDetector extends RoadDetector {
 //		}
 	}
 
+	Boolean withinSOSRange(PoliceForce police, EntityID SOStarget) {
+		Boolean needToSave = false;
+		StandardEntity entity = this.worldInfo.getEntity(SOStarget);
+		if (entity != null && (entity instanceof Road || entity instanceof Hydrant)) {
+			Road targetRoad = (Road) entity;
+			double manhattanDistance = this.getManhattanDistance(police.getX(), police.getY(), targetRoad.getX(), targetRoad.getY());
+			//31445.392 in CSUConstants
+			double time = manhattanDistance / 31445.392;
+			if (time < this.timeThreshold) {
+				needToSave = true;
+			}
+
+		}
+		return needToSave;
+	}
+
+	Boolean SOSinMyCluster(PoliceForce police, EntityID SOStarget) {
+		Boolean needToSave = false;
+		StandardEntity entity = this.worldInfo.getEntity(SOStarget);
+		if (entity != null && (entity instanceof Road || entity instanceof Hydrant || entity instanceof Building)) {
+			Collection<StandardEntity> clusterEntities = null;
+			if (this.clustering != null) {
+				int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+				if (clusterIndex != -1) {
+					clusterEntities = this.clustering.getClusterEntities(clusterIndex);
+				}
+				if (clusterEntities.contains(entity.getID())) needToSave = true;
+			}
+		}
+		return needToSave;
+	}
+
+
 	private void reflectMessage(CommandPolice commandPolice) {
 		boolean flag = false;
-		if (commandPolice.isToIDDefined() && this.agentInfo.getID().getValue() == commandPolice.getToID().getValue()) {
-			flag = true;
-		} else if (commandPolice.isBroadcast()) {
+		PoliceForce police = (PoliceForce) this.agentInfo.me();
+		EntityID SOStarget = commandPolice.getTargetID();
+		if(this.withinSOSRange(police,SOStarget) || this.SOSinMyCluster(police,SOStarget)){
 			flag = true;
 		}
 		if (flag && commandPolice.getAction() == CommandPolice.ACTION_CLEAR) {
@@ -969,16 +988,28 @@ public class CSURoadDetector extends RoadDetector {
 			}
 			StandardEntity target = this.worldInfo.getEntity(commandPolice.getTargetID());
 			if (target instanceof Road || target instanceof Hydrant) {
-				Road road = (Road) target;
-				this.SOSroad.add(target.getID());
+				if (!this.noNeedToClear.contains(target.getID())) {
+					this.SOSroad.add(target.getID());
+				}
 			} else if (target.getStandardURN() == StandardEntityURN.BLOCKADE) {
 				Blockade blockade = (Blockade) target;
 				if (blockade.isPositionDefined()) {
 					StandardEntity position = worldInfo.getEntity(blockade.getPosition());
 					if (position != null) {
 						if (position instanceof Road || position instanceof Hydrant) {
-							Road road = (Road) position;
-							this.SOSroad.add(blockade.getPosition());
+							if (!this.noNeedToClear.contains(position.getID())) {
+								this.SOSroad.add(position.getID());
+							}
+						}
+					}
+				}
+			} else if (target instanceof Building) {
+				Building building = (Building) target;
+				for (EntityID neighbourID : building.getNeighbours()) {
+					StandardEntity neighbour = this.worldInfo.getEntity(neighbourID);
+					if (neighbour instanceof Road || neighbour instanceof Hydrant) {
+						if (!this.noNeedToClear.contains(neighbourID)) {
+							this.SOSroad.add(neighbourID);
 						}
 					}
 				}
@@ -986,3 +1017,4 @@ public class CSURoadDetector extends RoadDetector {
 		}
 	}
 }
+
