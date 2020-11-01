@@ -722,20 +722,21 @@ public class CSUViewer extends StandardViewer{
     protected void handleTimeStepProcess(final KVTimestep t) {
         if (pause)
             return;
-//        Collection<StandardEntity> buildings=model.getEntitiesOfType(StandardEntityURN.BUILDING);
-//
-//        for(StandardEntity entity: buildings){
-//            Building building= (Building) entity;
-//            building.setFieryness(0);
-//        }
-//        for(Integer i:dataMap.keySet() ){
-//
-//            if(i<t.getTime()){
-//                super.handleTimestep(dataMap.get(i));
-//            }else{
-//                break;
-//            }
-//        }
+        if (isSetToManual) {
+            Collection<StandardEntity> buildings = model.getEntitiesOfType(StandardEntityURN.BUILDING);
+            for (StandardEntity entity : buildings) {
+                Building building = (Building) entity;
+                building.setFieryness(0);
+            }
+            for (Integer i : dataMap.keySet()) {
+
+                if (i < t.getTime()) {
+                    super.handleTimestep(dataMap.get(i));
+                } else {
+                    break;
+                }
+            }
+        }
         super.handleTimestep(t);
 
 
@@ -827,7 +828,7 @@ public class CSUViewer extends StandardViewer{
 
     @Override
     public String toString() {
-        return "MRLs viewer";
+        return "CSUs viewer";
     }
 
 
