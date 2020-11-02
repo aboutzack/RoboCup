@@ -438,7 +438,7 @@ public class SampleKMeans extends StaticClustering {
 		if (polygon != null) {
 			data.add(convexHull.getConvexPolygon());
 		}
-		if (DebugHelper.DEBUG_MODE) {
+		if (DebugHelper.DEBUG_MODE && scenarioInfo.getMode() != ScenarioInfo.Mode.PRECOMPUTATION_PHASE) {
 			try {
 				DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "ClusterConvexPolygon", data);
 				if (agentInfo.me() instanceof FireBrigade) {
