@@ -162,10 +162,10 @@ public class CSURoad {
 	
 	public void resetPassably() {
 		boolean isSeen = world.getRoadsSeen().contains(selfId);
-		//在有radio通讯情况下，会收到其他agent关于某MyEdge不可通的信息，所以即使看不见road也进行reset
-		if (!isSeen && world.isCommunicationLess()) {
-			return;
-		}
+//		//在有radio通讯情况下，会收到其他agent关于某MyEdge不可通的信息，所以即使看不见road也进行reset
+//		if (!isSeen && world.isCommunicationLess()) {
+//			return;
+//		}
 		if (agentInfo.me() instanceof PoliceForce || passablyLastResetTime > lastUpdateTime) {
 			return;
 		}
