@@ -71,7 +71,7 @@ public class GuidelineCreator extends AbstractModule {
     }
 
 
-
+    //d1 - d2 is nearest //d2 -d1 is farest
     private class DistanceIDSorter implements Comparator<EntityID> {
         private WorldInfo worldInfo;
         private EntityID reference;
@@ -89,7 +89,7 @@ public class GuidelineCreator extends AbstractModule {
         public int compare(EntityID a, EntityID b) {
             int d1 = this.worldInfo.getDistance(this.reference, a);
             int d2 = this.worldInfo.getDistance(this.reference, b);
-            return d1 - d2;
+            return d2 - d1;
         }
     }
 
@@ -120,7 +120,9 @@ public class GuidelineCreator extends AbstractModule {
         this.createGuideline();
         this.roadsize = this.judgeRoad.size();
         precomputeData.setInteger(KEY_ROAD_SIZE,this.roadsize);
+        ArrayList<java.awt.geom.Line2D> line2DS = new ArrayList<>();
         for (int i = 0; i < this.roadsize; ++i) {
+            line2DS.add(new java.awt.geom.Line2D.Double(this.judgeRoad.get(i).getStartPoint().getX(), this.judgeRoad.get(i).getStartPoint().getY(), this.judgeRoad.get(i).getEndPoint().getX(), this.judgeRoad.get(i).getEndPoint().getY()));
 			precomputeData.setDouble(KEY_START_X + i, this.judgeRoad.get(i).getStartPoint().getX());
 			precomputeData.setDouble(KEY_START_Y + i, this.judgeRoad.get(i).getStartPoint().getY());
 			precomputeData.setDouble(KEY_END_X + i, this.judgeRoad.get(i).getEndPoint().getX());
@@ -128,7 +130,10 @@ public class GuidelineCreator extends AbstractModule {
 			precomputeData.setEntityID(KEY_JUDGE_ROAD + i, this.judgeRoad.get(i).getSelfID());
 			precomputeData.setBoolean(KEY_ISENTRANCE + i, this.judgeRoad.get(i).getEntranceState());
         }
-        System.out.println("PPPPPPPPPSIZE:"+this.roadsize);
+        if (DebugHelper.DEBUG_MODE){
+            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "GuideLine", line2DS);
+        }
+
         this.clustering.precompute(precomputeData);
         this.pathPlanning.precompute(precomputeData);
         return this;
@@ -337,6 +342,7 @@ public class GuidelineCreator extends AbstractModule {
                 worldRoadID.add(id);
             }
         }
+        System.out.println("position:"+this.agentInfo.getPosition().getValue());
         worldRoadID.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
         for (EntityID id : worldRoadID) {
             worldRoad.add(this.worldInfo.getEntity(id));
@@ -370,6 +376,7 @@ public class GuidelineCreator extends AbstractModule {
             }
             //根据路线计算guideline,此举可得绝大部分guideline
             for (int cnt = 0 ; cnt < worldRoad.size() ; ++ cnt) {
+                
                 StandardEntity se = worldRoad.get(cnt);
                 if (this.countedRoad.contains(se.getID())) {
                     continue;

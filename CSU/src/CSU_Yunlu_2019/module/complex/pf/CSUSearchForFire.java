@@ -38,6 +38,8 @@ public class CSUSearchForFire extends Search {
 	private Collection<EntityID> searchedRoadIDs;
 	private int searchedClusterIndexes[] ;
 	private int clusterCount = 0;
+	private List<EntityID> blockedRoad = new ArrayList<>();
+	private List<EntityID> clearedRoad = new ArrayList<>();
 	private MessageManager messageManager =null;
 
 	public CSUSearchForFire(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager,
@@ -190,76 +192,87 @@ public class CSUSearchForFire extends Search {
 			++this.clusterCount;
 			return clusterIndex;
 		}else {
-//			double min = Double.MAX_VALUE;
-//			for(StandardEntity entity  : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-//				flag = false;
-//				int index = this.clustering.getClusterIndex(entity.getID());
-//				for(int i = 0 ; i < this.clusterCount ; ++i) {
-//					if(this.searchedClusterIndexes[i] == index) {
-//						flag = true;
-//						break;
-//					}
-//				}
-//				if(!flag) {
-//					Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
-//					int sumx = 0,sumy = 0,count = 0;
-//					for(StandardEntity se : clutserEntities) {
-//						sumx += this.worldInfo.getLocation(se).first();
-//						sumy += this.worldInfo.getLocation(se).second();
-//						++count;
-//					}
-//					double dist = this.getDistance(sumx/count, sumy/count, this.agentInfo.getX(),this.agentInfo.getY());
-//					if(dist < min) {
-//						clusterIndex = index;
-//						min = dist;
-//					}
-//				}
-//			}
-
-			List<EntityID> blockedRoad = new ArrayList<>();
-			this.addMessageRoad(blockedRoad);
-			clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
-			if(blockedRoad != null && !blockedRoad.isEmpty()){
-				double bestRate = Double.MAX_VALUE;
-				for(StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)){
-					double rate = 0;
-					double allRoad = 0;
-					double blocked = 0;
-					int index = this.clustering.getClusterIndex(se.getID());
-					Collection<StandardEntity> clusterEntities = this.clustering.getClusterEntities(index);
-					for(StandardEntity entity : clusterEntities){
-						if(entity instanceof Road || entity instanceof Hydrant){
-							allRoad++;
-							if(blockedRoad.contains(entity.getID())){
-								blocked++;
-							}
+			if(this.scenarioInfo.getCommsChannelsCount() < 2) {
+				double min = Double.MAX_VALUE;
+				for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+					flag = false;
+					int index = this.clustering.getClusterIndex(entity.getID());
+					for (int i = 0; i < this.clusterCount; ++i) {
+						if (this.searchedClusterIndexes[i] == index) {
+							flag = true;
+							break;
 						}
 					}
-					if(blocked == 0){
-						continue;
-					}else{
-						rate = allRoad / blocked;
-						if(rate < bestRate){
-							bestRate = rate;
+					if (!flag) {
+						Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
+						int sumx = 0, sumy = 0, count = 0;
+						for (StandardEntity se : clutserEntities) {
+							sumx += this.worldInfo.getLocation(se).first();
+							sumy += this.worldInfo.getLocation(se).second();
+							++count;
+						}
+						double dist = this.getDistance(sumx / count, sumy / count, this.agentInfo.getX(), this.agentInfo.getY());
+						if (dist < min) {
 							clusterIndex = index;
+							min = dist;
 						}
 					}
 				}
+			}else {
+				this.addMessageRoad(this.blockedRoad);
+				this.blockedRoad.removeAll(this.clearedRoad);
+				clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
+				if (this.blockedRoad != null && !this.blockedRoad.isEmpty()) {
+					double bestRate = Double.MAX_VALUE;
+					for (StandardEntity se : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+						double rate = 0;
+						double allRoad = 0;
+						double blocked = 0;
+						int index = this.clustering.getClusterIndex(se.getID());
+						Collection<StandardEntity> clusterEntities = this.clustering.getClusterEntities(index);
+						for (StandardEntity entity : clusterEntities) {
+							if (entity instanceof Road || entity instanceof Hydrant) {
+								allRoad++;
+								if (this.blockedRoad.contains(entity.getID())) {
+									blocked++;
+								}
+							}
+						}
+						if (blocked == 0) {
+							continue;
+						} else {
+							rate = allRoad / blocked;
+							if (rate < bestRate) {
+								bestRate = rate;
+								clusterIndex = index;
+							}
+						}
+					}
+				}
+				if (this.clusterCount > this.clustering.getClusterNumber() / 5) {
+					System.out.println("back to my cluster");
+					return this.clustering.getClusterIndex(this.agentInfo.getID());
+				}
+
+				this.searchedClusterIndexes[this.clusterCount] = clusterIndex;
+				++this.clusterCount;
 			}
-			this.searchedClusterIndexes[this.clusterCount] = clusterIndex;
-			++this.clusterCount;
 			return clusterIndex;
 		}
 	}
 
-	void addMessageRoad(List<EntityID> blockedRoad){
+	void addMessageRoad(List<EntityID> Roadlist){
 		if(messageManager.getReceivedMessageList() != null
 				&& !messageManager.getReceivedMessageList().isEmpty()) {
 			for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
 				Class<? extends CommunicationMessage> messageClass = message.getClass();
 				if (messageClass == MessageRoad.class) {
 					MessageRoad messageRoad = (MessageRoad) message;
-					blockedRoad.add(messageRoad.getRoadID());
+					if(!messageRoad.isPassable()) {
+						Roadlist.add(messageRoad.getRoadID());
+					}else{
+						this.clearedRoad.add(messageRoad.getRoadID());
+					}
 				}
 			}
 		}

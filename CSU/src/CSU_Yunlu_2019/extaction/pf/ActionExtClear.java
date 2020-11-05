@@ -19,6 +19,7 @@ import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.component.communication.CommunicationMessage;
 import adf.component.extaction.ExtAction;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
@@ -45,15 +46,18 @@ import java.util.stream.Collectors;
 public class ActionExtClear extends ExtAction {
 
 	protected double x, y, time;
-	protected int lastTime = 0;
 	protected double lastx  =0 ;
 	protected double lasty = 0;
 	protected double repairDistance;
 	private List<guidelineHelper> judgeRoad = new ArrayList<>();
 	HashSet <Blockade> already_clear_blocked = new HashSet<>();
+	private List<Road> targetblockedRoad = new ArrayList<>();
+	private List<EntityID> clearedRoad = new ArrayList<>();
 	protected Map<EntityID, CSURoadHelper> csuRoadMap = new FastMap<>();
 	private Action lastAction = null;
 	private int lasttime = 0;
+	private int lastNoMoveTime = 0;
+	private Boolean noMoveFlag = false;
 	MessageManager messageManager=null;
 	private GuidelineCreator guidelineCreator;
 
@@ -223,15 +227,24 @@ public class ActionExtClear extends ExtAction {
 		double currentx = this.agentInfo.getX();
 		double currenty = this.agentInfo.getY();
 		int currentTime = this.agentInfo.getTime();
-		if (currentx > lastx - 200 && currentx < lastx + 200 && currenty > lasty - 200 && currenty < lasty + 200 && (currentTime - this.lastTime > 5)) {
-			this.lastTime = currentTime;
-			return true;
+		if (currentx > lastx - 200 && currentx < lastx + 200 && currenty > lasty - 200 && currenty < lasty + 200) {
+			if(this.noMoveFlag == false){
+				this.lastNoMoveTime = this.agentInfo.getTime();
+			}
+			noMoveFlag = true;
+			if(this.agentInfo.getTime() - this.lastNoMoveTime >10) {
+				return true;
+			}
 		} else {
+			this.noMoveFlag = false;
 			this.lastx = currentx;
 			this.lasty = currenty;
 			return false;
 		}
+		return false;
 	}
+
+
 
 	protected Action randomWalk(){
 
@@ -733,9 +746,31 @@ public class ActionExtClear extends ExtAction {
 
 	private Action noMoveAction() {
 		StandardEntity se =  this.worldInfo.getEntity(this.agentInfo.getPosition());
+		if(se instanceof Building){
+			Building building = (Building) se;
+			for(EntityID neighbourID : building.getNeighbours()){
+				StandardEntity neighbour = this.worldInfo.getEntity(neighbourID);
+				if(neighbour instanceof Road || neighbour instanceof Hydrant){
+					Road road = (Road) neighbour;
+					Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
+							.collect(Collectors.toSet());
+					if(blockades != null) {
+						if(!blockades.isEmpty()){
+							Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+							if(block != null && this.isNearBlockade(this.agentInfo.getX(),this.agentInfo.getY(), block)) {
+//						System.out.println("------------------被挡没动------------");
+								return new ActionClear(block);//(int)block.getX(),(int)block.getY());
+							}else {
+								return this.clear();
+							}
+						}
+					}
+				}
+			}
+		}
 		if(se instanceof Road) {
-			Road road = (Road) se;
-			Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
+			Road position = (Road) se;
+			Collection<Blockade> blockades = this.worldInfo.getBlockades(position).stream().filter(Blockade::isApexesDefined)
 					.collect(Collectors.toSet());
 			if(blockades != null) {
 				if(!blockades.isEmpty()){
@@ -743,15 +778,106 @@ public class ActionExtClear extends ExtAction {
 					if(block != null && this.isNearBlockade(this.agentInfo.getX(),this.agentInfo.getY(), block)) {
 //						System.out.println("------------------被挡没动------------");
 						return new ActionClear(block);//(int)block.getX(),(int)block.getY());
-					}else {
-						return this.clear();
+					}else if(block != null){
+						List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(block.getApexes());
+						double min = Double.MAX_VALUE;
+						Point2D targetPoint = Points.get(0);
+						for(Point2D point : Points){
+							double dist = this.getDistance(this.agentInfo.getX(),this.agentInfo.getY(),point.getX(),point.getY());
+							if(dist<min){
+								min = dist;
+								targetPoint = point;
+							}
+						}
+						return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int)targetPoint.getX(),(int)targetPoint.getY());
+					}
+				}
+			}else {
+				if(this.scenarioInfo.getCommsChannelsCount() > 1) {
+					this.addMessageRoad();
+					Road road = (Road) this.getClosestEntity(this.targetblockedRoad, this.agentInfo.me());
+					blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
+							.collect(Collectors.toSet());
+					if (blockades != null) {
+						if (!blockades.isEmpty()) {
+							Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+							if (block != null && this.isNearBlockade(this.agentInfo.getX(), this.agentInfo.getY(), block)) {
+//						System.out.println("------------------被挡没动------------");
+								return new ActionClear(block);//(int)block.getX(),(int)block.getY());
+							} else if (block != null) {
+								List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(block.getApexes());
+								double min = Double.MAX_VALUE;
+								Point2D targetPoint = Points.get(0);
+								for (Point2D point : Points) {
+									double dist = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), point.getX(), point.getY());
+									if (dist < min) {
+										min = dist;
+										targetPoint = point;
+									}
+								}
+								return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int) targetPoint.getX(), (int) targetPoint.getY());
+							}
+						}
+					}
+				}else{
+					for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
+						StandardEntity entity = this.worldInfo.getEntity(id);
+						if(entity instanceof Road ||entity instanceof Hydrant){
+							blockades = this.worldInfo.getBlockades((Road)entity).stream().filter(Blockade::isApexesDefined)
+									.collect(Collectors.toSet());
+							if (blockades != null) {
+								if (!blockades.isEmpty()) {
+									Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
+									if (block != null && this.isNearBlockade(this.agentInfo.getX(), this.agentInfo.getY(), block)) {
+//						System.out.println("------------------被挡没动------------");
+										return new ActionClear(block);//(int)block.getX(),(int)block.getY());
+									} else if (block != null) {
+										List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(block.getApexes());
+										double min = Double.MAX_VALUE;
+										Point2D targetPoint = Points.get(0);
+										for (Point2D point : Points) {
+											double dist = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), point.getX(), point.getY());
+											if (dist < min) {
+												min = dist;
+												targetPoint = point;
+											}
+										}
+										return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int) targetPoint.getX(), (int) targetPoint.getY());
+									}
+								}
+							}
+						}
 					}
 				}
 			}
-
 		}
 		return null;
 	}
+
+
+	void addMessageRoad(){
+		if(messageManager.getReceivedMessageList() != null
+				&& !messageManager.getReceivedMessageList().isEmpty()) {
+			for (CommunicationMessage message : messageManager.getReceivedMessageList()) {
+				Class<? extends CommunicationMessage> messageClass = message.getClass();
+				if (messageClass == MessageRoad.class) {
+					MessageRoad messageRoad = (MessageRoad) message;
+					if(!messageRoad.isPassable()) {
+						this.targetblockedRoad.add((Road) this.worldInfo.getEntity(messageRoad.getRoadID()));
+					}else{
+						this.clearedRoad.add(messageRoad.getRoadID());
+					}
+				}
+			}
+			List<Road> roads = new ArrayList<>();
+			for(EntityID id : this.clearedRoad){
+				roads.add((Road)this.worldInfo.getEntity(id));
+			}
+			this.targetblockedRoad.removeAll(roads);
+		}
+	}
+
+
 
 	/**
 	 * @Description: 新的directClear
