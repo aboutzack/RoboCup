@@ -8,6 +8,7 @@ import CSU_Yunlu_2019.standard.simplePartition.Line;
 import CSU_Yunlu_2019.CSUConstants;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
+import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
 import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
@@ -71,6 +72,7 @@ public class CSURoadDetector extends RoadDetector {
 	private Set<EntityID> topLevelBlockedRoad = new HashSet<>();
 	private Set<EntityID> halfTopLevelBlockedRoad = new HashSet<>();
 	private Set<EntityID> midLevelBlockedRoad = new HashSet<>();
+	private Set<EntityID> halfLowLevelBlockedRoad = new HashSet<>();
 	private Set<EntityID> lowLevelBlockedRoad = new HashSet<>();
 	private Set<EntityID> noNeedToClear = new HashSet<>();
 	private MessageManager messageManager = null;
@@ -262,6 +264,21 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
+		PoliceForce police = (PoliceForce) this.agentInfo.me();
+		if(police.isBuriednessDefined() && police.getBuriedness() > 0){
+			messageManager.addMessage(new CommandAmbulance(true,null,police.getPosition(),2));
+			messageManager.addMessage(new CommandAmbulance(false,null,police.getPosition(),2));
+		}
+
+//		if(this.agentInfo.getID().getValue() == 695896871) {
+//			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
+//			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
+//			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
+//			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
+//			System.out.println("targetRoadsize:" + this.targetAreas.size());
+//			System.out.println();
+//		}
+
 		if (agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() + 5 && !this.arrive_flag)
 			this.Get_To_Refuge(positionID);
 
@@ -337,6 +354,29 @@ public class CSURoadDetector extends RoadDetector {
 
 		if (!this.midLevelBlockedRoad.isEmpty()) {
 			List<EntityID> sortList = new ArrayList<>(this.midLevelBlockedRoad);
+			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+			List<EntityID> nearPolice = new ArrayList<>();
+			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
+				nearPolice.add(se.getID());
+			}
+			for (int i = 0; i < sortList.size(); ++i) {
+				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
+				if (id.equals(this.agentInfo.getID())) {
+					if(this.agentInfo.getID().getValue() == 695896871)
+					System.out.println("111111");
+					return this.getPathTo(positionID, sortList.get(i));
+				}
+			}
+		}
+
+
+		//halfLowLevelBlockedRoad
+		if (this.result != null && this.halfLowLevelBlockedRoad.contains(this.result)) {
+			return this;
+		}
+
+		if (!this.halfLowLevelBlockedRoad.isEmpty()) {
+			List<EntityID> sortList = new ArrayList<>(this.halfLowLevelBlockedRoad);
 			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
 			List<EntityID> nearPolice = new ArrayList<>();
 			for (StandardEntity se : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
@@ -673,13 +713,7 @@ public class CSURoadDetector extends RoadDetector {
 
 
 
-//		System.out.println("id:"+this.agentInfo.getID().getValue());
-//		System.out.println("topsize:"+this.topLevelBlockedRoad.size());
-//		System.out.println("halftopsize:"+this.halfTopLevelBlockedRoad.size());
-//		System.out.println("midsize:"+this.midLevelBlockedRoad.size());
-//		System.out.println("lowsize:"+this.lowLevelBlockedRoad.size());
-//		System.out.println("targetRoadsize:"+this.targetAreas.size());
-//		System.out.println();
+
 
 
 //			road
@@ -689,6 +723,7 @@ public class CSURoadDetector extends RoadDetector {
 					this.topLevelBlockedRoad.remove(road.getID());
 					this.halfTopLevelBlockedRoad.remove(road.getID());
 					this.midLevelBlockedRoad.remove(road.getID());
+					this.halfLowLevelBlockedRoad.remove(road.getID());
 					this.lowLevelBlockedRoad.remove(road.getID());
 					this.noNeedToClear.add(road.getID());
 					continue;
@@ -704,7 +739,7 @@ public class CSURoadDetector extends RoadDetector {
 							}
 						}
 						if (!buildingFlag) {
-							this.midLevelBlockedRoad.add(road.getID());
+							this.halfLowLevelBlockedRoad.add(road.getID());
 						}
 					}
 				}
@@ -858,7 +893,9 @@ public class CSURoadDetector extends RoadDetector {
 		}
 		if (messageRoad.isPassable()) {
 			this.topLevelBlockedRoad.remove(messageRoad.getRoadID());
+			this.halfTopLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.midLevelBlockedRoad.remove(messageRoad.getRoadID());
+			this.halfLowLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.lowLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.halfTopLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.noNeedToClear.add(messageRoad.getRoadID());
