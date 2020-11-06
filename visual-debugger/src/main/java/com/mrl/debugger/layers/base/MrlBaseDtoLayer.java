@@ -9,8 +9,6 @@ import rescuecore2.view.RenderedObject;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
 import java.util.*;
 
 /**
@@ -22,7 +20,7 @@ public abstract class MrlBaseDtoLayer<T extends StandardDto> extends StandardVie
     private boolean drawAllData = false;
 
     protected Map<EntityID, T> agentDtoMap = new HashMap<>();
-    private Set<T> allDtoSet = new HashSet<>();
+    private final Set<T> allDtoSet = new HashSet<>();
 
     public MrlBaseDtoLayer() {
         ViewLayer annotation = this.getClass().getAnnotation(ViewLayer.class);
@@ -75,5 +73,11 @@ public abstract class MrlBaseDtoLayer<T extends StandardDto> extends StandardVie
         }
     }
 
+    protected boolean isDrawAllData() {
+        return drawAllData;
+    }
 
+    protected Set<T> getAllDtoSet() {
+        return allDtoSet;
+    }
 }

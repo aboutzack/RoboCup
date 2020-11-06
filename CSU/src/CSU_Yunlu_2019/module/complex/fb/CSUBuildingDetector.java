@@ -28,6 +28,7 @@ import adf.agent.precompute.PrecomputeData;
 import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.complex.BuildingDetector;
+import com.mrl.debugger.remote.dto.BuildingDetectorDto;
 import rescuecore2.standard.entities.Building;
 import rescuecore2.standard.entities.Civilian;
 import rescuecore2.standard.entities.Refuge;
@@ -36,6 +37,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class CSUBuildingDetector extends BuildingDetector {
     private EntityID result;
@@ -136,11 +138,21 @@ public class CSUBuildingDetector extends BuildingDetector {
         FireCluster targetCluster = clusterSelector.selectCluster();
         FireBrigadeTarget fireBrigadeTarget = targetSelector.selectTarget(targetCluster);
         if (DebugHelper.DEBUG_MODE) {
-            ArrayList<Integer> elements = new ArrayList<>();
             if (fireBrigadeTarget != null) {
-                elements.add(fireBrigadeTarget.getCsuBuilding().getId().getValue());
+                BuildingDetectorDto dto = new BuildingDetectorDto();
+                dto.setTargetBuilding(fireBrigadeTarget.getCsuBuilding().getId().getValue());
+                dto.setDynamicClusterConvexHulls(((CSUFireClustering) clustering).getClusterConvexPolygons());
+                if (targetSelector instanceof DirectionBasedTargetSelector) {
+                    dto.setBorderBuildings(((DirectionBasedTargetSelector) targetSelector)
+                            .getBorderBuildings(targetCluster).stream()
+                            .map(e-> e.getID().getValue()).collect(Collectors.toSet()));
+                    dto.setInDirectionBuildings(((DirectionBasedTargetSelector) targetSelector)
+                            .getInDirectionBuildings(targetCluster)
+                            .stream().map(e-> e.getId().getValue()).collect(Collectors.toSet()));
+                }
+                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "CSUBuildingDetectorLayer", dto);
+
             }
-            DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "SampleBuildings", elements);
         }
         if (fireBrigadeTarget != null) {
             this.result = fireBrigadeTarget.getCsuBuilding().getId();

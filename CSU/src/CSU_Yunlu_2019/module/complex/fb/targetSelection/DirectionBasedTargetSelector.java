@@ -167,17 +167,17 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings =
                 new TreeSet<Pair<Pair<EntityID, Double>, Double>>(fbUtilities.pairComparator_new);
 
-        Set<StandardEntity> borderBuildings = new FastSet<>(fireCluster.getBorderEntities());
-        ///System.out.println(world.getTime() + ", "+ world.me + ",fireCluster: " + fireCluster.getFireCondition());
-        ///System.out.println(world.getTime() + ", "+ world.me + ",borderBuildings  "+borderBuildings);///
-        Set<CSUBuilding> inDirectionBuildings;
-        Point directionPoint = directionManager.findFarthestPointOfMap(fireCluster, (FireBrigade) selfHuman);
-        inDirectionBuildings = fireCluster.findBuildingInDirection(directionPoint);
+//        Set<StandardEntity> borderBuildings = new FastSet<>(fireCluster.getBorderEntities());
+//        ///System.out.println(world.getTime() + ", "+ world.me + ",fireCluster: " + fireCluster.getFireCondition());
+//        ///System.out.println(world.getTime() + ", "+ world.me + ",borderBuildings  "+borderBuildings);///
+//        Set<CSUBuilding> inDirectionBuildings;
+//        Point directionPoint = directionManager.findFarthestPointOfMap(fireCluster, (FireBrigade) selfHuman);
+//        inDirectionBuildings = fireCluster.findBuildingInDirection(directionPoint);
         ///System.out.println(world.getTime() + ", "+world.me +", inDirectionBuildings  " + inDirectionBuildings);///
-        borderBuildings.removeAll(csuBuildingToEntity(inDirectionBuildings));
+//        borderBuildings.removeAll(csuBuildingToEntity(inDirectionBuildings));
 
-        this.calculateValueOfInDirectionBuildings(inDirectionBuildings, sortedBuildings);
-        this.calculateValueOfBorderBuildings(borderBuildings, sortedBuildings);
+        this.calculateValueOfInDirectionBuildings(getInDirectionBuildings(fireCluster), sortedBuildings);
+        this.calculateValueOfBorderBuildings(getBorderBuildings((fireCluster)), sortedBuildings);
 
         return sortedBuildings;
     }
@@ -242,5 +242,19 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         for (CSUBuilding next : csuBuildings)
             result.add(next.getSelfBuilding());
         return result;
+    }
+
+    public Set<CSUBuilding> getInDirectionBuildings(FireCluster fireCluster) {
+        Set<CSUBuilding> inDirectionBuildings;
+        Point directionPoint = directionManager.findFarthestPointOfMap(fireCluster, (FireBrigade) selfHuman);
+        inDirectionBuildings = fireCluster.findBuildingInDirection(directionPoint);
+        return inDirectionBuildings;
+    }
+
+
+    public Set<StandardEntity> getBorderBuildings(FireCluster fireCluster) {
+        Set<StandardEntity> borderBuildings = new FastSet<>(fireCluster.getBorderEntities());
+        borderBuildings.removeAll(csuBuildingToEntity(getInDirectionBuildings(fireCluster)));
+        return borderBuildings;
     }
 }

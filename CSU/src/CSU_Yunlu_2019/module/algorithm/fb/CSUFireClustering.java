@@ -1,7 +1,6 @@
 package CSU_Yunlu_2019.module.algorithm.fb;
 
 import CSU_Yunlu_2019.CSUConstants;
-import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.standard.Ruler;
 import CSU_Yunlu_2019.util.Util;
 import CSU_Yunlu_2019.world.CSUWorldHelper;
@@ -25,7 +24,6 @@ import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.io.Serializable;
 import java.util.List;
 import java.util.*;
 
@@ -131,13 +129,13 @@ public class CSUFireClustering extends DynamicClustering {
     }
 
     private void visualDebug() {
-        if (DebugHelper.DEBUG_MODE) {
-            try {
-                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "DynamicClusterConvexPolygon", (Serializable) clusterConvexPolygons);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+//        if (DebugHelper.DEBUG_MODE) {
+//            try {
+//                DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "DynamicClusterConvexPolygon", (Serializable) clusterConvexPolygons);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
     private void calcCluster() {
