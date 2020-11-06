@@ -32,9 +32,9 @@ public interface CSUConstants {
     public static final int ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP = 20;
     public static final int ROAD_PASSABLY_RESET_TIME_IN_HUGE_MAP = 25;
     public static final int MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN = 4;
-    public static final double MEAN_FB_MESSAGE_BYTE_SIZE = 36.733;
-    public static final double MEAN_PF_MESSAGE_BYTE_SIZE = 40.8623;
-    public static final double MEAN_AT_MESSAGE_BYTE_SIZE = 44.182;
+    public static final double MEAN_FB_MESSAGE_BYTE_SIZE = 40;
+    public static final double MEAN_PF_MESSAGE_BYTE_SIZE = 44;
+    public static final double MEAN_AT_MESSAGE_BYTE_SIZE = 44;
 
     /** Config key for the number of fire brigades in the scenario. */
     public static final String FIRE_BRIGADE_COUNT_KEY = "scenario.agents.fb";
