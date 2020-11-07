@@ -365,7 +365,7 @@ public class GuidelineCreator extends AbstractModule {
                     Road road = (Road) this.worldInfo.getEntity(neighbour);
                     Edge edge = position.getEdgeTo(neighbour);
                     Point2D startPoint = this.getMidPoint(edge);
-                    Edge oppositeEdge = this.getOppositeEdge(road, edge);
+                    Edge oppositeEdge = this.getPFNeighbourOppositeEdge(road, edge);
                     Point2D endPoint = this.getMidPoint(oppositeEdge);
                     guidelineHelper line = new guidelineHelper(road, startPoint, endPoint, false);
                     if (!this.judgeRoad.contains(line)) {
@@ -485,7 +485,7 @@ public class GuidelineCreator extends AbstractModule {
         }
     }
 
-    //应对建筑入口，获取建筑对面的edge
+    //应对某个道路对面的edge
     private Edge getOppositeEdge(Road road,Edge original) {
         List<Edge> edges = new ArrayList<>();
         for(Edge edge : road.getEdges()){
@@ -509,6 +509,55 @@ public class GuidelineCreator extends AbstractModule {
                 }
             }
             return answerEdge;
+        }
+        return null;
+    }
+    //PF的neighbour,只用到一次
+    private Edge getPFNeighbourOppositeEdge(Road road,Edge original){
+        List<Edge> edges = new ArrayList<>();
+        List<Edge> reverseEdges = new ArrayList<>();
+        for(Edge edge : road.getEdges()){
+            if(!edge.equals(original)){
+                reverseEdges.add(edge);
+            }
+            if(edge.isPassable() && !edge.equals(original)){
+                edges.add(edge);
+            }
+        }
+        if(edges.size() > 0) {
+            Point2D roadCenter = new Point2D(road.getX(), road.getY());
+            Point2D originalMid = this.getMidPoint(original);
+            Vector2D standardDirection = new Vector2D(roadCenter.getX() - originalMid.getX(), roadCenter.getY() - originalMid.getY());
+            Edge answerEdge = null;
+            double minAngle = Double.MAX_VALUE;
+            for (int i = 0; i < edges.size(); ++i) {
+                Point2D mid = this.getMidPoint(edges.get(i));
+                Vector2D testDirection = new Vector2D(mid.getX() - originalMid.getX(), mid.getY() - originalMid.getY());
+                double angle = GeometryTools2D.getAngleBetweenVectors(standardDirection, testDirection);
+                if (angle < minAngle) {
+                    minAngle = angle;
+                    answerEdge = edges.get(i);
+                }
+            }
+            return answerEdge;
+        }else{
+            if(reverseEdges.size() > 0){
+                Point2D roadCenter = new Point2D(road.getX(), road.getY());
+                Point2D originalMid = this.getMidPoint(original);
+                Vector2D standardDirection = new Vector2D(roadCenter.getX() - originalMid.getX(), roadCenter.getY() - originalMid.getY());
+                Edge answerEdge = null;
+                double minAngle = Double.MAX_VALUE;
+                for (int i = 0; i < edges.size(); ++i) {
+                    Point2D mid = this.getMidPoint(edges.get(i));
+                    Vector2D testDirection = new Vector2D(mid.getX() - originalMid.getX(), mid.getY() - originalMid.getY());
+                    double angle = GeometryTools2D.getAngleBetweenVectors(standardDirection, testDirection);
+                    if (angle < minAngle) {
+                        minAngle = angle;
+                        answerEdge = edges.get(i);
+                    }
+                }
+                return answerEdge;
+            }
         }
         return null;
     }
