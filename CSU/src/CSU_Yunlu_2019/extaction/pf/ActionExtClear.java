@@ -46,11 +46,11 @@ import java.util.stream.Collectors;
 public class ActionExtClear extends ExtAction {
 
 	protected double x, y, time;
-	protected double lastx  =0 ;
+	protected double lastx = 0;
 	protected double lasty = 0;
 	protected double repairDistance;
 	private List<guidelineHelper> judgeRoad = new ArrayList<>();
-	HashSet <Blockade> already_clear_blocked = new HashSet<>();
+	HashSet<Blockade> already_clear_blocked = new HashSet<>();
 	private List<Road> targetblockedRoad = new ArrayList<>();
 	private List<EntityID> clearedRoad = new ArrayList<>();
 	protected Map<EntityID, CSURoadHelper> csuRoadMap = new FastMap<>();
@@ -58,7 +58,7 @@ public class ActionExtClear extends ExtAction {
 	private int lasttime = 0;
 	private int lastNoMoveTime = 0;
 	private Boolean noMoveFlag = false;
-	MessageManager messageManager=null;
+	MessageManager messageManager = null;
 	private GuidelineCreator guidelineCreator;
 
 
@@ -102,7 +102,6 @@ public class ActionExtClear extends ExtAction {
 		this.repairDistance = scenarioInfo.getClearRepairDistance();
 
 
-
 		switch (si.getMode()) {
 			case PRECOMPUTATION_PHASE:
 				this.pathPlanning = moduleManager.getModule("ActionExtClear.PathPlanning",
@@ -119,7 +118,7 @@ public class ActionExtClear extends ExtAction {
 		}
 		this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
 				"adf.sample.module.algorithm.SampleKMeans");
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default","CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
 
 	}
 
@@ -162,11 +161,10 @@ public class ActionExtClear extends ExtAction {
 	}
 
 
-
 	@Override
 	public ExtAction updateInfo(MessageManager messageManager) {
 		super.updateInfo(messageManager);
-		this.messageManager= messageManager;
+		this.messageManager = messageManager;
 		if (this.getCountUpdateInfo() >= 2) {
 			return this;
 		}
@@ -181,7 +179,6 @@ public class ActionExtClear extends ExtAction {
 		this.guidelineCreator.updateInfo(messageManager);
 		return this;
 	}
-
 
 
 	//**********************************************************try whether the target is from RoadDetector and randWalk is often used************************************************
@@ -228,11 +225,11 @@ public class ActionExtClear extends ExtAction {
 		double currenty = this.agentInfo.getY();
 		int currentTime = this.agentInfo.getTime();
 		if (currentx > lastx - 200 && currentx < lastx + 200 && currenty > lasty - 200 && currenty < lasty + 200) {
-			if(this.noMoveFlag == false){
+			if (this.noMoveFlag == false) {
 				this.lastNoMoveTime = this.agentInfo.getTime();
 			}
 			noMoveFlag = true;
-			if(this.agentInfo.getTime() - this.lastNoMoveTime >10) {
+			if (this.agentInfo.getTime() - this.lastNoMoveTime > 10) {
 				return true;
 			}
 		} else {
@@ -245,13 +242,12 @@ public class ActionExtClear extends ExtAction {
 	}
 
 
+	protected Action randomWalk() {
 
-	protected Action randomWalk(){
+		if (this.target == null && this.lastClearTarget != null) this.target = this.lastClearTarget.getID();
+		if (this.target != null) {
 
-		if(this.target == null && this.lastClearTarget != null) this.target = this.lastClearTarget.getID();
-		if(this.target != null) {
-
-			if(this.agentInfo.getPosition().equals(this.target)) {
+			if (this.agentInfo.getPosition().equals(this.target)) {
 				Collection<Blockade> blockades = null;
 				if (this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
 					blockades = this.worldInfo.getBlockades(this.target);
@@ -287,21 +283,20 @@ public class ActionExtClear extends ExtAction {
 		Set<EntityID> blockedRoads = new HashSet<>();
 
 
-
 		for (EntityID i : this.worldInfo.getChanged().getChangedEntities()) {
-			StandardEntity entity = (StandardEntity)this.worldInfo.getEntity(i);
-			if(entity instanceof Road){
+			StandardEntity entity = (StandardEntity) this.worldInfo.getEntity(i);
+			if (entity instanceof Road) {
 				Road road = (Road) entity;
-				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()){
+				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()) {
 					blockedRoads.add(entity.getID());
 				}
 			}
 		}
 
-		for (StandardEntity entity  : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
-			if(entity instanceof Road){
+		for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.ROAD)) {
+			if (entity instanceof Road) {
 				Road road = (Road) entity;
-				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()){
+				if (road.isBlockadesDefined() && !road.getBlockades().isEmpty()) {
 					blockedRoads.add(entity.getID());
 				}
 			}
@@ -310,13 +305,13 @@ public class ActionExtClear extends ExtAction {
 		this.target = get_result_from_set(blockedRoads);
 
 
-		if(this.target == null){
+		if (this.target == null) {
 			this.target = this.agentInfo.getPosition();
-		}else{
-			while(!blockedRoads.isEmpty()){
+		} else {
+			while (!blockedRoads.isEmpty()) {
 				Collection<Blockade> blockades = null;
-				if(this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
-					blockades= this.worldInfo.getBlockades(this.target);
+				if (this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
+					blockades = this.worldInfo.getBlockades(this.target);
 
 				Set<Blockade> covers = new HashSet<>();
 
@@ -327,12 +322,12 @@ public class ActionExtClear extends ExtAction {
 				if (!covers.isEmpty()) {
 
 					Blockade block = (Blockade) this.getClosestEntity(covers, this.agentInfo.me());
-					while(!covers.isEmpty() && this.already_clear_blocked.contains(block)){
+					while (!covers.isEmpty() && this.already_clear_blocked.contains(block)) {
 						covers.remove(block);
 						block = (Blockade) this.getClosestEntity(covers, this.agentInfo.me());
 					}
 					this.already_clear_blocked.add(block);
-					if(block != null) return new ActionClear((int)block.getX(),(int)block.getY());
+					if (block != null) return new ActionClear((int) block.getX(), (int) block.getY());
 
 					//return new ActionClear((Blockade) this.getClosestEntity(covers, this.agentInfo.me()));
 				}
@@ -341,10 +336,10 @@ public class ActionExtClear extends ExtAction {
 			}
 		}
 
-		if(this.agentInfo.getPosition().equals(this.target)){
+		if (this.agentInfo.getPosition().equals(this.target)) {
 			Collection<Blockade> blockades = null;
-			if(this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
-				blockades= this.worldInfo.getBlockades(this.target);
+			if (this.worldInfo.getEntity(target).getStandardURN() == StandardEntityURN.ROAD)
+				blockades = this.worldInfo.getBlockades(this.target);
 
 			Set<Blockade> covers = new HashSet<>();
 
@@ -355,12 +350,12 @@ public class ActionExtClear extends ExtAction {
 			if (!covers.isEmpty()) {
 
 				Blockade block = (Blockade) this.getClosestEntity(covers, this.agentInfo.me());
-				while(!covers.isEmpty() && this.already_clear_blocked.contains(block)){
+				while (!covers.isEmpty() && this.already_clear_blocked.contains(block)) {
 					covers.remove(block);
 					block = (Blockade) this.getClosestEntity(covers, this.agentInfo.me());
 				}
 				this.already_clear_blocked.add(block);
-				if(block != null) return new ActionClear(block);//(int)block.getX(),(int)block.getY());
+				if (block != null) return new ActionClear(block);//(int)block.getX(),(int)block.getY());
 
 				//return new ActionClear((Blockade) this.getClosestEntity(covers, this.agentInfo.me()));
 			}
@@ -370,7 +365,7 @@ public class ActionExtClear extends ExtAction {
 		this.pathPlanning.setDestination(entity.getID());
 		List<EntityID> path = pathPlanning.calc().getResult();
 
-		if (path!= null && path.size() > 1) return new ActionMove(path);
+		if (path != null && path.size() > 1) return new ActionMove(path);
 
 		int clusterIndex = this.get_cluster_Index();
 		this.target = get_clustering(clusterIndex);
@@ -380,7 +375,7 @@ public class ActionExtClear extends ExtAction {
 		this.pathPlanning.setDestination(entity.getID());
 		path = pathPlanning.calc().getResult();
 
-		if (path!= null && path.size() > 1) return new ActionMove(path);
+		if (path != null && path.size() > 1) return new ActionMove(path);
 
 
 		return null;
@@ -388,15 +383,16 @@ public class ActionExtClear extends ExtAction {
 
 
 	Set<Integer> last_cluster_number = new HashSet<Integer>();
-	private int get_cluster_Index(){
+
+	private int get_cluster_Index() {
 		int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
 		int cluster_number = this.clustering.getClusterNumber();
-		if(!last_cluster_number.contains(clusterIndex)){
+		if (!last_cluster_number.contains(clusterIndex)) {
 			last_cluster_number.add(clusterIndex);
-		}else{
+		} else {
 			Random r = new Random(cluster_number);
-			while(last_cluster_number.contains(clusterIndex)){
-				if(last_cluster_number.size() >= cluster_number) this.last_cluster_number = new HashSet<Integer>();
+			while (last_cluster_number.contains(clusterIndex)) {
+				if (last_cluster_number.size() >= cluster_number) this.last_cluster_number = new HashSet<Integer>();
 				clusterIndex = r.nextInt(cluster_number);
 			}
 			last_cluster_number.add(clusterIndex);
@@ -404,23 +400,22 @@ public class ActionExtClear extends ExtAction {
 		return clusterIndex;
 	}
 
-	private EntityID get_clustering(int clusterIndex){
+	private EntityID get_clustering(int clusterIndex) {
 
 		List<EntityID> sortList = new ArrayList<>();
-		for(EntityID id : this.clustering.getClusterEntityIDs(clusterIndex)){
-			if(this.worldInfo.getEntity(id) instanceof Road) sortList.add(id);}
-		sortList.sort(new sorter(this.worldInfo,this.agentInfo.getID()));
-		return sortList.get(sortList.size()/2);
+		for (EntityID id : this.clustering.getClusterEntityIDs(clusterIndex)) {
+			if (this.worldInfo.getEntity(id) instanceof Road) sortList.add(id);
+		}
+		sortList.sort(new sorter(this.worldInfo, this.agentInfo.getID()));
+		return sortList.get(sortList.size() / 2);
 
 
 	}
 
 
-
-
 	private EntityID get_result_from_set(Set<EntityID> set) {
 
-		if(set == null) return null;
+		if (set == null) return null;
 
 		EntityID positionID = this.agentInfo.getPosition();
 		if (set.contains(positionID)) {
@@ -490,9 +485,9 @@ public class ActionExtClear extends ExtAction {
 	@Override
 	public ExtAction calc() {
 
-		if(this.is_no_move()) {
+		if (this.is_no_move()) {
 			this.result = this.noMoveAction();
-			if(result!=null) {
+			if (result != null) {
 				return this;
 			}
 		}
@@ -507,10 +502,10 @@ public class ActionExtClear extends ExtAction {
 			result = tmp;
 			if (needCheckForRepeat) {
 
-				if ( result instanceof ActionMove && mayRepeat instanceof ActionMove && lastCyclePath.size() > 1)
+				if (result instanceof ActionMove && mayRepeat instanceof ActionMove && lastCyclePath.size() > 1)
 					if (commonMove((ActionMove) result, (ActionMove) mayRepeat)) {
 						//result = this.randomWalk();
-						if(result!=null) {
+						if (result != null) {
 							this.check_same_action();
 							return this;
 
@@ -533,7 +528,7 @@ public class ActionExtClear extends ExtAction {
 						}
 						actionHistory.add(result);
 						actionStack.push(result);
-						if(result  == null) {
+						if (result == null) {
 							result = this.clear();
 						}
 						this.check_same_action();
@@ -545,8 +540,8 @@ public class ActionExtClear extends ExtAction {
 				if (goBack()) {
 					if (!needCheckForRepeat) {
 						//result = this.randomWalk();
-						if(result!=null) {
-							if(result instanceof ActionClear) {
+						if (result != null) {
+							if (result instanceof ActionClear) {
 								this.check_same_action();
 								return this;
 
@@ -600,10 +595,10 @@ public class ActionExtClear extends ExtAction {
 				}
 			}
 		}
-		if(result==null) {
+		if (result == null) {
 			result = this.clear();
 		}
-		if(result!=null) {
+		if (result != null) {
 			actionHistory.add(result);
 			actionStack.push(result);
 		}
@@ -651,33 +646,32 @@ public class ActionExtClear extends ExtAction {
 		Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
 				.collect(Collectors.toSet());
 		Line2D guideline = null;
-		for(guidelineHelper r : this.judgeRoad) {
-			if(r.getSelfID().equals(road.getID())) {
+		for (guidelineHelper r : this.judgeRoad) {
+			if (r.getSelfID().equals(road.getID())) {
 				guideline = r.getGuideline();
 			}
 		}
 		if (guideline != null) {
 			for (Blockade blockade : blockades) {
 				List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
-				for(int i =0;i<Points.size();++i) {
-					if(i!=Points.size()-1) {
+				for (int i = 0; i < Points.size(); ++i) {
+					if (i != Points.size() - 1) {
 						double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
-						double crossProduct2 = this.getCrossProduct(guideline, Points.get(i+1));
-						if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
-							Line2D line = new Line2D(Points.get(i),Points.get(i+1));
+						double crossProduct2 = this.getCrossProduct(guideline, Points.get(i + 1));
+						if (crossProduct1 < 0 && crossProduct2 > 0 || crossProduct1 > 0 && crossProduct2 < 0) {
+							Line2D line = new Line2D(Points.get(i), Points.get(i + 1));
 							Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
-							if(intersect!=null) {
+							if (intersect != null) {
 								return false;
 							}
 						}
-					}
-					else {
+					} else {
 						double crossProduct1 = this.getCrossProduct(guideline, Points.get(i));
 						double crossProduct2 = this.getCrossProduct(guideline, Points.get(0));
-						if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
-							Line2D line = new Line2D(Points.get(i),Points.get(0));
+						if (crossProduct1 < 0 && crossProduct2 > 0 || crossProduct1 > 0 && crossProduct2 < 0) {
+							Line2D line = new Line2D(Points.get(i), Points.get(0));
 							Point2D intersect = GeometryTools2D.getIntersectionPoint(line, guideline);
-							if(intersect!=null) {
+							if (intersect != null) {
 								return false;
 							}
 						}
@@ -689,25 +683,20 @@ public class ActionExtClear extends ExtAction {
 		return false;
 	}
 
-	private void check_same_action(){
-		if(!(result instanceof ActionMove && this.lastAction instanceof ActionMove)
-				&& !(result instanceof ActionClear && this.lastAction instanceof ActionClear) ) {
+	private void check_same_action() {
+		if (!(result instanceof ActionMove && this.lastAction instanceof ActionMove)
+				&& !(result instanceof ActionClear && this.lastAction instanceof ActionClear)) {
 			this.lastAction = result;
 			lasttime = this.agentInfo.getTime();
-		}
-		else{
+		} else {
 			int time = this.agentInfo.getTime();
-			if(time - lasttime > 15) {
+			if (time - lasttime > 15) {
 				result = this.randomWalk();
 				lasttime = time;
 			}
 			this.lastAction = result;
 		}
 	}
-
-
-
-
 
 
 	private Action clearWhenStuck() {
@@ -745,22 +734,22 @@ public class ActionExtClear extends ExtAction {
 	}
 
 	private Action noMoveAction() {
-		StandardEntity se =  this.worldInfo.getEntity(this.agentInfo.getPosition());
-		if(se instanceof Building){
+		StandardEntity se = this.worldInfo.getEntity(this.agentInfo.getPosition());
+		if (se instanceof Building) {
 			Building building = (Building) se;
-			for(EntityID neighbourID : building.getNeighbours()){
+			for (EntityID neighbourID : building.getNeighbours()) {
 				StandardEntity neighbour = this.worldInfo.getEntity(neighbourID);
-				if(neighbour instanceof Road || neighbour instanceof Hydrant){
+				if (neighbour instanceof Road || neighbour instanceof Hydrant) {
 					Road road = (Road) neighbour;
 					Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
 							.collect(Collectors.toSet());
-					if(blockades != null) {
-						if(!blockades.isEmpty()){
+					if (blockades != null) {
+						if (!blockades.isEmpty()) {
 							Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
-							if(block != null && this.isNearBlockade(this.agentInfo.getX(),this.agentInfo.getY(), block)) {
+							if (block != null && this.isNearBlockade(this.agentInfo.getX(), this.agentInfo.getY(), block)) {
 //						System.out.println("------------------被挡没动------------");
 								return new ActionClear(block);//(int)block.getX(),(int)block.getY());
-							}else {
+							} else {
 								return this.clear();
 							}
 						}
@@ -768,32 +757,33 @@ public class ActionExtClear extends ExtAction {
 				}
 			}
 		}
-		if(se instanceof Road) {
+		if (se instanceof Road) {
 			Road position = (Road) se;
 			Collection<Blockade> blockades = this.worldInfo.getBlockades(position).stream().filter(Blockade::isApexesDefined)
 					.collect(Collectors.toSet());
-			if(blockades != null) {
-				if(!blockades.isEmpty()){
+			if (blockades != null) {
+				if (!blockades.isEmpty()) {
 					Blockade block = (Blockade) this.getClosestEntity(blockades, this.agentInfo.me());
-					if(block != null && this.isNearBlockade(this.agentInfo.getX(),this.agentInfo.getY(), block)) {
+					if (block != null && this.isNearBlockade(this.agentInfo.getX(), this.agentInfo.getY(), block)) {
 //						System.out.println("------------------被挡没动------------");
 						return new ActionClear(block);//(int)block.getX(),(int)block.getY());
-					}else if(block != null){
+					} else if (block != null) {
 						List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(block.getApexes());
 						double min = Double.MAX_VALUE;
 						Point2D targetPoint = Points.get(0);
-						for(Point2D point : Points){
-							double dist = this.getDistance(this.agentInfo.getX(),this.agentInfo.getY(),point.getX(),point.getY());
-							if(dist<min){
+						for (Point2D point : Points) {
+							double dist = this.getDistance(this.agentInfo.getX(), this.agentInfo.getY(), point.getX(), point.getY());
+							if (dist < min) {
 								min = dist;
 								targetPoint = point;
 							}
 						}
-						return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int)targetPoint.getX(),(int)targetPoint.getY());
+						Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
+						return this.clearToPoint(blockades, agentPosition, targetPoint);
 					}
 				}
-			}else {
-				if(this.scenarioInfo.getCommsChannelsCount() > 1) {
+			} else {
+				if (this.scenarioInfo.getCommsChannelsCount() > 1) {
 					this.addMessageRoad();
 					Road road = (Road) this.getClosestEntity(this.targetblockedRoad, this.agentInfo.me());
 					blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
@@ -815,15 +805,16 @@ public class ActionExtClear extends ExtAction {
 										targetPoint = point;
 									}
 								}
-								return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int) targetPoint.getX(), (int) targetPoint.getY());
+								Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
+								return this.clearToPoint(blockades, agentPosition, targetPoint);
 							}
 						}
 					}
-				}else{
+				} else {
 					for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
 						StandardEntity entity = this.worldInfo.getEntity(id);
-						if(entity instanceof Road ||entity instanceof Hydrant){
-							blockades = this.worldInfo.getBlockades((Road)entity).stream().filter(Blockade::isApexesDefined)
+						if (entity instanceof Road || entity instanceof Hydrant) {
+							blockades = this.worldInfo.getBlockades((Road) entity).stream().filter(Blockade::isApexesDefined)
 									.collect(Collectors.toSet());
 							if (blockades != null) {
 								if (!blockades.isEmpty()) {
@@ -842,7 +833,8 @@ public class ActionExtClear extends ExtAction {
 												targetPoint = point;
 											}
 										}
-										return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition()), (int) targetPoint.getX(), (int) targetPoint.getY());
+										Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
+										return this.clearToPoint(blockades, agentPosition, targetPoint);
 									}
 								}
 							}
@@ -853,6 +845,7 @@ public class ActionExtClear extends ExtAction {
 		}
 		return null;
 	}
+
 
 
 	void addMessageRoad(){
@@ -912,10 +905,10 @@ public class ActionExtClear extends ExtAction {
 			}
 
 			if (guideline != null) {
-				Action action = moveToGuideLine(guideline,road);
-				if (action != null) {
-					return action;
-				}
+//				Action action = moveToGuideLine(guideline,road);
+//				if (action != null) {
+//					return action;
+//				}
 				double agentX = police.getX();
 				double agentY = police.getY();
 				clearBlockade = null;
@@ -1135,7 +1128,11 @@ public class ActionExtClear extends ExtAction {
 			double humanY = human.getY();
 			ActionClear actionClear = null;
 			for (Blockade blockade : blockades) {
-				if (!this.isInside(humanX, humanY, blockade.getApexes()) && !this.isNearBlockade(humanX, humanY, blockade)) {
+				if(entity instanceof Civilian && !this.isInside(humanX, humanY, blockade.getApexes())){
+					continue;
+				}
+				if (entity instanceof FireBrigade && !this.isInside(humanX, humanY, blockade.getApexes()) && !this.isNearBlockade(humanX, humanY, blockade)
+						||entity instanceof AmbulanceTeam && !this.isInside(humanX, humanY, blockade.getApexes()) && !this.isNearBlockade(humanX, humanY, blockade)) {
 					continue;
 				}
 				Point2D agent = new Point2D(humanX, humanY);
@@ -1177,10 +1174,10 @@ public class ActionExtClear extends ExtAction {
 		}
 
 		if (guideline != null) {
-			Action action = moveToGuideLine(guideline,road);
-			if (action != null) {
-				return action;
-			}
+//			Action action = moveToGuideLine(guideline,road);
+//			if (action != null) {
+//				return action;
+//			}
 			double agentX = police.getX();
 			double agentY = police.getY();
 			clearBlockade = null;
@@ -1254,7 +1251,7 @@ public class ActionExtClear extends ExtAction {
 	private Action getNeighbourPositionAction(PoliceForce police, Area target) {
 		double agentX = police.getX();
 		double agentY = police.getY();
-		StandardEntity position = Objects.requireNonNull(this.worldInfo.getPosition(police));
+		StandardEntity position = this.worldInfo.getEntity(this.agentInfo.getPosition());
 		Edge edge = target.getEdgeTo(position.getID());
 		if (edge == null) {
 			return null;
@@ -1267,6 +1264,7 @@ public class ActionExtClear extends ExtAction {
 				Point2D Police = new Point2D(agentX,agentY);
 				Point2D mid = new Point2D((edge.getStartX() + edge.getEndX()) / 2,(edge.getStartY() + edge.getEndY()) / 2);
 				return this.clearToPoint(blockades, Police, mid);
+//				return this.clearPassEdge(blockades,Police,mid,target);
 			}
 		}
 		if (target instanceof Road || target instanceof Hydrant) {
@@ -1330,7 +1328,7 @@ public class ActionExtClear extends ExtAction {
 					}
 				}
 				if (intersection != null) {
-					if (minPointDistance < this.clearDistance /2) {
+					if (minPointDistance < this.clearDistance - 1000) {
 						Vector2D vector = this.scaleClear(this.getVector(agentX, agentY, clearX, clearY));
 						clearX = (int) (agentX + vector.getX());
 						clearY = (int) (agentY + vector.getY());
@@ -1436,6 +1434,78 @@ public class ActionExtClear extends ExtAction {
 			return new ActionMove(Lists.newArrayList(police.getPosition()),(int) closest.getX(),(int) closest.getY());
 		}
 	}
+
+	/**
+	 * @Description: Applying in the function getNeighbourPositionAction,different to function clearToPoint
+	 * @Author: Bochun-Yue
+	 * @Date: 11/17/20
+	 */
+	private Action clearPassEdge(Collection<Blockade> blockades,Point2D agent,Point2D edgeMidPoint,Area neighbour) {
+		PoliceForce police = (PoliceForce) this.agentInfo.me();
+		double agentX = agent.getX();
+		double agentY = agent.getY();
+		Point2D intersection = null;
+		Double minPointDistance = Double.MAX_VALUE;
+		int clearX = 0;
+		int clearY = 0;
+		Line2D ToGuideLine = new Line2D(agent,edgeMidPoint);
+		for (Blockade blockade : blockades) {
+			List<Point2D> Points = GeometryTools2D.vertexArrayToPoints(blockade.getApexes());
+			for(int i =0;i<Points.size();++i) {
+				if(i!=Points.size()-1) {
+					double crossProduct1 = this.getCrossProduct(ToGuideLine, Points.get(i));
+					double crossProduct2 = this.getCrossProduct(ToGuideLine, Points.get(i+1));
+					if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
+						Line2D line = new Line2D(Points.get(i),Points.get(i+1));
+						Point2D intersect = GeometryTools2D.getIntersectionPoint(line, ToGuideLine);
+						if(intersect!=null) {
+							double dist = this.getDistance(agentX,agentY, intersect.getX(), intersect.getY());
+							if(dist<minPointDistance) {
+								minPointDistance = dist;
+								clearX = (int)intersect.getX();
+								clearY = (int)intersect.getY();
+								intersection = intersect;
+							}
+						}
+					}
+				}
+				else {
+					double crossProduct1 = this.getCrossProduct(ToGuideLine, Points.get(i));
+					double crossProduct2 = this.getCrossProduct(ToGuideLine, Points.get(0));
+					if(crossProduct1<0&&crossProduct2>0 || crossProduct1>0&&crossProduct2<0) {
+						Line2D line = new Line2D(Points.get(i),Points.get(0));
+						Point2D intersect = GeometryTools2D.getIntersectionPoint(line, ToGuideLine);
+						if(intersect!=null) {
+							double dist = this.getDistance(agentX,agentY, intersect.getX(), intersect.getY());
+							if(dist<minPointDistance) {
+								minPointDistance = dist;
+								clearX = (int)intersect.getX();
+								clearY = (int)intersect.getY();
+								intersection = intersect;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (intersection != null) {
+			if (minPointDistance < this.clearDistance - 1000) {
+				Vector2D vector = this.scaleClear(this.getVector(agentX, agentY, clearX, clearY));
+				clearX = (int) (agentX + vector.getX());
+				clearY = (int) (agentY + vector.getY());
+				double dist = this.getDistance(agentX, agentY, clearX, clearY);
+				return new ActionClear(clearX, clearY);
+			}
+			int dX = (int)((intersection.getX() - agentX) / 10);
+			int dY = (int)((intersection.getY() - agentY) / 10);
+			return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX(), (int)intersection.getY());
+		}
+		else {
+			return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition(), neighbour.getID()));
+		}
+	}
+
+
 	/**
 	 * @Description: 叉积
 	 * @Author: Bochun-Yue

@@ -264,19 +264,20 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
-		PoliceForce police = (PoliceForce) this.agentInfo.me();
-		if(police.isBuriednessDefined() && police.getBuriedness() > 0){
-			messageManager.addMessage(new CommandAmbulance(true,null,police.getPosition(),2));
-			messageManager.addMessage(new CommandAmbulance(false,null,police.getPosition(),2));
-		}
-
-//		if(this.agentInfo.getID().getValue() == 695896871) {
+//		if(this.agentInfo.getID().getValue() == 1154074119) {
 //			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
 //			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
 //			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
 //			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
 //			System.out.println("targetRoadsize:" + this.targetAreas.size());
-//			System.out.println();
+////			System.out.println();
+//		}
+
+//		for(StandardEntity se : this.worldInfo.getEntitiesOfType(ROAD)) {
+//			if (se.getID().getValue() == 199333) {
+//				System.out.println("has 199333 road");
+//				return this.getPathTo(this.agentInfo.getPosition(), se.getID());
+//			}
 //		}
 
 		if (agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() + 5 && !this.arrive_flag)
@@ -362,8 +363,6 @@ public class CSURoadDetector extends RoadDetector {
 			for (int i = 0; i < sortList.size(); ++i) {
 				EntityID id = this.getClosestEntityID(nearPolice, sortList.get(i));
 				if (id.equals(this.agentInfo.getID())) {
-					if(this.agentInfo.getID().getValue() == 695896871)
-					System.out.println("111111");
 					return this.getPathTo(positionID, sortList.get(i));
 				}
 			}
@@ -410,22 +409,16 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
-//		StandardEntity position = this.worldInfo.getEntity(this.agentInfo.getPosition());
-//		if (position instanceof Road) {
-//			Road road = (Road) position;
-//			if (this.isRoadPassable(road)) {
-//				this.result = null;
-//				return this;
-//			}
-//		} else if (position instanceof Building) {
-//			this.result = null;
-//			return this;
-//		}
+		StandardEntity position = this.worldInfo.getEntity(this.agentInfo.getPosition());
+		if (position instanceof Road || position instanceof Hydrant) {
+			Road road = (Road) position;
+			if (this.isRoadPassable(road)) {
+				this.noNeedToClear.add(road.getID());
+			}
+		}
 
+		this.getResultWhenNull();
 
-//		if (this.result == null) {
-			this.getResultWhenNull();
-//		}
 		return this;
 	}
 
@@ -529,17 +522,11 @@ public class CSURoadDetector extends RoadDetector {
 				}
 			}
 			if (this.targetAreas != null && !this.targetAreas.isEmpty()) {
-				this.targetAreas.removeAll(this.noNeedToClear);
-				this.pathPlanning.setFrom(this.agentInfo.getPosition());
-				this.pathPlanning.setDestination(this.targetAreas);
-				List<EntityID> path = this.pathPlanning.calc().getResult();
-				if (path != null && path.size() > 0) {
-					this.result = path.get(path.size() - 1);
-				}
-				return this;
+				List<EntityID> sortList = new ArrayList<>(this.targetAreas);
+				sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+				return this.getPathTo(this.agentInfo.getPosition(),sortList.get(0));
 			}
 		}
-//		System.out.println("ID:"+this.agentInfo.getID()+"   return null");
 		this.result = null;
 		return this;
 	}
@@ -660,7 +647,7 @@ public class CSURoadDetector extends RoadDetector {
 
 	private void update_roads() {
 		for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
-			StandardEntity entity = (StandardEntity) this.worldInfo.getEntity(id);
+			StandardEntity entity = this.worldInfo.getEntity(id);
 			//refuge
 			if (entity != null && entity instanceof Refuge) {
 				this.topLevelBlockedRoad.addAll(this.get_all_Bloacked_Entrance_of_Building((Building) entity));
@@ -709,13 +696,6 @@ public class CSURoadDetector extends RoadDetector {
 					this.lowLevelBlockedRoad.addAll(entrances);
 				}
 			}
-
-
-
-
-
-
-
 //			road
 			if (entity instanceof Road) {
 				Road road = (Road) entity;

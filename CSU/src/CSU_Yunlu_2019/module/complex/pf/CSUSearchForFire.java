@@ -195,15 +195,15 @@ public class CSUSearchForFire extends Search {
 			if(this.scenarioInfo.getCommsChannelsCount() < 2) {
 				double min = Double.MAX_VALUE;
 				for (StandardEntity entity : this.worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-					flag = false;
+					Boolean alreadyflag = false;
 					int index = this.clustering.getClusterIndex(entity.getID());
 					for (int i = 0; i < this.clusterCount; ++i) {
 						if (this.searchedClusterIndexes[i] == index) {
-							flag = true;
+							alreadyflag = true;
 							break;
 						}
 					}
-					if (!flag) {
+					if (!alreadyflag) {
 						Collection<StandardEntity> clutserEntities = this.clustering.getClusterEntities(index);
 						int sumx = 0, sumy = 0, count = 0;
 						for (StandardEntity se : clutserEntities) {
@@ -218,6 +218,9 @@ public class CSUSearchForFire extends Search {
 						}
 					}
 				}
+				this.searchedClusterIndexes[this.clusterCount] = clusterIndex;
+				++this.clusterCount;
+
 			}else {
 				this.addMessageRoad(this.blockedRoad);
 				this.blockedRoad.removeAll(this.clearedRoad);
@@ -260,7 +263,6 @@ public class CSUSearchForFire extends Search {
 			return clusterIndex;
 		}
 	}
-
 	void addMessageRoad(List<EntityID> Roadlist){
 		if(messageManager.getReceivedMessageList() != null
 				&& !messageManager.getReceivedMessageList().isEmpty()) {
