@@ -9,4 +9,5 @@ package CSU_Yunlu_2019.module.complex.fb.targetSelection;
  */
 public enum TargetSelectorType {
 	DIRECTION_BASED,
+	GREEDY,
 }

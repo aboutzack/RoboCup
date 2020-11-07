@@ -27,6 +27,7 @@ import javolution.util.FastSet;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
+import rescuecore2.worldmodel.Property;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
@@ -90,6 +91,7 @@ public class CSUWorldHelper extends AbstractModule {
 
     //others
     protected ConfigConstants config;
+    protected Map<Property, Integer> propertyTimeMap;
 
     //sub modules
     protected GraphHelper graph;
@@ -126,6 +128,8 @@ public class CSUWorldHelper extends AbstractModule {
         csuRoadMap = new HashMap<>();
         csuHydrantMap = new HashMap<>();
         buildingXYMap = new HashMap<>();
+
+        propertyTimeMap = new HashMap<>();
 
         config = new ConfigConstants(scenarioInfo.getRawConfig(), this);
         graph = moduleManager.getModule("GraphHelper.Default", CSUConstants.GRAPH_HELPER_DEFAULT);
@@ -225,6 +229,12 @@ public class CSUWorldHelper extends AbstractModule {
                     csuBuilding.setIgnitionTime(agentInfo.getTime());
                 }
                 csuBuilding.setLastSeenTime(agentInfo.getTime());
+
+                //Update seen building properties
+                for (Property p : worldInfo.getChanged().getChangedProperties(building.getID())) {
+                    building.getProperty(p.getURN()).takeValue(p);
+                    propertyTimeMap.put(p, agentInfo.getTime());
+                }
 
             } else if (entity instanceof Road) {
                 Road road = (Road) entity;
@@ -451,6 +461,17 @@ public class CSUWorldHelper extends AbstractModule {
                     MessageUtil.reflectMessage(this.worldInfo, mb);
                     if (agentInfo.me() instanceof FireBrigade) {
                         updateBuildingFuelForFireBrigade(getEntity(mb.getBuildingID(), Building.class));
+                        int receivedTime;
+                        if (mb.isRadio()) {
+                            receivedTime = agentInfo.getTime() - 1;
+                        } else {
+                            receivedTime = agentInfo.getTime() - 5;
+                        }
+                        Building building = (Building) this.getEntity(mb.getBuildingID());
+                        if (getPropertyTime(building.getFierynessProperty()) < receivedTime) {
+                            propertyTimeMap.put(building.getFierynessProperty(), receivedTime);
+                            propertyTimeMap.put(building.getTemperatureProperty(), receivedTime);
+                        }
                     }
                 }
             } else if (message instanceof MessageRoad) {
@@ -1223,5 +1244,25 @@ public class CSUWorldHelper extends AbstractModule {
     public Building getBuildingInPoint(int x, int y) {
         String xy = x + "," + y;
         return buildingXYMap.get(xy);
+    }
+
+    public int getEntityLastUpdateTime(StandardEntity entity) {
+        int maxTime = Integer.MIN_VALUE;
+        for (Property property : entity.getProperties()) {
+            Integer value = getPropertyTime(property);
+            if (value > maxTime) {
+                maxTime = value;
+            }
+        }
+
+        return maxTime;
+    }
+
+    public Integer getPropertyTime(Property property) {
+        Integer integer = propertyTimeMap.get(property);
+        if (integer == null) {
+            return 0;
+        }
+        return integer;
     }
 }
