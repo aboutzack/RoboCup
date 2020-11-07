@@ -15,6 +15,7 @@ import adf.component.communication.MessageCoordinator;
 import rescuecore2.standard.entities.StandardEntityURN;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -195,6 +196,20 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         int channel = channels[channelIndex];
         int channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
         int allocatedCapacity = channelCapacity / CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
+        switch (agentType) {
+            case FIRE_BRIGADE:
+            case FIRE_STATION:
+                messages.sort(new FBMessageComparator());
+                break;
+            case POLICE_FORCE:
+            case POLICE_OFFICE:
+                messages.sort(new PFMessageComparator());
+                break;
+            case AMBULANCE_TEAM:
+            case AMBULANCE_CENTRE:
+                messages.sort(new ATMessageComparator());
+                break;
+        }
         // start from HIGH, NORMAL, to LOW
         for (int i = StandardMessagePriority.values().length - 1; i >= 0; i--) {
             for (CommunicationMessage msg : messages) {
@@ -224,4 +239,53 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         }
 //        System.out.println(agentType+": "+channelSendMessageList);
     }
+
+    /**
+     * MessageBuilding first
+     */
+    public static class FBMessageComparator implements Comparator<CommunicationMessage> {
+        @Override
+        public int compare(CommunicationMessage t0, CommunicationMessage t1) {
+            if (t0 instanceof MessageBuilding && !(t1 instanceof MessageBuilding)) {
+                return -1;
+            } else if (!(t0 instanceof MessageBuilding) && t1 instanceof MessageBuilding) {
+                return 1;
+            }else {
+                return 0;
+            }
+        }
+    }
+
+    /**
+     * MessageCivilian first
+     */
+    public static class ATMessageComparator implements Comparator<CommunicationMessage> {
+        @Override
+        public int compare(CommunicationMessage t0, CommunicationMessage t1) {
+            if (t0 instanceof MessageCivilian && !(t1 instanceof MessageCivilian)) {
+                return -1;
+            } else if (!(t0 instanceof MessageCivilian) && t1 instanceof MessageCivilian) {
+                return 1;
+            }else {
+                return 0;
+            }
+        }
+    }
+
+    /**
+     * MessageCivilian first
+     */
+    public static class PFMessageComparator implements Comparator<CommunicationMessage> {
+        @Override
+        public int compare(CommunicationMessage t0, CommunicationMessage t1) {
+            if (t0 instanceof CommandPolice && !(t1 instanceof CommandPolice)) {
+                return -1;
+            } else if (!(t0 instanceof CommandPolice) && t1 instanceof CommandPolice) {
+                return 1;
+            }else {
+                return 0;
+            }
+        }
+    }
+
 }
