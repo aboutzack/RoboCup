@@ -8,9 +8,11 @@ import javolution.util.FastSet;
 import rescuecore2.standard.entities.Building;
 import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
+import rescuecore2.standard.entities.StandardEntityURN;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -27,6 +29,8 @@ public class FireCluster extends Cluster {
     private boolean controllable;
     private CSUWorldHelper world;
     private boolean isOverCenter;
+    private static final int CLUSTER_ENERGY_COEFFICIENT = 50;
+    private static final int CLUSTER_ENERGY_SECOND_COEFFICIENT = 20;
 
     public FireCluster(CSUWorldHelper worldHelper) {
         super();
@@ -49,6 +53,7 @@ public class FireCluster extends Cluster {
         resetRemovedAndNew();
         updateCenter();
         updateBorderEntities();
+        updateControllable();
     }
 
     private void updateCenter() {
@@ -345,7 +350,31 @@ public class FireCluster extends Cluster {
         return controllable;
     }
 
-    public void setControllable(boolean controllable) {
+
+    private void updateControllable() {
+        Set<CSUBuilding> dangerBuildings = new HashSet<>();
+        double clusterEnergy = 0;
+        for (StandardEntity entity : getBuildings()) {
+            CSUBuilding burningBuilding = world.getCsuBuilding(entity.getID());
+            if (burningBuilding.getEstimatedFieryness() == 1) {
+                dangerBuildings.add(burningBuilding);
+                clusterEnergy += burningBuilding.getEnergy();
+            }
+            if (burningBuilding.getEstimatedFieryness() == 2) {
+                dangerBuildings.add(burningBuilding);
+                clusterEnergy += burningBuilding.getEnergy();
+            }
+            if (burningBuilding.getEstimatedFieryness() == 3 && burningBuilding.getEstimatedTemperature() > 150) {
+                dangerBuildings.add(burningBuilding);
+            }
+        }
+
+        this.clusterEnergy = clusterEnergy / 4;
+        double fireBrigadeEnergy = world.getWorldInfo().getEntitiesOfType(StandardEntityURN.FIRE_BRIGADE).size() * world.getScenarioInfo().getFireExtinguishMaxSum();
+        boolean controllable = (clusterEnergy / CLUSTER_ENERGY_COEFFICIENT) < fireBrigadeEnergy;
+        if (!isControllable() && controllable) {
+            controllable = (clusterEnergy / CLUSTER_ENERGY_SECOND_COEFFICIENT) < fireBrigadeEnergy;
+        }
         this.controllable = controllable;
     }
 }

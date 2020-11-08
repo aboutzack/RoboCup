@@ -65,7 +65,7 @@ public abstract class Cluster {
         isOverCenter = false;
         isEdge = false;
         isDying = false;
-        controllable = false;
+        controllable = true;
     }
 
     public void addAll(Set<StandardEntity> entities) {
@@ -235,5 +235,9 @@ public abstract class Cluster {
 
     public boolean isDying() {
         return isDying;
+    }
+
+    public boolean isControllable() {
+        return controllable;
     }
 }

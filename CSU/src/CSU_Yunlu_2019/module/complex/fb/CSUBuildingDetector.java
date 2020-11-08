@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.complex.fb;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.module.algorithm.fb.CSUFireClustering;
+import CSU_Yunlu_2019.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.ClusterSelectorType;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.DistanceBasedClusterSelector;
@@ -35,8 +36,10 @@ import rescuecore2.standard.entities.Refuge;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
+import java.awt.*;
 import java.io.Serializable;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class CSUBuildingDetector extends BuildingDetector {
@@ -142,6 +145,11 @@ public class CSUBuildingDetector extends BuildingDetector {
                 BuildingDetectorDto dto = new BuildingDetectorDto();
                 dto.setTargetBuilding(fireBrigadeTarget.getCsuBuilding().getId().getValue());
                 dto.setDynamicClusterConvexHulls(((CSUFireClustering) clustering).getClusterConvexPolygons());
+                HashMap<Polygon, Boolean> polygonControllableMap = new HashMap<>();
+                for (Cluster cluster : ((CSUFireClustering) clustering).getClusters()) {
+                    polygonControllableMap.put(cluster.getConvexHull().getConvexPolygon(), cluster.isControllable());
+                }
+                dto.setPolygonControllableMap(polygonControllableMap);
                 if (targetSelector instanceof DirectionBasedTargetSelector) {
                     dto.setBorderBuildings(((DirectionBasedTargetSelector) targetSelector)
                             .getBorderBuildings(targetCluster).stream()

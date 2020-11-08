@@ -14,9 +14,7 @@ import rescuecore2.view.RenderedObject;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -50,21 +48,29 @@ public class CSUBuildingDetectorLayer extends MrlBaseDtoLayer<BuildingDetectorDt
         //必须创建一个新的副本
         BuildingDetectorDto result = new BuildingDetectorDto();
         HashSet<Polygon> polygons = new HashSet<>();
+        HashMap<Polygon, Boolean> polygonControllableMap = new HashMap<>();
         for (Polygon polygon : p.getDynamicClusterConvexHulls()) {
-            polygons.add(Util.transform(polygon, t));
+            boolean controllable = p.getPolygonControllableMap().get(polygon);
+            Polygon transformedPolygon = Util.transform(polygon, t);
+            polygons.add(transformedPolygon);
+            polygonControllableMap.put(transformedPolygon, controllable);
         }
         result.setDynamicClusterConvexHulls(polygons);
+        result.setPolygonControllableMap(polygonControllableMap);
         return result;
     }
 
     @Override
     protected void paintDto(BuildingDetectorDto p, Graphics2D g) {
         g.setStroke(STROKE_DEFAULT);
-        g.setColor(Color.RED);
-        p.getDynamicClusterConvexHulls().forEach(g::drawPolygon);
-        for (Polygon polygon : p.getDynamicClusterConvexHulls()) {
-            g.draw(polygon);
-        }
+        p.getDynamicClusterConvexHulls().forEach(e -> {
+            if (p.getPolygonControllableMap().get(e)) {
+                g.setColor(new Color(0x1E4D2B));
+            } else {
+                g.setColor(Color.RED);
+            }
+            g.draw(e);
+        });
     }
 
 
@@ -75,7 +81,7 @@ public class CSUBuildingDetectorLayer extends MrlBaseDtoLayer<BuildingDetectorDt
             });
 
             p.getInDirectionBuildings().forEach(e -> {
-                fillShape(getShape((Building) world.getEntity(new EntityID(e)), t), g, new Color(10, 53, 210));
+                fillShape(getShape((Building) world.getEntity(new EntityID(e)), t), g, new Color(43, 43, 43));
             });
 
             Building targetBuilding = (Building) world.getEntity(new EntityID(p.getTargetBuilding()));

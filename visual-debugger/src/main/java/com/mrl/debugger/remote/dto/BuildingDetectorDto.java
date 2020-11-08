@@ -2,10 +2,13 @@ package com.mrl.debugger.remote.dto;
 
 import java.awt.*;
 import java.util.Collection;
+import java.util.Map;
 
 public class BuildingDetectorDto implements StandardDto {
 
     private Collection<Polygon> dynamicClusterConvexHulls;
+
+    private Map<Polygon, Boolean> polygonControllableMap;
 
     private Collection<Integer> inDirectionBuildings;
 
@@ -43,5 +46,13 @@ public class BuildingDetectorDto implements StandardDto {
 
     public void setTargetBuilding(Integer targetBuilding) {
         this.targetBuilding = targetBuilding;
+    }
+
+    public Map<Polygon, Boolean> getPolygonControllableMap() {
+        return polygonControllableMap;
+    }
+
+    public void setPolygonControllableMap(Map<Polygon, Boolean> polygonControllableMap) {
+        this.polygonControllableMap = polygonControllableMap;
     }
 }
