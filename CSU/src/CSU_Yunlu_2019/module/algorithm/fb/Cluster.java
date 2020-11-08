@@ -48,6 +48,8 @@ public abstract class Cluster {
     protected boolean isDying;
     //是否可控
     protected boolean controllable;
+    //边缘建筑物
+    protected Set<StandardEntity> ignoredBorderEntities;
 
     public Cluster() {
         id = -1;
@@ -235,6 +237,10 @@ public abstract class Cluster {
 
     public boolean isDying() {
         return isDying;
+    }
+
+    public void setDying(boolean dying) {
+        isDying = dying;
     }
 
     public boolean isControllable() {

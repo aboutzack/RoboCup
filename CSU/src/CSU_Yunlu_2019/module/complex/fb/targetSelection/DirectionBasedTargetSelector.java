@@ -4,7 +4,9 @@ import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2019.module.algorithm.fb.CompositeConvexHull;
 import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
+import CSU_Yunlu_2019.module.complex.fb.tools.ZJUBaseBuildingCostComputer;
 import CSU_Yunlu_2019.standard.Ruler;
+import CSU_Yunlu_2019.util.ConstantComparators;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
 import javolution.util.FastSet;
@@ -14,6 +16,7 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -31,58 +34,36 @@ import java.util.stream.Collectors;
  */
 public class DirectionBasedTargetSelector extends TargetSelector {
 
+    /**
+     * first get a triangle and then add them to
+     * then calculate cost
+     * then select a specific entity as target
+     */
+    private ZJUBaseBuildingCostComputer calculateBuildingCost;
+
     public DirectionBasedTargetSelector(CSUFireBrigadeWorld world) {
         super(world);
+        this.calculateBuildingCost = new ZJUBaseBuildingCostComputer(world);
     }
 
     @Override
     public FireBrigadeTarget selectTarget(Cluster targetCluster) {
-        FireBrigadeTarget targetBuilding;
-        this.lastTarget = this.target;
+        FireBrigadeTarget fireBrigadeTarget = null;
         if (targetCluster != null) {
-            targetBuilding = gasStationHandler((FireCluster) targetCluster);
-            if (targetBuilding != null) {
-                return targetBuilding;
-            }
+            SortedSet<Pair<EntityID, Double>> sortedBuildings;
+            sortedBuildings = calculateValue((FireCluster) targetCluster);
+//            sortedBuildings = fireBrigadeUtilities.reRankBuildings(sortedBuildings);
 
-            SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings;
-            sortedBuildings = this.calculateValue((FireCluster) targetCluster);
-            sortedBuildings = fbUtilities.reRankBuildings(sortedBuildings, (FireBrigade) selfHuman);
-
-            //去除所有认为未着火的
-            Set<EntityID> changedEntities = world.getWorldInfo().getChanged().getChangedEntities();
-            sortedBuildings = sortedBuildings.stream().filter(e -> {
-                EntityID id = e.first().first();
-                return world.getEntity(id, Building.class).isTemperatureDefined() &&
-                        world.getEntity(id, Building.class).getTemperature() > 40 &&
-                        world.getEntity(id, Building.class).isFierynessDefined() &&
-                        world.getEntity(id, Building.class).getFieryness() != 8;
-            }).collect(Collectors.toCollection(() -> new TreeSet<>(fbUtilities.pairComparator_new)));
+//            MrlPersonalData.VIEWER_DATA.setBuildingValues(world.getSelf().getID(), world.getMrlBuildings());
 
             if (sortedBuildings != null && !sortedBuildings.isEmpty()) {
-                this.target = world.getCsuBuilding(sortedBuildings.first().first().first());
-                targetBuilding = new FireBrigadeTarget(targetCluster, this.target);
-                if (CSUConstants.DEBUG_DIRECTION_BASED_TARGET_SELECTOR) {
-                    System.out.println("clusterSize: " + targetCluster.getBuildings().size());
-                    System.out.println("allBuildings: " + targetCluster.getBuildings());
-                    System.out.println("sortedBuildings: " + sortedBuildings);
-                }
-            } else {//任意取一个building
-                if (CSUConstants.DEBUG_DIRECTION_BASED_TARGET_SELECTOR) {
-                    Point directionPoint = directionManager.findFarthestPointOfMap((FireCluster) targetCluster, (FireBrigade) selfHuman);
-                    System.out.println("empty sorted buildings in cluster's buildings: " + targetCluster.getBuildings() + "entities: " +
-                            targetCluster.getEntities());
-                    System.out.println("borders: " + targetCluster.getBorderEntities());
-                    System.out.println("inDirections: " + ((FireCluster) targetCluster).findBuildingInDirection(directionPoint));
-                    System.out.println("direction point: " + directionPoint);
-                }
-                Building building = targetCluster.getBuildings().iterator().next();
-                targetBuilding = new FireBrigadeTarget(targetCluster, world.getCsuBuilding(building.getID()));
+                lastTarget = target;
+                target = world.getCsuBuilding(sortedBuildings.first().first());
+                fireBrigadeTarget = new FireBrigadeTarget(targetCluster ,target);
             }
-        } else {
-            return null;
         }
-        return targetBuilding;
+
+        return fireBrigadeTarget;
     }
 
     /**
@@ -163,10 +144,21 @@ public class DirectionBasedTargetSelector extends TargetSelector {
     }
 
     //计算borderBuildings和inDirectionBuildings的value选择
-    private SortedSet<Pair<Pair<EntityID, Double>, Double>> calculateValue(FireCluster fireCluster) {
-        SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings =
-                new TreeSet<Pair<Pair<EntityID, Double>, Double>>(fbUtilities.pairComparator_new);
+    private SortedSet<Pair<EntityID, Double>> calculateValue(FireCluster fireCluster) {
+        // data preparation [sortedBuilding, borderbuilding, ]
+        SortedSet<Pair<EntityID, Double>> sortedBuildings = new TreeSet<Pair<EntityID, Double>>(ConstantComparators.DISTANCE_VALUE_COMPARATOR_DOUBLE);
+        Set<StandardEntity> borderEntities = fireCluster.getBorderEntities();
 
+        // get in direction building
+        List<CSUBuilding> inDirectionBuildings = fireCluster.getBuildingsInDirection();
+        // update
+        calculateBuildingCost.updateFor(fireCluster, lastTarget);
+
+        if (inDirectionBuildings.isEmpty()) {
+            calculateValueForOtherBuildings(sortedBuildings, borderEntities);
+        }
+        calculateValueForInDirectionBuildings(sortedBuildings, inDirectionBuildings);
+        return sortedBuildings;
 //        Set<StandardEntity> borderBuildings = new FastSet<>(fireCluster.getBorderEntities());
 //        ///System.out.println(world.getTime() + ", "+ world.me + ",fireCluster: " + fireCluster.getFireCondition());
 //        ///System.out.println(world.getTime() + ", "+ world.me + ",borderBuildings  "+borderBuildings);///
@@ -176,10 +168,24 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         ///System.out.println(world.getTime() + ", "+world.me +", inDirectionBuildings  " + inDirectionBuildings);///
 //        borderBuildings.removeAll(csuBuildingToEntity(inDirectionBuildings));
 
-        this.calculateValueOfInDirectionBuildings(getInDirectionBuildings(fireCluster), sortedBuildings);
-        this.calculateValueOfBorderBuildings(getBorderBuildings((fireCluster)), sortedBuildings);
+//        this.calculateValueOfInDirectionBuildings(getInDirectionBuildings(fireCluster), sortedBuildings);
+//        this.calculateValueOfBorderBuildings(getBorderBuildings((fireCluster)), sortedBuildings);
 
-        return sortedBuildings;
+//        return this.calculateValueOfDistance(sortedBuildings);
+    }
+    private void calculateValueForOtherBuildings(SortedSet<Pair<EntityID, Double>> sortedBuildings, Set<StandardEntity> otherBuildings) {
+        for (StandardEntity entity : otherBuildings) {
+            CSUBuilding csuBuilding = world.getCsuBuilding(entity.getID());
+            csuBuilding.BUILDING_VALUE = calculateBuildingCost.getCost(csuBuilding);
+            sortedBuildings.add(new Pair<EntityID, Double>(csuBuilding.getId(), csuBuilding.BUILDING_VALUE));
+        }
+    }
+
+    private void calculateValueForInDirectionBuildings(SortedSet<Pair<EntityID, Double>> sortedBuildings, List<CSUBuilding> highValueBuildings) {
+        for (CSUBuilding csuBuilding : highValueBuildings) {
+            csuBuilding.BUILDING_VALUE = calculateBuildingCost.getCost(csuBuilding);
+            sortedBuildings.add(new Pair<EntityID, Double>(csuBuilding.getId(), csuBuilding.BUILDING_VALUE));
+        }
     }
 
     private void calculateValueOfInDirectionBuildings(Set<CSUBuilding> inDirectionBuildings,
@@ -190,7 +196,7 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             next.BUILDING_VALUE += 500;///
 
             if (lastTarget != null && next.getId() == lastTarget.getId()) {
-                next.BUILDING_VALUE += 250;///
+                next.BUILDING_VALUE += 1000;///
             }
 
             Pair<Integer, Integer> selfLocation = world.getSelfLocation();
@@ -228,6 +234,23 @@ public class DirectionBasedTargetSelector extends TargetSelector {
             Pair<EntityID, Double> pair = new Pair<>(next.getID(), distance);
             sortedBuildings.add(new Pair<Pair<EntityID, Double>, Double>(pair, csuBuilding.BUILDING_VALUE));
         }
+    }
+
+    // 计算当前的sortedset中的所有建筑物与当前agent之间的距离作为权重并加入
+    private SortedSet<Pair<Pair<EntityID, Double>, Double>> calculateValueOfDistance(SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildings) {
+        double distanceWeight = 0.2;
+        SortedSet<Pair<Pair<EntityID, Double>, Double>> sortedBuildingsWithDistance =
+                new TreeSet<Pair<Pair<EntityID, Double>, Double>>(fbUtilities.pairComparator_new);
+        Iterator interator = sortedBuildings.iterator();
+        while(interator.hasNext()){
+            Pair<Pair<EntityID, Double>, Double> pair = (Pair<Pair<EntityID, Double>, Double>)interator.next();
+
+//            System.out.println("  +++++++  "+ pair.first().first()+"  "+pair.second() + "  "+world.getDistance(pair.first().first(), world.getAgentInfo().getID()));
+            sortedBuildingsWithDistance.add(new Pair<Pair<EntityID, Double>, Double>(pair.first(), pair.second()+distanceWeight*world.getDistance(pair.first().first(), world.getAgentInfo().getID())));
+//            System.out.println("  *******  "+ pair.first().first()+"  "+pair.second() + "  "+world.getDistance(pair.first().first(), world.getAgentInfo().getID()));
+
+        }
+        return sortedBuildingsWithDistance;
     }
 
     /**

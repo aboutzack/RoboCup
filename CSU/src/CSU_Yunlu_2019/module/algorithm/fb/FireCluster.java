@@ -13,6 +13,8 @@ import rescuecore2.standard.entities.StandardEntityURN;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -290,8 +292,7 @@ public class FireCluster extends Cluster {
     }
 
     /**
-     * We have a test class {@link TestForGetPerpendicularPoints} for this
-     * method. Please run this test class to see what this method can do.
+     * get perpendicular points
      */
     public Point[] getPerpendicularPoints(Point2D P_1, Point2D P_2, double radiusLength) {
         double x1 = P_1.getX();
@@ -329,6 +330,129 @@ public class FireCluster extends Cluster {
         Point perpendicular2 = new Point((int) x4, (int) y4);
         return new Point[]{perpendicular1, perpendicular2};
     }
+
+
+    private List<CSUBuilding> highValueBuildings = new ArrayList<CSUBuilding>();
+    private Set<CSUBuilding> clusterBuildings;
+
+    public boolean hasBuildingInDirection(Point targetPoint, boolean limitDirection, boolean useAllFieryness) {
+
+        highValueBuildings = new ArrayList<>();
+//        List<StandardEntity> borderDirectionBuildings = new ArrayList<StandardEntity>();
+        setTriangle(targetPoint, limitDirection);
+        Set<CSUBuilding> entitySet = new HashSet<>();
+        entitySet.addAll(clusterBuildings);
+        entitySet.removeAll(ignoredBorderEntities); //todo: check this ignoredBorderEntities mostafas
+        if (isDying() || getConvexObject() == null) {
+            return !highValueBuildings.isEmpty();
+        }
+        if (getConvexObject() == null || convexObject.CONVEX_POINT == null || convexObject.CENTER_POINT == null || convexObject.getTriangle() == null) {
+            return !highValueBuildings.isEmpty();
+        }
+
+        Polygon triangle = convexObject.getTriangle();
+
+        for (CSUBuilding building : entitySet) {
+            if (!isCandidate(building)) {
+                if (!useAllFieryness || !isOldCandidate(building)) {
+                    continue;
+                }
+            }
+
+            int vertexes[] = building.getSelfBuilding().getApexList();
+            for (int i = 0; i < vertexes.length; i += 2) {
+                if (triangle.contains(vertexes[i], vertexes[i + 1])) {
+                    highValueBuildings.add(building);
+                    break;
+                }
+            }
+        }
+        return !highValueBuildings.isEmpty();
+    }
+
+    public List<CSUBuilding> getBuildingsInDirection() {
+        return highValueBuildings;
+    }
+
+    private void setTriangle(Point targetPoint, boolean limitDirection) {
+        Polygon convexPoly = convexObject.getConvexHullPolygon();
+        double radiusLength;
+        if (limitDirection) {
+            radiusLength = Math.max(world.getMapHeight(), world.getMapWidth()) / 2;
+//            radiusLength = Util.distance(convexHull.getConvexPolygon(), new rescuecore2.misc.geometry.Point2D(targetPoint.getX(), targetPoint.getY()));
+        } else {
+            radiusLength = Math.sqrt(Math.pow(convexPoly.getBounds().getHeight(), 2) + Math.pow(convexPoly.getBounds().getWidth(), 2));
+        }
+
+        Point convexPoint = new Point((int) convexPoly.getBounds().getCenterX(), (int) convexPoly.getBounds().getCenterY());
+        targetPoint = getFinalDirectionPoints(targetPoint, convexPoint, Math.min(convexPoly.getBounds2D().getWidth(), convexPoly.getBounds2D().getHeight()) * 5);
+        Point[] points = getPerpendicularPoints(targetPoint, convexPoint, radiusLength);
+        Point point1 = points[0];
+        Point point2 = points[1];
+
+        convexObject.CENTER_POINT = targetPoint;
+//        MrlPersonalData.VIEWER_DATA.setCenterPoint(world.getSelf().getID(), new Pair<Point, ConvexObject>(targetPoint, this.convexObject));
+        convexObject.FIRST_POINT = point1;
+        convexObject.SECOND_POINT = point2;
+        convexObject.CONVEX_POINT = convexPoint;
+        Polygon trianglePoly = new Polygon();
+        trianglePoly.addPoint(point1.x, point1.y);
+        trianglePoly.addPoint(convexPoint.x, convexPoint.y);
+        trianglePoly.addPoint(point2.x, point2.y);
+
+        convexObject.setTriangle(trianglePoly);
+        {//get other side of triangle
+            double distance;
+            if (limitDirection) {
+                distance = Math.max(world.getMapHeight(), world.getMapWidth()) / 2;
+//                distance = Util.distance(convexHull.getConvexPolygon(), new rescuecore2.misc.geometry.Point2D(targetPoint.getX(), targetPoint.getY()));
+            } else {
+                distance = point1.distance(point2) / 3;
+            }
+            points = getPerpendicularPoints(point2, point1, distance);
+            if (convexPoint.distance(points[0]) >= convexPoint.distance(points[1])) {
+                trianglePoly.addPoint(points[0].x, points[0].y);
+                convexObject.OTHER_POINT_2 = new Point(points[0].x, points[0].y);
+            } else {
+                trianglePoly.addPoint(points[1].x, points[1].y);
+                convexObject.OTHER_POINT_2 = new Point(points[1].x, points[1].y);
+            }
+
+            points = getPerpendicularPoints(point1, point2, distance);
+            if (convexPoint.distance(points[0]) >= convexPoint.distance(points[1])) {
+                trianglePoly.addPoint(points[0].x, points[0].y);
+                convexObject.OTHER_POINT_1 = new Point(points[0].x, points[0].y);
+            } else {
+                trianglePoly.addPoint(points[1].x, points[1].y);
+                convexObject.OTHER_POINT_1 = new Point(points[1].x, points[1].y);
+            }
+        }
+    }
+
+    private static Point getFinalDirectionPoints(Point2D point1, Point2D point2, double radiusLength) {
+        double x1 = point1.getX();
+        double y1 = point1.getY();
+        double x2 = point2.getX();
+        double y2 = point2.getY();
+
+//        double m1 = (y1 - y2) / (x1 - x2);
+//        double a = Math.pow(m1, 2) + 1;
+//        double b = (-2 * x1) - (2 * Math.pow(m1, 2) * x1);
+//        double c = (Math.pow(x1, 2) * (Math.pow(m1, 2) + 1)) - Math.pow(radiusLength, 2);
+//
+//        double x3 = ((-1 * b) + Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
+//        double y3 = (m1 * x3) - (m1 * x1) + y1;
+
+        double d = Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
+        double r = radiusLength / d;
+
+        double x3 = r * x1 + (1 - r) * x2;
+        double y3 = r * y1 + (1 - r) * y2;
+
+        Point perpendicular = new Point((int) x3, (int) y3);
+        return perpendicular;
+    }
+
 
     public int getWaterNeeded() {
         return waterNeeded;
