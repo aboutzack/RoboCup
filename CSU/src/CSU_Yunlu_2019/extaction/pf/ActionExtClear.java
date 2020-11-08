@@ -779,7 +779,11 @@ public class ActionExtClear extends ExtAction {
 							}
 						}
 						Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
-						return this.clearToPoint(blockades, agentPosition, targetPoint);
+						Action action = this.clearToPoint(blockades, agentPosition, targetPoint);
+						if(action != null){
+							return action;
+						}
+//						return this.clearToPoint(blockades, agentPosition, targetPoint);
 					}
 				}
 			} else {
@@ -806,7 +810,11 @@ public class ActionExtClear extends ExtAction {
 									}
 								}
 								Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
-								return this.clearToPoint(blockades, agentPosition, targetPoint);
+								Action action = this.clearToPoint(blockades, agentPosition, targetPoint);
+								if(action != null){
+									return action;
+								}
+//								return this.clearToPoint(blockades, agentPosition, targetPoint);
 							}
 						}
 					}
@@ -834,7 +842,11 @@ public class ActionExtClear extends ExtAction {
 											}
 										}
 										Point2D agentPosition = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
-										return this.clearToPoint(blockades, agentPosition, targetPoint);
+										Action action = this.clearToPoint(blockades, agentPosition, targetPoint);
+										if(action != null){
+											return action;
+										}
+//										return this.clearToPoint(blockades, agentPosition, targetPoint);
 									}
 								}
 							}
@@ -1116,9 +1128,7 @@ public class ActionExtClear extends ExtAction {
 
 		double policeX = police.getX();
 		double policeY = police.getY();
-		double minDistance = Double.MAX_VALUE;
 		Action moveAction = null;
-		Blockade nearestBlock = null;
 		for (StandardEntity entity : agents) {
 			Human human = (Human) entity;
 			if (!human.isPositionDefined() || human.getPosition().getValue() != road.getID().getValue()) {
@@ -1126,7 +1136,6 @@ public class ActionExtClear extends ExtAction {
 			}
 			double humanX = human.getX();
 			double humanY = human.getY();
-			ActionClear actionClear = null;
 			for (Blockade blockade : blockades) {
 				if(entity instanceof Civilian && !this.isInside(humanX, humanY, blockade.getApexes())){
 					continue;
@@ -1137,15 +1146,12 @@ public class ActionExtClear extends ExtAction {
 				}
 				Point2D agent = new Point2D(humanX, humanY);
 				Point2D Police = new Point2D(policeX, policeY);
-				return this.clearToPoint(blockades, Police,agent);
-			}
-			if (actionClear != null) {
-				lastClearTarget = null;
-				return actionClear;
+				moveAction = this.clearToPoint(blockades, Police, agent);
+				if(moveAction != null){
+					return moveAction;
+				}
 			}
 		}
-		if (nearestBlock != null)
-			lastClearTarget = nearestBlock;
 		return moveAction;
 	}
 	/**
@@ -1257,13 +1263,17 @@ public class ActionExtClear extends ExtAction {
 			return null;
 		}
 		if (position instanceof Road || position instanceof Hydrant) {
-			if(!edge.isPassable()) {
+			if(edge.isPassable()) {
 				Road road = (Road) position;
 				Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
 						.collect(Collectors.toSet());
 				Point2D Police = new Point2D(agentX,agentY);
 				Point2D mid = new Point2D((edge.getStartX() + edge.getEndX()) / 2,(edge.getStartY() + edge.getEndY()) / 2);
-				return this.clearToPoint(blockades, Police, mid);
+//				return this.clearToPoint(blockades, Police, mid);
+				Action clearAction = this.clearPassEdge(blockades,Police,mid);
+				if(clearAction != null){
+					return clearAction;
+				}
 //				return this.clearPassEdge(blockades,Police,mid,target);
 			}
 		}
@@ -1440,7 +1450,7 @@ public class ActionExtClear extends ExtAction {
 	 * @Author: Bochun-Yue
 	 * @Date: 11/17/20
 	 */
-	private Action clearPassEdge(Collection<Blockade> blockades,Point2D agent,Point2D edgeMidPoint,Area neighbour) {
+	private Action clearPassEdge(Collection<Blockade> blockades,Point2D agent,Point2D edgeMidPoint) {
 		PoliceForce police = (PoliceForce) this.agentInfo.me();
 		double agentX = agent.getX();
 		double agentY = agent.getY();
@@ -1501,7 +1511,7 @@ public class ActionExtClear extends ExtAction {
 			return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX(), (int)intersection.getY());
 		}
 		else {
-			return new ActionMove(Lists.newArrayList(this.agentInfo.getPosition(), neighbour.getID()));
+			return null;
 		}
 	}
 

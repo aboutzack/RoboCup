@@ -202,7 +202,7 @@ public class GuidelineCreator extends AbstractModule {
             Boolean edgeToEntrance = false;
             for(EntityID neighbour : road.getNeighbours()){
                 Edge neighbourEdge = road.getEdgeTo(neighbour);
-                if(this.countedEntrance.contains(neighbour) && edge.equals(neighbourEdge)){
+                if(this.countedEntrance.contains(neighbour) && this.getMidPoint(edge).equals(this.getMidPoint(neighbourEdge))){
                     edgeToEntrance = true;
                     break;
                 }
@@ -342,7 +342,6 @@ public class GuidelineCreator extends AbstractModule {
                 worldRoadID.add(id);
             }
         }
-        System.out.println("position:"+this.agentInfo.getPosition().getValue());
         worldRoadID.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
         for (EntityID id : worldRoadID) {
             worldRoad.add(this.worldInfo.getEntity(id));
@@ -489,7 +488,7 @@ public class GuidelineCreator extends AbstractModule {
     private Edge getOppositeEdge(Road road,Edge original) {
         List<Edge> edges = new ArrayList<>();
         for(Edge edge : road.getEdges()){
-            if(edge.isPassable() && !edge.equals(original)){
+            if(edge.isPassable() && !this.getMidPoint(edge).equals(this.getMidPoint(original))){
                 edges.add(edge);
             }
         }
@@ -517,10 +516,10 @@ public class GuidelineCreator extends AbstractModule {
         List<Edge> edges = new ArrayList<>();
         List<Edge> reverseEdges = new ArrayList<>();
         for(Edge edge : road.getEdges()){
-            if(!edge.equals(original)){
+            if(!this.getMidPoint(edge).equals(this.getMidPoint(original))){
                 reverseEdges.add(edge);
             }
-            if(edge.isPassable() && !edge.equals(original)){
+            if(edge.isPassable() && !this.getMidPoint(edge).equals(this.getMidPoint(original))){
                 edges.add(edge);
             }
         }
@@ -540,24 +539,23 @@ public class GuidelineCreator extends AbstractModule {
                 }
             }
             return answerEdge;
-        }else{
-            if(reverseEdges.size() > 0){
-                Point2D roadCenter = new Point2D(road.getX(), road.getY());
-                Point2D originalMid = this.getMidPoint(original);
-                Vector2D standardDirection = new Vector2D(roadCenter.getX() - originalMid.getX(), roadCenter.getY() - originalMid.getY());
-                Edge answerEdge = null;
-                double minAngle = Double.MAX_VALUE;
-                for (int i = 0; i < edges.size(); ++i) {
-                    Point2D mid = this.getMidPoint(edges.get(i));
-                    Vector2D testDirection = new Vector2D(mid.getX() - originalMid.getX(), mid.getY() - originalMid.getY());
-                    double angle = GeometryTools2D.getAngleBetweenVectors(standardDirection, testDirection);
-                    if (angle < minAngle) {
-                        minAngle = angle;
-                        answerEdge = edges.get(i);
-                    }
+        }
+        if(reverseEdges.size() > 0) {
+            Point2D roadCenter = new Point2D(road.getX(), road.getY());
+            Point2D originalMid = this.getMidPoint(original);
+            Vector2D standardDirection = new Vector2D(roadCenter.getX() - originalMid.getX(), roadCenter.getY() - originalMid.getY());
+            Edge answerEdge = null;
+            double minAngle = Double.MAX_VALUE;
+            for (int i = 0; i < reverseEdges.size(); ++i) {
+                Point2D mid = this.getMidPoint(reverseEdges.get(i));
+                Vector2D testDirection = new Vector2D(mid.getX() - originalMid.getX(), mid.getY() - originalMid.getY());
+                double angle = GeometryTools2D.getAngleBetweenVectors(standardDirection, testDirection);
+                if (angle < minAngle) {
+                    minAngle = angle;
+                    answerEdge = reverseEdges.get(i);
                 }
-                return answerEdge;
             }
+            return answerEdge;
         }
         return null;
     }
