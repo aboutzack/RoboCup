@@ -9,10 +9,7 @@ import CSU_Yunlu_2019.module.complex.fb.clusterSelection.ClusterSelectorType;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.DistanceBasedClusterSelector;
 import CSU_Yunlu_2019.module.complex.fb.clusterSelection.IFireBrigadeClusterSelector;
 import CSU_Yunlu_2019.module.complex.fb.search.SearchHelper;
-import CSU_Yunlu_2019.module.complex.fb.targetSelection.DirectionBasedTargetSelector;
-import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
-import CSU_Yunlu_2019.module.complex.fb.targetSelection.IFireBrigadeTargetSelector;
-import CSU_Yunlu_2019.module.complex.fb.targetSelection.TargetSelectorType;
+import CSU_Yunlu_2019.module.complex.fb.targetSelection.*;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import adf.agent.communication.MessageManager;
@@ -38,8 +35,8 @@ import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
 import java.io.Serializable;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CSUBuildingDetector extends BuildingDetector {
@@ -51,7 +48,7 @@ public class CSUBuildingDetector extends BuildingDetector {
     private Map<EntityID, CSUBuilding> sentBuildingMap;
     private ClusterSelectorType clusterSelectorType = ClusterSelectorType.DISTANCE_BASED;
     private IFireBrigadeClusterSelector clusterSelector;
-    private TargetSelectorType targetSelectorType = TargetSelectorType.DIRECTION_BASED;
+    private TargetSelectorType targetSelectorType = TargetSelectorType.GREEDY;
     private IFireBrigadeTargetSelector targetSelector;
     private SearchHelper searchHelper;
 
@@ -74,6 +71,8 @@ public class CSUBuildingDetector extends BuildingDetector {
         registerModule(this.clustering);
         registerModule(world);
         this.sentBuildingMap = new HashMap<>();
+        setClusterSelector();
+        setTargetSelector();
     }
 
 
@@ -136,9 +135,8 @@ public class CSUBuildingDetector extends BuildingDetector {
 
     @Override
     public BuildingDetector calc() {
-        setClusterSelector();
-        setTargetSelector();
         FireCluster targetCluster = clusterSelector.selectCluster();
+        updateTargetSelectorStrategy(targetCluster);
         FireBrigadeTarget fireBrigadeTarget = targetSelector.selectTarget(targetCluster);
         if (DebugHelper.DEBUG_MODE) {
             if (fireBrigadeTarget != null) {
@@ -157,6 +155,9 @@ public class CSUBuildingDetector extends BuildingDetector {
                     dto.setInDirectionBuildings(((DirectionBasedTargetSelector) targetSelector)
                             .getInDirectionBuildings(targetCluster)
                             .stream().map(e-> e.getId().getValue()).collect(Collectors.toSet()));
+                }else {
+                    dto.setBorderBuildings(new HashSet<>());
+                    dto.setInDirectionBuildings(new HashSet<>());
                 }
                 DebugHelper.VD_CLIENT.drawAsync(agentInfo.getID().getValue(), "CSUBuildingDetectorLayer", dto);
 
@@ -206,6 +207,7 @@ public class CSUBuildingDetector extends BuildingDetector {
         switch (clusterSelectorType) {
             case DISTANCE_BASED:
                 clusterSelector = new DistanceBasedClusterSelector(world);
+                break;
         }
     }
 
@@ -214,6 +216,22 @@ public class CSUBuildingDetector extends BuildingDetector {
             case DIRECTION_BASED:
                 targetSelector = new DirectionBasedTargetSelector(world);
                 break;
+            case GREEDY:
+                targetSelector = new GreedyTargetSelector(world);
+        }
+    }
+
+    private void updateTargetSelectorStrategy(FireCluster cluster) {
+        if (cluster != null) {
+            if (!cluster.isControllable() && !targetSelectorType.equals(TargetSelectorType.DIRECTION_BASED)) {
+                targetSelectorType = TargetSelectorType.DIRECTION_BASED;
+                setTargetSelector();
+                System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+            } else if (cluster.isControllable() && !targetSelectorType.equals(TargetSelectorType.GREEDY)) {
+                targetSelectorType = TargetSelectorType.GREEDY;
+                setTargetSelector();
+                System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+            }
         }
     }
 

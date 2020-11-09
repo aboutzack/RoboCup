@@ -14,6 +14,7 @@ public interface CSUConstants {
     public static final boolean DEBUG_WATER_REFILL = false;
     public static final boolean DEBUG_MESSAGE_COUNT = false;
     public static final boolean DEBUG_CHANNEL_SUBSCRIBE = false;
+    public static final boolean DEBUG_DISTANCE_BASED_CLUSTER_SELECTOR = false;
 
     //防止target.cfg未正确配置
     public static final String WORLD_HELPER_DEFAULT = "CSU_Yunlu_2019.world.CSUWorldHelper";

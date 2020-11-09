@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @description: cluster for buildings on fire
@@ -31,6 +32,7 @@ public class FireCluster extends Cluster {
     private boolean controllable;
     private CSUWorldHelper world;
     private boolean isOverCenter;
+    private List<CSUBuilding> highValueBuildings;
     private static final int CLUSTER_ENERGY_COEFFICIENT = 50;
     private static final int CLUSTER_ENERGY_SECOND_COEFFICIENT = 20;
 
@@ -40,6 +42,7 @@ public class FireCluster extends Cluster {
         this.waterNeeded = 0;
         this.clusterEnergy = 0;
         this.isOverCenter = false;
+        this.highValueBuildings = new ArrayList<>();
     }
 
     @Override
@@ -72,99 +75,6 @@ public class FireCluster extends Cluster {
         } else {
             center = new Point(0, 0);
         }
-    }
-
-    /**
-     * Get all candidate buildings of this FireCluster in the given direction.
-     *
-     * @param center         the point marks the direction
-     * @param limitDirection a flag used to determine the size of the direction triangle
-     * @return
-     */
-    public Set<CSUBuilding> findBuildingInDirection(Point center) {
-        Set<CSUBuilding> targetBuildins = new FastSet<>();
-
-        if (!isOverCenter)
-            this.checkForOverCenter(center);
-        this.setTriangle(isOverCenter);
-
-        if (this.isDying() || this.getConvexObject() == null)
-            return targetBuildins;
-        if (convexObject.CENTER_POINT == null || convexObject.CONVEX_POINT == null)
-            return targetBuildins;
-
-        Building building;
-        CSUBuilding csuBuilding;
-        Polygon polygon;
-        if (isOverCenter) {
-            polygon = this.convexObject.getDirectionRectangle();
-        } else {
-            polygon = this.convexObject.getTriangle();
-        }
-
-        for (StandardEntity entity : this.borderEntities) {
-            building = (Building) entity;
-            csuBuilding = world.getCsuBuilding(entity);
-            if (!isCandidate(csuBuilding))
-                continue;
-            if (!isOldCandidate(csuBuilding))
-                continue;
-            int[] vertices = building.getApexList();
-            for (int i = 0; i < vertices.length; i += 2) {
-                if (polygon.contains(vertices[i], vertices[i + 1])) {
-                    targetBuildins.add(csuBuilding);
-                    break;
-                }
-            }
-        }
-
-        return targetBuildins;
-    }
-
-    /**
-     * Determines whether there are candidate buildings in the given direction.
-     *
-     * @param center
-     *            the point marks the direction
-     * @param limitDirection
-     *            a flag used to determines the size of the direction triangle
-     * @return true if there is building in this direction. Otherwise, false.
-     */
-    public boolean haveBuildingInDirectionOf(Point center) {
-        if (!isOverCenter)
-            this.checkForOverCenter(center);
-        this.setTriangle(isOverCenter);
-
-        if (this.isDying() || this.getConvexObject() == null)
-            return false;
-        if (convexObject.CENTER_POINT == null || convexObject.CONVEX_POINT == null)
-            return false;
-
-        Building building;
-        CSUBuilding csuBuilding;
-        Polygon polygon;
-
-        if (isOverCenter) {
-            polygon = this.convexObject.getDirectionRectangle();
-        } else {
-            polygon = this.convexObject.getTriangle();
-        }
-
-        for (StandardEntity entity : this.borderEntities) {
-            building = (Building) entity;
-            csuBuilding = world.getCsuBuilding(entity);
-            if (!isCandidate(csuBuilding))
-                continue;
-            if (!isOldCandidate(csuBuilding))
-                continue;
-            int[] vertices = building.getApexList();
-            for (int i = 0; i < vertices.length; i += 2) {
-                if (polygon.contains(vertices[i], vertices[i + 1]))
-                    return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -221,6 +131,129 @@ public class FireCluster extends Cluster {
                 }
             }
         }
+    }
+
+    /**
+     * get perpendicular points
+     */
+    public Point[] getPerpendicularPoints(Point2D P_1, Point2D P_2, double radiusLength) {
+        double x1 = P_1.getX();
+        double y1 = P_1.getY();
+        double x2 = P_2.getX();
+        double y2 = P_2.getY();
+
+        double x3, x4, y3, y4;
+
+        if (y1 == y2) {
+            x3 = x1;
+            x4 = x1;
+            y3 = y1 + radiusLength;
+            y4 = y1 - radiusLength;
+        } else {
+            /* a * X^2 + b * X + c = 0 */
+            double m1 = (y1 - y2) / (x1 - x2);   ///infinity
+            double m2 = (-1 / m1);                    ///0
+
+//            double a = Math.pow(m2, 2) + 1;
+//            double b = (-2 * x1) - (2 * Math.pow(m2, 2) * x1);
+//            double c = (Math.pow(x1, 2) * (Math.pow(m2, 2) + 1)) - Math.pow(radiusLength, 2);
+//            x3 = ((-1 * b) + Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
+//            x4 = ((-1 * b) - Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
+
+            double x = Math.sqrt(Math.pow(radiusLength, 2) / (Math.pow(m2, 2) + 1));
+            x3 = x1 + x;
+            x4 = x1 - x;
+
+            y3 = (m2 * x3) - (m2 * x1) + y1;
+            y4 = (m2 * x4) - (m2 * x1) + y1;
+        }
+
+        Point perpendicular1 = new Point((int) x3, (int) y3);
+        Point perpendicular2 = new Point((int) x4, (int) y4);
+        return new Point[]{perpendicular1, perpendicular2};
+    }
+
+    public boolean hasBuildingInDirection(Point targetPoint, boolean limitDirection, boolean useAllFieryness) {
+
+        highValueBuildings = new ArrayList<>();
+//        List<StandardEntity> borderDirectionBuildings = new ArrayList<StandardEntity>();
+        setTriangle(targetPoint, limitDirection);
+        Set<CSUBuilding> entitySet = new HashSet<>();
+        Set<CSUBuilding> csuBuildings = buildings.stream().map(world::getCsuBuilding).collect(Collectors.toSet());
+        entitySet.addAll(csuBuildings);
+//        entitySet.removeAll(ignoredBorderEntities); //todo: check this ignoredBorderEntities mostafas
+        // TODO: 2020/11/8 consider ignoredBorderEntities
+        if (isDying() || getConvexObject() == null) {
+            return !highValueBuildings.isEmpty();
+        }
+        if (getConvexObject() == null || convexObject.CONVEX_POINT == null || convexObject.CENTER_POINT == null || convexObject.getTriangle() == null) {
+            return !highValueBuildings.isEmpty();
+        }
+
+        Polygon triangle = convexObject.getTriangle();
+
+        for (CSUBuilding building : entitySet) {
+            if (!isCandidate(building)) {
+                if (!useAllFieryness || !isOldCandidate(building)) {
+                    continue;
+                }
+            }
+
+            int[] vertexes = building.getSelfBuilding().getApexList();
+            for (int i = 0; i < vertexes.length; i += 2) {
+                if (triangle.contains(vertexes[i], vertexes[i + 1])) {
+                    highValueBuildings.add(building);
+                    break;
+                }
+            }
+        }
+        return !highValueBuildings.isEmpty();
+    }
+
+    /**
+     * Determines whether there are candidate buildings in the given direction.
+     *
+     * @param center
+     *            the point marks the direction
+     * @param limitDirection
+     *            a flag used to determines the size of the direction triangle
+     * @return true if there is building in this direction. Otherwise, false.
+     */
+    public boolean haveBuildingInDirectionOf(Point center) {
+        if (!isOverCenter)
+            this.checkForOverCenter(center);
+        this.setTriangle(isOverCenter);
+
+        if (this.isDying() || this.getConvexObject() == null)
+            return false;
+        if (convexObject.CENTER_POINT == null || convexObject.CONVEX_POINT == null)
+            return false;
+
+        Building building;
+        CSUBuilding csuBuilding;
+        Polygon polygon;
+
+        if (isOverCenter) {
+            polygon = this.convexObject.getDirectionRectangle();
+        } else {
+            polygon = this.convexObject.getTriangle();
+        }
+
+        for (StandardEntity entity : this.borderEntities) {
+            building = (Building) entity;
+            csuBuilding = world.getCsuBuilding(entity);
+            if (!isCandidate(csuBuilding))
+                continue;
+            if (!isOldCandidate(csuBuilding))
+                continue;
+            int[] vertices = building.getApexList();
+            for (int i = 0; i < vertices.length; i += 2) {
+                if (polygon.contains(vertices[i], vertices[i + 1]))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -291,88 +324,6 @@ public class FireCluster extends Cluster {
         }
     }
 
-    /**
-     * get perpendicular points
-     */
-    public Point[] getPerpendicularPoints(Point2D P_1, Point2D P_2, double radiusLength) {
-        double x1 = P_1.getX();
-        double y1 = P_1.getY();
-        double x2 = P_2.getX();
-        double y2 = P_2.getY();
-
-        double x3, x4, y3, y4;
-
-        if (y1 == y2) {
-            x3 = x1;
-            x4 = x1;
-            y3 = y1 + radiusLength;
-            y4 = y1 - radiusLength;
-        } else {
-            /* a * X^2 + b * X + c = 0 */
-            double m1 = (y1 - y2) / (x1 - x2);   ///infinity
-            double m2 = (-1 / m1);                    ///0
-
-//            double a = Math.pow(m2, 2) + 1;
-//            double b = (-2 * x1) - (2 * Math.pow(m2, 2) * x1);
-//            double c = (Math.pow(x1, 2) * (Math.pow(m2, 2) + 1)) - Math.pow(radiusLength, 2);
-//            x3 = ((-1 * b) + Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
-//            x4 = ((-1 * b) - Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
-
-            double x = Math.sqrt(Math.pow(radiusLength, 2) / (Math.pow(m2, 2) + 1));
-            x3 = x1 + x;
-            x4 = x1 - x;
-
-            y3 = (m2 * x3) - (m2 * x1) + y1;
-            y4 = (m2 * x4) - (m2 * x1) + y1;
-        }
-
-        Point perpendicular1 = new Point((int) x3, (int) y3);
-        Point perpendicular2 = new Point((int) x4, (int) y4);
-        return new Point[]{perpendicular1, perpendicular2};
-    }
-
-
-    private List<CSUBuilding> highValueBuildings = new ArrayList<CSUBuilding>();
-    private Set<CSUBuilding> clusterBuildings;
-
-    public boolean hasBuildingInDirection(Point targetPoint, boolean limitDirection, boolean useAllFieryness) {
-
-        highValueBuildings = new ArrayList<>();
-//        List<StandardEntity> borderDirectionBuildings = new ArrayList<StandardEntity>();
-        setTriangle(targetPoint, limitDirection);
-        Set<CSUBuilding> entitySet = new HashSet<>();
-        entitySet.addAll(clusterBuildings);
-        entitySet.removeAll(ignoredBorderEntities); //todo: check this ignoredBorderEntities mostafas
-        if (isDying() || getConvexObject() == null) {
-            return !highValueBuildings.isEmpty();
-        }
-        if (getConvexObject() == null || convexObject.CONVEX_POINT == null || convexObject.CENTER_POINT == null || convexObject.getTriangle() == null) {
-            return !highValueBuildings.isEmpty();
-        }
-
-        Polygon triangle = convexObject.getTriangle();
-
-        for (CSUBuilding building : entitySet) {
-            if (!isCandidate(building)) {
-                if (!useAllFieryness || !isOldCandidate(building)) {
-                    continue;
-                }
-            }
-
-            int vertexes[] = building.getSelfBuilding().getApexList();
-            for (int i = 0; i < vertexes.length; i += 2) {
-                if (triangle.contains(vertexes[i], vertexes[i + 1])) {
-                    highValueBuildings.add(building);
-                    break;
-                }
-            }
-        }
-        return !highValueBuildings.isEmpty();
-    }
-
-    public List<CSUBuilding> getBuildingsInDirection() {
-        return highValueBuildings;
-    }
 
     private void setTriangle(Point targetPoint, boolean limitDirection) {
         Polygon convexPoly = convexObject.getConvexHullPolygon();
@@ -429,6 +380,53 @@ public class FireCluster extends Cluster {
         }
     }
 
+    /**
+     * Get all candidate buildings of this FireCluster in the given direction.
+     *
+     * @param center         the point marks the direction
+     * @param limitDirection a flag used to determine the size of the direction triangle
+     * @return
+     */
+    public Set<CSUBuilding> findBuildingInDirection(Point center) {
+        Set<CSUBuilding> targetBuildins = new FastSet<>();
+
+        if (!isOverCenter)
+            this.checkForOverCenter(center);
+        this.setTriangle(isOverCenter);
+
+        if (this.isDying() || this.getConvexObject() == null)
+            return targetBuildins;
+        if (convexObject.CENTER_POINT == null || convexObject.CONVEX_POINT == null)
+            return targetBuildins;
+
+        Building building;
+        CSUBuilding csuBuilding;
+        Polygon polygon;
+        if (isOverCenter) {
+            polygon = this.convexObject.getDirectionRectangle();
+        } else {
+            polygon = this.convexObject.getTriangle();
+        }
+
+        for (StandardEntity entity : this.borderEntities) {
+            building = (Building) entity;
+            csuBuilding = world.getCsuBuilding(entity);
+            if (!isCandidate(csuBuilding))
+                continue;
+            if (!isOldCandidate(csuBuilding))
+                continue;
+            int[] vertices = building.getApexList();
+            for (int i = 0; i < vertices.length; i += 2) {
+                if (polygon.contains(vertices[i], vertices[i + 1])) {
+                    targetBuildins.add(csuBuilding);
+                    break;
+                }
+            }
+        }
+
+        return targetBuildins;
+    }
+
     private static Point getFinalDirectionPoints(Point2D point1, Point2D point2, double radiusLength) {
         double x1 = point1.getX();
         double y1 = point1.getY();
@@ -474,6 +472,9 @@ public class FireCluster extends Cluster {
         return controllable;
     }
 
+    public List<CSUBuilding> getBuildingsInDirection() {
+        return highValueBuildings;
+    }
 
     private void updateControllable() {
         Set<CSUBuilding> dangerBuildings = new HashSet<>();

@@ -46,12 +46,14 @@ public class DistanceBasedClusterSelector extends ClusterSelector {
                     break;
                 }
             }
-            if (lastCluster != null && lastPolygon != null) {
+            if (lastCluster != null && lastPolygon != null && !(nearestCluster == lastCluster)) {
                 double lastDistance = Ruler.getDistance(lastPolygon, world.getSelfLocation(), true);
                 double thisDistance = Ruler.getDistance(nearestCluster.getConvexHull().getConvexPolygon(), world.getSelfLocation(), true);
                 if (Math.abs(lastDistance / CSUConstants.MEAN_VELOCITY_DISTANCE - thisDistance / CSUConstants.MEAN_VELOCITY_DISTANCE) < 3) {
                     lastClusterId = lastCluster.getId();
-                    System.out.println("agent: " + world.getSelfHuman().getID() + " 解决dynamic cluster徘徊问题");
+                    if (CSUConstants.DEBUG_DISTANCE_BASED_CLUSTER_SELECTOR) {
+                        System.out.println("agent: " + world.getSelfHuman().getID() + " 解决dynamic cluster徘徊问题");
+                    }
                     return (FireCluster) lastCluster;
                 }
             }

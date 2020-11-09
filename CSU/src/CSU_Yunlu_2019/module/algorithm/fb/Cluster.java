@@ -49,7 +49,7 @@ public abstract class Cluster {
     //是否可控
     protected boolean controllable;
     //边缘建筑物
-    protected Set<StandardEntity> ignoredBorderEntities;
+//    protected Set<StandardEntity> ignoredBorderEntities;
 
     public Cluster() {
         id = -1;
