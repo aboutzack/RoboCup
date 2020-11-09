@@ -81,7 +81,7 @@ public class CSUBuildingDetectorLayer extends MrlBaseDtoLayer<BuildingDetectorDt
             });
 
             p.getInDirectionBuildings().forEach(e -> {
-                fillShape(getShape((Building) world.getEntity(new EntityID(e)), t), g, new Color(43, 43, 43));
+                fillShape(getShape((Building) world.getEntity(new EntityID(e)), t), g, new Color(10, 53, 210));
             });
 
             Building targetBuilding = (Building) world.getEntity(new EntityID(p.getTargetBuilding()));
