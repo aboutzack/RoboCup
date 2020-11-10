@@ -6,22 +6,26 @@ import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.component.module.algorithm.PathPlanning;
+import com.sun.tools.doclets.standard.Standard;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 /**
  * @author Yiji Gao
  */
-//todo:1、想办法求出路程最短建筑，而不是欧几里得最短。
 public class CSUSearchUtil {
     //建筑类型
-    public final static int FIRST_CLASS = 6;
-    public final static int SECOND_CLASS = 5;
-    public final static int THIRD_CLASS = 4;
-    public final static int FORTH_CLASS = 3;
-    public final static int FIFTH_CLASS = 2;
+    public final static int FIRST_CLASS = 6; //确定有人的建筑
+    public final static int SECOND_CLASS = 5; //听到可能有人的建筑
+    public final static int THIRD_CLASS = 4; //聚类内没搜过的建筑
+    public final static int FORTH_CLASS = 3; //全图没搜过的建筑
+    public final static int FIFTH_CLASS = 2; //搜过的建筑
     public final static int UNKNOWN_CLASS = 0;
     //智能体状态
     public final static int NORMAL = 0;
@@ -33,17 +37,30 @@ public class CSUSearchUtil {
     public final static int BLOCKED = 2;
     public final static int BLOCKED_AND_BURNING = 3;
     public final static int UNKNOWN = 4;
-    //debug
-    public final static boolean debug = true;
-    public final int monitorID = 59932914;
+    //世界信息
     private WorldInfo worldInfo;
     private AgentInfo agentInfo;
     private ScenarioInfo scenarioInfo;
+
+    //debug
+    public final static boolean debug = true;
+    public final static boolean logMode = false;
+    public boolean logCreated = false;
+
+    public final int monitorID = 0;
+    private BufferedWriter output;
 
     public CSUSearchUtil(WorldInfo wi, AgentInfo ai, ScenarioInfo si){
         this.worldInfo = wi;
         this.agentInfo = ai;
         this.scenarioInfo = si;
+        if(logMode){
+            try{
+                createLog();
+            }catch (IOException e){
+                logCreated = false;
+            }
+        }
     }
 
     public Collection<StandardEntity> getAllAgents(){
@@ -78,6 +95,11 @@ public class CSUSearchUtil {
         return worldInfo.getEntityIDsOfType(StandardEntityURN.CIVILIAN);
     }
 
+    public Collection<EntityID> getHumanIDs(){
+        return worldInfo.getEntityIDsOfType(StandardEntityURN.CIVILIAN, StandardEntityURN.FIRE_BRIGADE,
+                StandardEntityURN.POLICE_FORCE, StandardEntityURN.AMBULANCE_TEAM);
+    }
+
     public Collection<EntityID> getBuildingIDs(){
         return worldInfo.getEntityIDsOfType(StandardEntityURN.BUILDING,
                 StandardEntityURN.REFUGE,
@@ -101,6 +123,9 @@ public class CSUSearchUtil {
 
     public boolean isBuildingReachable(PathPlanning pathPlanning, EntityID destination){
         EntityID from = agentInfo.getPosition();
+        if(from.equals(destination)){
+            return true;
+        }
         List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).getResult();
         return result != null && !result.isEmpty();
     }
@@ -144,19 +169,59 @@ public class CSUSearchUtil {
         }
     }
 
+    //fileWrite
+    public void createLog() throws IOException {
+        String fileName = "/Users/kyrieg/git_repository/RoboCup/AT_log/"+agentInfo.getID().toString()+".txt";
+        File file = new File(fileName);
+        if(file.exists()){
+            file.delete();
+        }
+        file.createNewFile();
+        FileWriter writer = new FileWriter(file,true);
+        this.output = new BufferedWriter(writer);
+        logCreated = true;
+    }
+
+    private void write(String msg){
+        if (logCreated) {
+            try{
+                output.write(msg+"\n");
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void flush(){
+        if(logCreated){
+            try {
+                output.flush();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //11.7
+    public Human getHuman(EntityID id){
+            return (Human) worldInfo.getEntity(id);
+    }
+
     //debug
     public void debugOverall(String message){
         if(CSUConstants.DEBUG_AT_SEARCH && debug){
-            System.out.println("[第"+agentInfo.getTime()+"回合] "+agentInfo.getID()+":"+message);
+            System.out.println("[第"+agentInfo.getTime()+"回合]Search "+agentInfo.getID()+":"+message);
         }
     }
 
     public void debugSpecific(String message){
+        if(CSUConstants.DEBUG_AT_SEARCH && logMode){
+            write("[第"+agentInfo.getTime()+"回合]Search "+agentInfo.getID()+":"+message);
+        }
         if(CSUConstants.DEBUG_AT_SEARCH && debug){
             if(agentInfo.getID().getValue() == monitorID){
                 System.out.println("[第"+agentInfo.getTime()+"回合] "+agentInfo.getID()+":"+message);
             }
         }
     }
-
 }

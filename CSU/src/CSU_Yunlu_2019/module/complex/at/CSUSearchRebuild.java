@@ -28,7 +28,7 @@ public class CSUSearchRebuild extends Search{
     private Clustering clustering;
     private EntityID result;
     private Collection<EntityID> unvisitedBuildingIDs;
-    private CSUSearchRecorder recorder;
+    public CSUSearchRecorder recorder;
     private CSUSearchUtil util;
 
     public CSUSearchRebuild(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
@@ -93,6 +93,8 @@ public class CSUSearchRebuild extends Search{
     @Override
     public Search updateInfo(MessageManager messageManager) {
 //        CSUSearchUtil.debugOverall("当前目标为:" + this.result);
+        util.debugSpecific("======================updateInfo Start======================");
+        util.debugSpecific("当前位置为:"+agentInfo.getPosition());
         if (this.getCountUpdateInfo() >= 2) {
             return this;
         }
@@ -105,39 +107,32 @@ public class CSUSearchRebuild extends Search{
 
 
         util.debugSpecific(this.agentInfo.getTime()+"回合，allCivilian的大小:"+util.getCivilianIDs().size());
-
-//        this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
-//
-//        if (this.unsearchedBuildingIDs.isEmpty()) {
-//            this.reset();
-//            this.unsearchedBuildingIDs.removeAll(this.worldInfo.getChanged().getChangedEntities());
-//        }
-
+        util.debugSpecific("======================updateInfo End========================");
+        util.flush();
         return this;
     }
 
     @Override
     public Search calc() {
         boolean completeCalc = false;
-
+        util.debugSpecific("=========================calc Start=========================");
+        util.debugSpecific("上一目标为:"+recorder.getTarget()
+                +",优先级为:"+CSUSearchUtil.getNameByPriority(recorder.getNowPriority()));
         if (util.creatingScene()) {
             completeCalc = true;
         }
         if(!completeCalc && recorder.needToChangeTarget()){
+            util.debugSpecific("有必要换目标");
             this.result = recorder.decideBest()? recorder.getTarget() : recorder.quickDecide();
             completeCalc = true;
         }
-        if(!completeCalc){
-            int needToChangeMessage = recorder.motionState();
-            if(needToChangeMessage != 0){
-                this.result = recorder.isForcedToChangeTarget(needToChangeMessage)? recorder.getTarget() : recorder.quickDecide();
-                completeCalc = true;
-            }
-        }
         //如果一切正常，尝试抢占。
         if(!completeCalc){
-            recorder.changeTarget();
+            if(recorder.tryFindPriorTarget()){
+                this.result = recorder.getTarget();
+            }
         }
+
 
         // 动态确定距离最近的建筑，用来改进decideBest，changeTarget。
 //        this.pathPlanning.setFrom(this.agentInfo.getPosition());
@@ -150,7 +145,9 @@ public class CSUSearchRebuild extends Search{
         if(this.result == null && !(agentInfo.getTime() < scenarioInfo.getKernelAgentsIgnoreuntil())){
             util.debugOverall("当前目标为空(impossible).");
         }
-        util.debugSpecific("当前目标为"+this.result);
+        util.debugSpecific("当前目标为"+this.result+",优先级为:"+CSUSearchUtil.getNameByPriority(recorder.getNowPriority()));
+        util.debugSpecific("=========================calc  End =========================\n");
+        util.flush();
         return this;
     }
 

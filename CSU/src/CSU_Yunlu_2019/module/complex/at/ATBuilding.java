@@ -1,6 +1,8 @@
 package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.module.complex.at.CSUATTimer.ATBuildingTimer;
+import CSU_Yunlu_2019.module.complex.at.CSUATTimer.ATTimerContainer;
 import rescuecore2.standard.entities.Building;
 import rescuecore2.worldmodel.EntityID;
 
@@ -10,18 +12,30 @@ import java.util.Set;
 //挂起和解挂都是在更新建筑状态的同时进行的，所以只需要额外对被抢占的建筑进行计算
 public class ATBuilding {
     private int priority = 0;
-    private EntityID id;
-    private boolean isVisited = false;
-    private boolean isBurning;
-    private boolean isReachable;
+    private final EntityID id;
     private int clusterIndex = UNINITIALISED;
-    private ATTimer hangUpTimer;
+    private ATBuildingTimer hangUpTimer;
     private Building me;
-    private boolean occupied;
-    private boolean isBurnt;
 
-    private Set<EntityID> civilianMayBe;
-    private Set<EntityID> civilianConfirmed;
+    //建筑属性  通过updateSingle更新
+    private int fieriness;
+    private int brokenness;
+
+    //判断挂起用
+    private boolean isOccupied;
+    private boolean isBurning; //与fieriness绑定
+    private boolean isReachable;//只判断当前目标能不能到，每20秒全体不能到的设置为true。
+    private boolean isWayBurning;
+
+    private EntityID wayBurningBuilding;
+
+    //用来判断有没有搜的必要
+    private boolean isBurnt; //与fieriness绑定
+    private boolean isBroken; //与brokenness绑定
+    private boolean isVisited;
+
+    private Set<EntityID> humanMayBe;
+    private Set<EntityID> humanConfirmed;
     private ATTimerContainer container;
 
     private CSUSearchUtil util;
@@ -45,10 +59,15 @@ public class ATBuilding {
         this.util = util;
         this.isReachable = true;
         this.isBurning = false;
-        this.occupied = false;
+        this.isOccupied = false;
         this.isBurnt = false;
-        civilianMayBe = new HashSet<>();
-        civilianConfirmed = new HashSet<>();
+        this.brokenness = 999999;
+        this.fieriness = -1;
+        this.isBroken = true;
+        this.isVisited = false;
+        this.isWayBurning = false;
+        humanMayBe = new HashSet<>();
+        humanConfirmed = new HashSet<>();
         this.container = container;
         if(id == null) util.debugOverall("初始化ATBuilding错误-\'id为null()\'(impossible)");
         initialise();
@@ -80,19 +99,19 @@ public class ATBuilding {
     }
 
     public boolean addCivilianMaybe(EntityID entityID){
-        if(civilianMayBe.contains(entityID)){
+        if(humanMayBe.contains(entityID)){
             return false;
         }else{
-            civilianMayBe.add(entityID);
+            humanMayBe.add(entityID);
             return true;
         }
     }
 
-    public boolean addCivilianConfirmed(EntityID entityID){
-        if(civilianConfirmed.contains(entityID)){
+    public boolean addHumanConfirmed(EntityID entityID){
+        if(humanConfirmed.contains(entityID)){
             return false;
         }else{
-            civilianConfirmed.add(entityID);
+            humanConfirmed.add(entityID);
             return true;
         }
     }
@@ -112,21 +131,21 @@ public class ATBuilding {
         this.clusterIndex = index;
     }
 
-    public void setFromOccupiedToBurning(){
-        this.occupied = false;
-        this.isBurning = true;
-        if(!isHangUp()){
-            hangUp("从被抢占到燃烧");
-        }
-    }
+//    public void setFromOccupiedToBurning(){
+//        this.occupied = false;
+//        this.isBurning = true;
+//        if(!isHangUp()){
+//            hangUp("从被抢占到燃烧");
+//        }
+//    }
 
-    public void setFromOccupiedToUnreachable(){
-        this.occupied = false;
-        this.isReachable = true;
-        if(!isHangUp()){
-            hangUp("从被抢占到无法到达");
-        }
-    }
+//    public void setFromOccupiedToUnreachable(){
+//        this.isOccupied = false;
+//        this.isReachable = true;
+//        if(!isHangUp()){
+//            hangUp("从被抢占到无法到达");
+//        }
+//    }
 
     public void setBurning(boolean burning){
         this.isBurning = burning;
@@ -134,10 +153,10 @@ public class ATBuilding {
             if(!isHangUp()){
                 hangUp("正在燃烧");
             }
+            hangUpTimer.reasonBurning();
         }else{
-            if(isReachable && !occupied){
-                releaseHangUp();
-            }
+            if(isHangUp()) hangUpTimer.removeBurningReason();
+            tryReleaseHangUp();
         }
     }
 
@@ -147,29 +166,29 @@ public class ATBuilding {
             if(!isHangUp()){
                 hangUp("找不到路");
             }
+            hangUpTimer.reasonUnReachable();
         }else{
-            if(!isBurning && !occupied){
-                releaseHangUp();
-            }
+            if(isHangUp()) hangUpTimer.removeUnReachableReason();
+            tryReleaseHangUp();
         }
     }
 
     public void setOccupied(boolean occupied){
-        this.occupied = occupied;
+        this.isOccupied = occupied;
         if(occupied){
             if(!isHangUp()){
                 hangUp("被抢占");
             }
+            hangUpTimer.reasonOccupied();
         }else{
-            if(!isBurning && isReachable){
-                releaseHangUp();
-            }
+            if(isHangUp()) hangUpTimer.removeOccupiedReason();
+            tryReleaseHangUp();
         }
     }
 
     public void setVisited(){
         isVisited = true;
-        releaseHangUp();
+        tryReleaseHangUp();
         priority = CSUSearchUtil.FIFTH_CLASS;
     }
 
@@ -189,16 +208,17 @@ public class ATBuilding {
         return isVisited;
     }
 
-    public boolean isSearchable(){
-        return !isBurning && isReachable && !isVisited;
-    }
+//    public boolean isSearchable(){
+//        return !isBurning && isReachable && !isVisited;
+//    }
 
     public boolean isOccupied(){
-        return occupied;
+        return isOccupied;
     }
 
+    //可能：燃烧、找不到路、被抢占、路上有燃烧
     private void hangUp(String message){
-        hangUpTimer = new ATTimer(id);
+        hangUpTimer = new ATBuildingTimer(id);
         container.register(hangUpTimer);
         util.debugSpecific(id+"挂起,因为"+message);
 //        if(!util.safeHangUpScope()){
@@ -208,9 +228,12 @@ public class ATBuilding {
 //        }
     }
 
-    private void releaseHangUp(){
-        container.release(hangUpTimer);
-        hangUpTimer = null;
+    private void tryReleaseHangUp(){
+        if(!isBurning && !isOccupied && isReachable){
+            container.release(hangUpTimer);
+            hangUpTimer = null;
+        }
+
     }
 
     public int getHangUptime(){
@@ -244,7 +267,73 @@ public class ATBuilding {
         return this.id.getValue()+"";
     }
 
+    //11.7
+    public boolean isBurnt(){
+        return isBurnt;
+    }
 
+    public boolean isBroken(){
+        return isBroken;
+    }
+
+
+
+    public void setBrokenness(int brokenness){
+        isBroken = brokenness > 0;
+        this.brokenness = brokenness;
+    }
+
+    public void removeBrokenness(){
+        this.brokenness = -1;
+    }
+
+    public void setFieriness(int fieriness){
+        if(fieriness > 0 && fieriness < 4){
+            setBurning(true);
+        }else{
+            setBurning(false);
+        }
+        if(fieriness == 8){
+            isBurnt = true;
+        }
+        this.fieriness = fieriness;
+    }
+
+    public void setWayBurning(boolean wayBurning, EntityID wayBurningBuilding){
+        this.isWayBurning = wayBurning;
+        if(wayBurning){
+            if(!isHangUp()){
+                hangUp("去"+id+"的路上有"+wayBurningBuilding+"在燃烧");
+            }
+            this.wayBurningBuilding = wayBurningBuilding;
+            hangUpTimer.reasonWayBurning();
+        }else{
+            this.wayBurningBuilding = null;
+            if(isHangUp()) hangUpTimer.removeWayBurning();
+            tryReleaseHangUp();
+        }
+    }
+
+    public boolean isWayBurning(){
+        return this.isWayBurning;
+    }
+
+    public EntityID getWayBurningBuilding(){
+        return wayBurningBuilding;
+    }
+
+    public int getUnReachableHangUpTime(){
+        return isHangUp()? hangUpTimer.getUnReachableTime() : -1;
+    }
+
+//    public boolean isNeedToSearch(){
+//        return !isBurnt && isBroken;
+//    }
+
+    public boolean isNeedToSearch(){
+//        return !isVisited && !isBurnt && isBroken;
+        return !isVisited && !isBurnt;
+    }
 //    public static void main(String[] args) {
 //        B b1 = new B(111);
 //        A a1 = new A(b1);

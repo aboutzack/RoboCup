@@ -12,9 +12,10 @@ import rescuecore2.misc.Handy;
 import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.*;
 import rescuecore2.standard.messages.AKSpeak;
-import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
+import javax.sound.midi.Soundbank;
+import java.security.CryptoPrimitive;
 import java.util.*;
 
 import static rescuecore2.standard.entities.StandardEntityURN.*;
@@ -27,27 +28,8 @@ public class CSUSearchRecorder {
     private Set<EntityID> allBuildings;
     //所有平民(不知道位置)
     private Set<EntityID> allCivilians;
-//    //听到声音的人
-//    private Set<EntityID> heardCivilians;
-//    //救过的人
-//    private Set<EntityID> savedCivilians;
     //通讯类
     private MessageManager messageManager;
-    //视线范围
-//    private Set<Civilian> visionCivilian;
-//    private Set<Building> visionBuilding;
-//    private Set<Blockade> visionBlockade;
-    //优先级建筑
-//    //有人的建筑
-//    private Set<EntityID> firstClassBuildings;
-//    //听到可能有人的建筑 todo 可以添加可能性排序
-//    private Set<EntityID> secondClassBuildings;
-//    //其他没搜过的建筑(聚类)
-//    private Set<EntityID> thirdClassBuildings;
-//    //其他没搜过的建筑（全局） //todo 尚未排除聚类
-//    private Set<EntityID> forthClassBuildings;
-//    //搜过的建筑
-//    private Set<EntityID> fifthClassBuildings;
 
     private EntityID lastPosition;
     private EntityID nowPosition;
@@ -55,7 +37,7 @@ public class CSUSearchRecorder {
     private int nowPriority;
     private int strategyType;
     private WorldInfo worldInfo;
-    private AgentInfo agentInfo;
+    public AgentInfo agentInfo;
     private ScenarioInfo scenarioInfo;
     private int voiceRange;
     private int lastClusterIndex = -1;
@@ -64,9 +46,11 @@ public class CSUSearchRecorder {
     private PathPlanning pathPlanning;
 
     private ATBuildingSystem ATBS;
-    private ATCivilianSystem ATCS;
+    private ATHumanSystem ATCS;
     private static CSUSearchRecorder me;
     private CSUSearchUtil util;
+
+    private List<EntityID> myWay;
 
     public CSUSearchRecorder(AgentInfo ai, WorldInfo wi, ScenarioInfo si, Clustering clustering, PathPlanning pathPlanning, CSUSearchUtil util){
         this.agentInfo = ai;
@@ -74,18 +58,13 @@ public class CSUSearchRecorder {
         this.scenarioInfo = si;
         allBuildings = new HashSet<>();
         allCivilians = new HashSet<>();
-//        heardCivilians = new HashSet<>();
-//        visionBlockade = new HashSet<>();
-//        firstClassBuildings = new HashSet<>();
-//        secondClassBuildings = new HashSet<>();
-//        thirdClassBuildings = new HashSet<>();
-//        forthClassBuildings = new HashSet<>();
-//        fifthClassBuildings = new HashSet<>();
+
         this.voiceRange = scenarioInfo.getRawConfig().getIntValue("comms.channels.0.range");
         this.clustering = clustering;
         this.pathPlanning = pathPlanning;
         this.nowPriority = 0;
         this.util = util;
+        this.myWay = new ArrayList<>();
 
         initialize();
     }
@@ -104,8 +83,8 @@ public class CSUSearchRecorder {
 
     //modified
     private void initialize(){
-        ATBS = new ATBuildingSystem(pathPlanning, agentInfo, util);
-        ATCS = new ATCivilianSystem(util);
+        ATBS = new ATBuildingSystem(pathPlanning, agentInfo, worldInfo, util);
+        ATCS = new ATHumanSystem(util, agentInfo);
         allBuildings.addAll(util.getBuildingIDs());
         allCivilians.addAll(util.getCivilianIDs());
         ATBS.initialized(allBuildings);
@@ -119,9 +98,13 @@ public class CSUSearchRecorder {
         this.clustering = clustering;
         //更新视野内的实体
         ATBS.getInSightBuildings().clear();
-        ATCS.getInSightCivilian().clear();
+        ATCS.getInSightHuman().clear();
+        //计时器计时
         ATBS.passTime();
         ATCS.passTime();
+        //更新位置信息
+        lastPosition = nowPosition;
+        nowPosition = agentInfo.getPosition();
 
         Set<EntityID> changedEntities = new HashSet<>(worldInfo.getChanged().getChangedEntities());
         for (EntityID changedId: changedEntities) {
@@ -134,8 +117,8 @@ public class CSUSearchRecorder {
                 ATBS.updateSingleBuilding(entity);
                 continue;
             }
-            if(entity instanceof Civilian){
-                ATCS.updateSingleCivilian(entity);
+            if(entity instanceof Human){
+                ATCS.updateSingleHuman(entity);
                 continue;
             }
 //            if(entity instanceof Blockade){
@@ -143,140 +126,56 @@ public class CSUSearchRecorder {
 //            }
         }
 
-        lastPosition = nowPosition;
-        nowPosition = agentInfo.getPosition();
         updateHeardCivilian();
+
         updateFirstClassBuildings();
-        if(!ATCS.isHeardEmpty()) updateSecondClassBuildings();
+
+        updateSecondClassBuildings();
+
         updateThirdClassBuildings();
         updateForthClassBuildings();
         ATBS.updateInfo();
-        if(!isCurrentTargetReachable() && target != null) ATBS.getByID(target).setReachable(false);
+        //更新当前的路线
+        this.myWay = this.pathPlanning.setFrom(agentInfo.getPosition()).setDestination(target).calc().getResult();
+        if(!isCurrentTargetReachable() && target != null){
+            ATBS.getByID(target).setReachable(false);
+            ATBS.addUnreachableBuilding(target);
+        }
 //        ATBuilding currentATBuilding = ATBS.getByID(target);
-        util.debugSpecific("听到的Civilian:"+ATCS.getHeardATCivilian());
-        util.debugSpecific("视线内的Civilian:"+ATCS.getInSightCivilian());
+        util.debugSpecific("听到的Civilian:"+ATCS.getHeardATHuman());
+        util.debugSpecific("视线内的Civilian:"+ATCS.getInSightHuman());
     }
 
-    public int motionState(){
-//        if(isStuck()){
-//            return CSUSearchUtil.STUCK;
-//        }
-        if(isStationary()){
-            return CSUSearchUtil.STATIONARY;
-        }
-        return CSUSearchUtil.NORMAL;
-    }
-
-    public boolean isForcedToChangeTarget(int message){
-        //todo 当前目标移出从前的队列，同时移入unreachableBuildings
-        switch (message){
-//            case CSUSearchUtil.STUCK:{
-//                //todo 抄MRL
-//                //todo toID：用null不知道会怎么样，如果可能，补充为getNearby的PF。
-//                messageManager.addMessage(new CommandPolice(
-//                        true,
-//                        null,
-//                        agentInfo.getPosition(),
-//                        CommandPolice.ACTION_CLEAR));
-//                break;
-//            }
-            case CSUSearchUtil.STATIONARY:{
-                if(this.target == null) {
-                    return decideBest();
-                } else{
-                    return changeTarget();
-                }
-            }
-            default:{
-                return false;
-            }
-        }
-//        util.debugOverall("ChangeTarget() go into unknown logic.(impossible)");
-//        return false;
-    }
-
-    //calcFifthClassTarget
-    //最优决策(忽略当前优先级)
+    //最优决策(忽略当前优先级) 没有必要考虑挂起当前目标，因为进入这个方法之前，当前目标早已经被挂起了
     public boolean decideBest(){
+        long start = Calendar.getInstance().getTimeInMillis();
         boolean success = false;
         ATBuilding hangUpBuilding = null;
+//        EntityID lastTarget = this.target;
         util.debugSpecific("开始最优决策");
-
-        if(decideBest(CSUSearchUtil.FIRST_CLASS)){
-            return true;
-        }else if(decideBest(CSUSearchUtil.SECOND_CLASS)){
-            return true;
-        }else if(decideBest(CSUSearchUtil.THIRD_CLASS)){
-            return true;
-        }else return decideBest(CSUSearchUtil.FORTH_CLASS);
-//        if(handleHangUp(CSUSearchUtil.FIRST_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.FIRST_CLASS;
-//            util.debugSpecific("从挂起队列中确定FirstClass");
-//        }else if(findTargetLoop(CSUSearchUtil.FIRST_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.FIRST_CLASS;
-//            util.debugSpecific("确定FirstClass");
-//        }
-//        if(!success && handleHangUp(CSUSearchUtil.SECOND_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.SECOND_CLASS;
-//            util.debugSpecific("从挂起队列中确定SecondClass");
-//        }else if(!success && findTargetLoop(CSUSearchUtil.SECOND_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.SECOND_CLASS;
-//            util.debugSpecific("确定SecondClass");
-//        }
-//        if(!success && handleHangUp(CSUSearchUtil.THIRD_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.THIRD_CLASS;
-//            util.debugSpecific("从挂起队列中确定ThirdClass");
-//        }else if(!success && findTargetLoop(CSUSearchUtil.THIRD_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.THIRD_CLASS;
-//            util.debugSpecific("确定ThirdClass");
-//        }
-//        if(!success && handleHangUp(CSUSearchUtil.FORTH_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.FORTH_CLASS;
-//            util.debugSpecific("从挂起队列中确定ForthClass");
-//        }else if(!success && findTargetLoop(CSUSearchUtil.FORTH_CLASS)){
-//            success = true;
-//            nowPriority = CSUSearchUtil.FORTH_CLASS;
-//            util.debugSpecific("确定ForthClass");
-//        }
-//        if(success){
-//            util.debugSpecific("最优决策成功");
-//        }else{
-//            util.debugSpecific("最优决策失败");
-//        }
-//        return success;
-
-//        if(findTargetLoop(CSUSearchUtil.FIRST_CLASS)){
-//            success = true;
-//            util.debugSpecific("确定FirstClass");
-//        }
-//        if(!success && findTargetLoop(CSUSearchUtil.SECOND_CLASS)){
-//            success = true;
-//            util.debugSpecific("确定SecondClass");
-//        }
-//        if(!success && findTargetLoop(CSUSearchUtil.THIRD_CLASS)){
-//            success = true;
-//            util.debugSpecific("确定ThirdClass");
-//        }
-//        if(!success && findTargetLoop(CSUSearchUtil.FORTH_CLASS)){
-//            success = true;
-//            util.debugSpecific("确定ForthClass");
-//        }
-//        if(success){
-//            util.debugSpecific("最优决策成功");
-//        }else{
-//            util.debugSpecific("最优决策失败");
-//        }
-//        return success;
+        if(decideBestByPriority(CSUSearchUtil.FIRST_CLASS)){
+            success = true;
+            util.debugSpecific("最优决策结果:FIRST_CLASS");
+        }else if(decideBestByPriority(CSUSearchUtil.SECOND_CLASS)){
+            success = true;
+            util.debugSpecific("最优决策结果:SECOND_CLASS");
+        }else if(decideBestByPriority(CSUSearchUtil.THIRD_CLASS)){
+            success = true;
+            util.debugSpecific("最优决策结果:THIRD_CLASS");
+        }else if(decideBestByPriority(CSUSearchUtil.FORTH_CLASS)){
+            success = true;
+            util.debugSpecific("最优决策结果:FORTH_CLASS");
+        }
+        long end = Calendar.getInstance().getTimeInMillis();
+        if(success){
+            util.debugSpecific("最优决策成功,花费时间:"+(end-start));
+        }else{
+            util.debugSpecific("最优决策失败,花费时间:"+(end-start));
+        }
+        return success;
     }
 
-    private boolean decideBest(int priority){
+    private boolean decideBestByPriority(int priority){
         boolean success = false;
         if(handleHangUp(priority)){
             nowPriority = priority;
@@ -296,108 +195,14 @@ public class CSUSearchRecorder {
         return this.target;
     }
 
-    //最优抢占(考虑优先级)
-    public boolean changeTarget(){
-        util.debugSpecific("尝试抢占");
-        EntityID lastTarget = target;
-        boolean success = false;
-        boolean occupied = false;
-        if(nowPriority <= CSUSearchUtil.FIRST_CLASS){
-            if(handleHangUp(CSUSearchUtil.FIRST_CLASS)){
-                this.nowPriority = CSUSearchUtil.FIRST_CLASS;
-                occupied = true;
-                success = true;
-            }else if(findTargetLoop(CSUSearchUtil.FIRST_CLASS)) {
-                this.nowPriority = CSUSearchUtil.FIRST_CLASS;
-                success = true;
-            }
-        }
-        if(nowPriority <= CSUSearchUtil.SECOND_CLASS){
-            if(handleHangUp(CSUSearchUtil.SECOND_CLASS)){
-                this.nowPriority = CSUSearchUtil.SECOND_CLASS;
-                occupied = true;
-                success = true;
-            }else if(findTargetLoop(CSUSearchUtil.SECOND_CLASS)){
-                this.nowPriority = CSUSearchUtil.SECOND_CLASS;
-                success = true;
-            }
-        }
-        if(nowPriority <= CSUSearchUtil.THIRD_CLASS){
-            if(handleHangUp(CSUSearchUtil.THIRD_CLASS)){
-                this.nowPriority = CSUSearchUtil.THIRD_CLASS;
-                occupied = true;
-                success = true;
-            }else if(findTargetLoop(CSUSearchUtil.THIRD_CLASS)){
-                this.nowPriority = CSUSearchUtil.THIRD_CLASS;
-                success = true;
-            }
-        }
-        if(nowPriority <= CSUSearchUtil.FORTH_CLASS){
-            if(handleHangUp(CSUSearchUtil.FORTH_CLASS)){
-                this.nowPriority = CSUSearchUtil.FORTH_CLASS;
-                occupied = true;
-                success = true;
-            }else if(findTargetLoop(CSUSearchUtil.FORTH_CLASS)){
-                this.nowPriority = CSUSearchUtil.FORTH_CLASS;
-                success = true;
-            }
-        }
-        if(nowPriority <= CSUSearchUtil.FIFTH_CLASS){
-            if(decideBest()){
-                this.nowPriority = 2;
-                success = true;
-            }
-        }
-        if(occupied) {
-            ATBS.getByID(lastTarget).setOccupied(true);
-        }
-        if(success){
-            util.debugSpecific("抢占成功");
-        }else {
-            util.debugSpecific("抢占失败");
-        }
-        return success;
-//        util.debugSpecific("尝试抢占");
-//        if(nowPriority <= CSUSearchUtil.FIRST_CLASS){
-//            if(findTargetLoop(CSUSearchUtil.FIRST_CLASS)) {
-//                this.nowPriority = 6;
-//                return true;
-//            }
-//        }
-//        if(nowPriority <= CSUSearchUtil.SECOND_CLASS){
-//            if(findTargetLoop(CSUSearchUtil.SECOND_CLASS)){
-//                this.nowPriority = 5;
-//                return true;
-//            }
-//        }
-//        if(nowPriority <= CSUSearchUtil.THIRD_CLASS){
-//            if(findTargetLoop(CSUSearchUtil.THIRD_CLASS)){
-//                this.nowPriority = 4;
-//                return true;
-//            }
-//        }
-//        if(nowPriority <= CSUSearchUtil.FORTH_CLASS){
-//            if(findTargetLoop(CSUSearchUtil.FORTH_CLASS)){
-//                this.nowPriority = 3;
-//                return true;
-//            }
-//        }
-//        if(nowPriority <= CSUSearchUtil.FIFTH_CLASS){
-//            if(decideBest()){
-//                this.nowPriority = 2;
-//                return true;
-//            }
-//        }
-//        util.debugSpecific("抢占失败");
-//        return false;
-    }
-
     private boolean findTargetLoop(int priority){
-        util.debugSpecific("计算"+CSUSearchUtil.getNameByPriority(priority)+"");
+        util.debugSpecific("从非挂起中计算"+CSUSearchUtil.getNameByPriority(priority)+"");
         this.pathPlanning.setFrom(this.agentInfo.getPosition());
         Set<EntityID> set = ATBuildingSystem.toIDSet(ATBS.getClassBuildingsByPriority(priority));
-        util.debugSpecific("set有:"+set);
+//        util.debugSpecific("set有:"+set);
         set.removeIf(entityID -> ATBS.isHangUp(entityID));
+        //燃烧中，不能到达的，被抢占，没必要搜的(Burnt,unbroken，visited)都要去掉
+//        set = ATBS.removeBad(set);
         util.debugSpecific(CSUSearchUtil.getNameByPriority(priority)+"有:"+set);
         EntityID target = null;
         while(!set.isEmpty()){
@@ -406,17 +211,38 @@ public class CSUSearchRecorder {
             if(path != null && path.size() > 0){
                 target = path.get(path.size() - 1);//获取终点
                 if(target == null){
-                    util.debugOverall("到"+target+"的路径终点为null.(impossible)");
+                    util.debugOverall("到null的路径终点为null.(impossible)");
                     return false;
                 }
                 ATBuilding atb = ATBS.getByID(target);
-                if(atb.isBurning() || !atb.isReachable()){
-                    if(atb.isBurning()) util.debugSpecific("该建筑("+atb.getId()+")正在燃烧，去除");
-                    if(!atb.isReachable()) util.debugSpecific("该建筑("+atb.getId()+")无法到达，去除");
-                    util.debugSpecific("重新计算");
-                    set.remove(atb.getId());
+                if(atb.isBurning()){
                     continue;
                 }
+                if(!atb.isReachable()){
+                    continue;
+                }
+                if(atb.isOccupied()){
+                   continue;
+                }
+                //-----------多这一句话就会不动-----------
+//                if(!atb.isNeedToSearch()){
+//                      continue;
+//                }
+                //-----------多这一句话就会不动-----------
+                if(atb.isVisited() || atb.isBurnt()){
+                    continue;
+                }
+                //---------------修改尝试----------------(成功)
+                if(atb.isWayBurning()){
+                    continue;
+                }
+//                if(atb.isBurning() || !atb.isReachable()){
+//                    if(atb.isBurning()) util.debugSpecific("该建筑("+atb.getId()+")正在燃烧，去除");
+//                    if(!atb.isReachable()) util.debugSpecific("该建筑("+atb.getId()+")无法到达，去除");
+//                    util.debugSpecific("重新计算");
+//                    set.remove(atb.getId());
+//                    continue;
+//                }
                 util.debugSpecific("计算"+CSUSearchUtil.getNameByPriority(priority)+"成功");
                 this.target = target;
                 return true;
@@ -447,7 +273,74 @@ public class CSUSearchRecorder {
         return false;
     }
 
-    //modified
+
+    public boolean tryFindPriorTarget(){
+        long start = Calendar.getInstance().getTimeInMillis();
+        util.debugSpecific("尝试抢占");
+        EntityID lastTarget = target;
+        int lastPriority = ATBS.getByID(target).getPriority();
+        boolean success = false;
+        if(nowPriority < CSUSearchUtil.FIRST_CLASS){
+            util.debugSpecific("尝试用FIRST_CLASS抢占");
+            if(handleHangUp(CSUSearchUtil.FIRST_CLASS)){
+                this.nowPriority = CSUSearchUtil.FIRST_CLASS;
+                success = true;
+            }else if(findTargetLoop(CSUSearchUtil.FIRST_CLASS)) {
+                this.nowPriority = CSUSearchUtil.FIRST_CLASS;
+                success = true;
+            }
+        }
+        if(!success && nowPriority < CSUSearchUtil.SECOND_CLASS){
+            util.debugSpecific("尝试用SECOND_CLASS抢占");
+            if(handleHangUp(CSUSearchUtil.SECOND_CLASS)){
+                this.nowPriority = CSUSearchUtil.SECOND_CLASS;
+//                occupied = true;
+                success = true;
+            }else if(findTargetLoop(CSUSearchUtil.SECOND_CLASS)){
+                this.nowPriority = CSUSearchUtil.SECOND_CLASS;
+                success = true;
+            }
+        }
+        if(!success && nowPriority < CSUSearchUtil.THIRD_CLASS){
+            util.debugSpecific("尝试用THIRD_CLASS抢占");
+            if(handleHangUp(CSUSearchUtil.THIRD_CLASS)){
+                this.nowPriority = CSUSearchUtil.THIRD_CLASS;
+//                occupied = true;
+                success = true;
+            }else if(findTargetLoop(CSUSearchUtil.THIRD_CLASS)){
+                this.nowPriority = CSUSearchUtil.THIRD_CLASS;
+                success = true;
+            }
+        }
+        if(!success && nowPriority < CSUSearchUtil.FORTH_CLASS){
+            util.debugSpecific("尝试用FORTH_CLASS抢占");
+            if(handleHangUp(CSUSearchUtil.FORTH_CLASS)){
+                this.nowPriority = CSUSearchUtil.FORTH_CLASS;
+//                occupied = true;
+                success = true;
+            }else if(findTargetLoop(CSUSearchUtil.FORTH_CLASS)){
+                this.nowPriority = CSUSearchUtil.FORTH_CLASS;
+                success = true;
+            }
+        }
+        if(!success && nowPriority < CSUSearchUtil.FIFTH_CLASS){
+            util.debugSpecific("尝试用Unknown building(impossible)抢占");
+            util.debugOverall("Unknown building(impossible)");
+//            if(decideBest()){
+//                this.nowPriority = 2;
+//                success = true;
+//            }
+        }
+        long end = Calendar.getInstance().getTimeInMillis();
+        if(success){
+            util.debugSpecific("抢占成功,由"+CSUSearchUtil.getNameByPriority(lastPriority)+"变为"+CSUSearchUtil.getNameByPriority(nowPriority)+",花费时间:"+(end-start));
+            ATBS.getByID(lastTarget).setOccupied(true);
+        }else {
+            util.debugSpecific("抢占失败,花费时间"+(end-start));
+        }
+        return success;
+    }
+
     private void updateHeardCivilian(){
         Collection<Command> heard = agentInfo.getHeard();
         if (heard != null) {
@@ -468,15 +361,20 @@ public class CSUSearchRecorder {
 
     //todo 每回合去除获救的人
     private void updateFirstClassBuildings(){
-        for (ATCivilian atCivilian : ATCS.getInSightCivilian()) {
-            EntityID civID = atCivilian.getId();
+        for (ATHuman atHuman : ATCS.getInSightHuman()) {
+            EntityID civID = atHuman.getId();
+            if(worldInfo.getEntity(civID) == null){
+                util.debugSpecific("看到的civ("+civID+")却无法获得Entity(impossible)");
+            }
+            util.debugSpecific("看到的civ("+civID+")当前位置类型为:"+worldInfo.getPosition((Human) worldInfo.getEntity(civID)).getStandardURN());
             if (worldInfo.getEntity(civID) != null &&
                     worldInfo.getPosition((Human) worldInfo.getEntity(civID))
                             .getStandardURN() == BUILDING){
+                //只有buriness大于零的human要救，以及只有damage的平民要背
                 Building building = (Building) worldInfo.getPosition((Human) worldInfo.getEntity(civID));
                 ATBuilding atb = ATBS.getByID(building.getID());
                 atb.setPriority(CSUSearchUtil.FIRST_CLASS);
-                atb.addCivilianConfirmed(civID);
+                atb.addHumanConfirmed(civID);
             }
         }
         util.debugSpecific("有"+ATBS.getClassBuildingsByPriority(CSUSearchUtil.FIRST_CLASS).size()+"栋建筑里有人");
@@ -484,12 +382,14 @@ public class CSUSearchRecorder {
 
     //todo 每回合去除获救的人,听到声音的人数没有利用
     private void updateSecondClassBuildings(){
-        Pair<Integer,Integer> location = worldInfo.getLocation(agentInfo.getID());
-        Collection<StandardEntity> ens = worldInfo.getObjectsInRange(location.first(), location.second(), voiceRange);
-        for (StandardEntity entity : ens) {
-            if (entity instanceof Building) {
-                ATBuilding atb = ATBS.getByID(entity.getID());
-                atb.setPriority(CSUSearchUtil.SECOND_CLASS);
+        if(!ATCS.isHeardEmpty()){
+            Pair<Integer,Integer> location = worldInfo.getLocation(agentInfo.getID());
+            Collection<StandardEntity> ens = worldInfo.getObjectsInRange(location.first(), location.second(), voiceRange);
+            for (StandardEntity entity : ens) {
+                if (entity instanceof Building) {
+                    ATBuilding atb = ATBS.getByID(entity.getID());
+                    atb.setPriority(CSUSearchUtil.SECOND_CLASS);
+                }
             }
         }
     }
@@ -529,140 +429,15 @@ public class CSUSearchRecorder {
     public EntityID getTarget(){
         return this.target;
     }
+    //------以上11.7-------
 
-//    private boolean calcFirstClassTarget(){
-//        util.debugSpecific("计算FirstClass");
-//        this.pathPlanning.setFrom(this.agentInfo.getPosition());
-//        Set<EntityID> first = ATBuildingSystem.toIDSet(ATBS.getClassBuildingsByPriority(CSUSearchUtil.FIRST_CLASS));
-//        this.pathPlanning.setDestination(first);
-//        if(!first.isEmpty()){
-//            List<EntityID> path = this.pathPlanning.calc().getResult();
-//            if (path != null && path.size() > 0) {
-//                this.target = path.get(path.size() - 1);//获取终点
-//                ATBuilding atb = ATBS.getByID(target);
-//                if(atb.isBurning() || !atb.isReachable()){
-//                    util.debugSpecific("该建筑("+atb.getId()+")不行，重新计算");
-//                    atb.hangUp();
-//                    return calcFirstClassTarget();
-//                }
-//                if(this.target == null){
-//                    util.debugOverall("到"+this.target+"的路径终点为null(impossible).");
-//                    return false;
-//                }
-//                util.debugSpecific("计算FirstClass成功");
-//                return true;
-//            }
-//            //功能冗余
-////            else {//building都不可到达,去除
-////                //todo:叫附近的警察来帮忙清障
-//////			Collection<EntityID> toRemove = new HashSet<>(optimalBuildings);
-//////			this.reset();
-//////			unsearchedBuildings.removeAll(toRemove);
-////                for (EntityID id : optimalBuildings){
-////                    if(worldInfo.getEntity(id) instanceof Building){
-////                        Building building = (Building) worldInfo.getEntity(id);
-////                        messageManager.addMessage(new MessageBuilding(false,building));
-////                    }
-////                }
-////                return false;
-////            }
-//        }
-//        util.debugSpecific("计算FirstClass失败，进入下一级");
-//        return false;
-//    }
-//
-//    private boolean calcSecondClassTarget(){
-//        util.debugSpecific("计算SecondClass");
-//        this.pathPlanning.setFrom(this.agentInfo.getPosition());
-//        Set<EntityID> second = ATBuildingSystem.toIDSet(ATBS.getClassBuildingsByPriority(CSUSearchUtil.SECOND_CLASS));
-//        this.pathPlanning.setDestination(second);
-//        if(!second.isEmpty()){
-//            List<EntityID> path = this.pathPlanning.calc().getResult();
-//            if (path != null && path.size() > 0) {
-//                this.target = path.get(path.size() - 1);//获取终点
-//                ATBuilding atb = ATBS.getByID(target);
-//                if(atb.isBurning() || !atb.isReachable()){
-//                    if(atb.isBurning()) util.debugSpecific("该建筑("+atb.getId()+")正在燃烧，重新计算");
-//                    if(atb.isReachable()) util.debugSpecific("找到该建筑("+atb.getId()+")无法到达，重新计算");
-//                    atb.hangUp();
-//                    return calcSecondClassTarget();
-//                }
-//                if(this.target == null){
-//                    util.debugOverall("到"+this.target+"的路径终点为null(impossible).");
-//                    return false;
-//                }
-//                util.debugSpecific("计算SecondClass成功");
-//                return true;
-//            }
-//        }
-//        util.debugSpecific("计算SecondClass失败，进入下一级");
-//        return false;
-//    }
-//
-//    private boolean calcThirdClassTarget(){
-//        util.debugSpecific("计算ThirdClass");
-//        this.pathPlanning.setFrom(this.agentInfo.getPosition());
-//        Set<EntityID> third = ATBuildingSystem.toIDSet(ATBS.getClassBuildingsByPriority(CSUSearchUtil.THIRD_CLASS));
-//        this.pathPlanning.setDestination(third);
-//        if(!third.isEmpty()){
-//            List<EntityID> path = this.pathPlanning.calc().getResult();
-//            if (path != null && path.size() > 0) {
-//                this.target = path.get(path.size() - 1);//获取终点
-//                ATBuilding atb = ATBS.getByID(target);
-//                if(atb.isBurning() || !atb.isReachable()){
-//                    util.debugSpecific("该建筑("+atb.getId()+")不行，重新计算");
-//                    atb.hangUp();
-//                    return calcSecondClassTarget();
-//                }
-//                if(this.target == null){
-//                    util.debugOverall("到"+this.target+"的路径终点为null(impossible).");
-//                    return false;
-//                }
-//                util.debugSpecific("计算ThirdClass成功");
-//                return true;
-//            }
-//        }
-//        util.debugSpecific("计算ThirdClass失败，进入下一级");
-//        return false;
-//    }
-//
-//    private boolean calcForthClassTarget(){
-//        util.debugSpecific("计算ForthClass");
-//        this.pathPlanning.setFrom(this.agentInfo.getPosition());
-//        Set<EntityID> forth = ATBuildingSystem.toIDSet(ATBS.getClassBuildingsByPriority(CSUSearchUtil.FORTH_CLASS));
-//        this.pathPlanning.setDestination(forth);
-//        if(!forth.isEmpty()){
-//            List<EntityID> path = this.pathPlanning.calc().getResult();
-//            if (path != null && path.size() > 0) {
-//                this.target = path.get(path.size() - 1);//获取终点
-//                ATBuilding atb = ATBS.getByID(target);
-//                if(atb.isBurning() || !atb.isReachable()){
-//                    util.debugSpecific("该建筑("+atb.getId()+")不行，重新计算");
-//                    atb.hangUp();
-//                    return calcSecondClassTarget();
-//                }
-//                if(this.target == null){
-//                    util.debugOverall("到"+this.target+"的路径终点为null(impossible).");
-//                    return false;
-//                }
-//                util.debugSpecific("计算ForthClass成功");
-//                return true;
-//            }
-//        }
-//        util.debugSpecific("计算ForthClass失败，进入下一级");
-//        return false;
-//    }
 
-    //todo
-//    private boolean calcFifthClassTarget(){
-//        return false;
-//    }
-
-    //todo 要考虑燃烧
+    //-------11.8--------
     private boolean handleHangUp(int priority){
-        util.debugSpecific("看看挂起队列");
-        ATBuilding hangUpBuilding = ATBS.decideBestOccupied(priority);
+        util.debugSpecific("先查看"+CSUSearchUtil.getNameByPriority(priority)+"挂起队列");
+        ATBuilding hangUpBuilding = decideBestOccupied(priority);//suspect
         if(hangUpBuilding != null){
+            if(target != null) ATBS.getByID(target).setOccupied(true);
             this.target = hangUpBuilding.getId();
             util.debugSpecific("取出挂起成功");
             return true;
@@ -672,27 +447,139 @@ public class CSUSearchRecorder {
         }
     }
 
-    private void findClosestElseCluster(){}
+    //当前为随机选择
+    public ATBuilding decideBestOccupied(int priority){
+        int maxTime = 0;
+        ATBuilding best = null;
+        Set<ATBuilding> occupiedBuildings = ATBS.getAllOccupiedByPriority(priority);
+        //燃烧中，不能到达的没必要搜的(Burnt,unbroken，visited)都要去掉
+        for(ATBuilding atBuilding : occupiedBuildings){
+            if(atBuilding.isBurning()){
+                continue;
+            }
+            if(!atBuilding.isReachable()){
+                continue;
+            }
+            if(!atBuilding.isOccupied()){
+                util.debugOverall(atBuilding+"没被抢占(impossible)");
+                continue;
+            }
+            //-----------多这一句话就会不动-----------
+//            if(!atBuilding.isNeedToSearch()){
+//                continue;
+//            }
+            //-----------多这一句话就会不动-----------
+            if(atBuilding.isWayBurning()){
+                continue;
+            }
 
-    private boolean isStationary(){
-        util.debugSpecific("判断是否静止");
-        if(lastPosition != null){
-            util.debugSpecific("走了 "+
-                    Util.getdistance(worldInfo.getLocation(lastPosition),worldInfo.getLocation(nowPosition)));
-            if(Util.getdistance(worldInfo.getLocation(lastPosition),worldInfo.getLocation(nowPosition)) < 2000){
-//                if(target != null){
-//                    ATBS.setVisited(target);
-//                }
-                util.debugSpecific(agentInfo.getID()+":静止不动");
-                return true;
+            if(atBuilding.isVisited() || atBuilding.isBurnt()){
+                continue;
+            }
+            //---------------修改尝试----------------(成功)
+            int hangUpTime = atBuilding.getHangUptime();
+            if(hangUpTime > maxTime){
+                maxTime = hangUpTime;
+                best = atBuilding;
             }
         }
-        util.debugSpecific("动了");
-        return false;
+        if(best != null) best.setOccupied(false);
+        return best;
     }
 
+    //当前为随机选择(suspect) //不能用pathplanning，不然算不过来
+//    public ATBuilding decideBestOccupied(int priority, EntityID target) {
+//        util.debugSpecific("-----------进行最优抢占计算-----------");
+//        int maxTime = 0;//修改策略了
+//        EntityID best = null;
+//        EntityID id = null;
+//        Set<ATBuilding> occupiedBuildings = ATBS.getAllOccupiedByPriority(priority);
+//        Set<EntityID> set = ATBuildingSystem.toIDSet(occupiedBuildings);
+//        //set中移除当前目标
+//        set.remove(target);
+//        this.pathPlanning.setFrom(this.agentInfo.getPosition());
+//        set.removeIf(entityID -> worldInfo.getEntity(entityID).getStandardURN() == REFUGE);
+//        while (!occupiedBuildings.isEmpty()) {
+//            this.pathPlanning.setDestination(set);
+//            List<EntityID> path = this.pathPlanning.calc().getResult();
+//            if (path != null && path.size() > 0) {
+//                id = path.get(path.size() - 1);//获取终点
+//                if (id == null) {
+//                    util.debugOverall("到" + id + "的路径终点为null.(impossible)");
+//                    continue;
+//                }
+//                ATBuilding atb = ATBS.getByID(id);
+//                if (atb.isBurning() || !atb.isReachable()) {
+//                    //debug
+//                    if (atb.isBurning()) util.debugSpecific("该建筑(" + atb.getId() + ")正在燃烧，去除");
+//                    if (!atb.isReachable()) util.debugSpecific("该建筑(" + atb.getId() + ")无法到达，去除");
+//                    util.debugSpecific("重新计算");
+//                    set.remove(atb.getId());
+//                    continue;
+//                }
+//                if (!atb.isNeedToSearch()) {
+//                    util.debugSpecific("该建筑(" + atb.getId() + ")已经没必要搜了，取出");
+//                    set.remove(atb.getId());
+//                    continue;
+//                }
+//                this.myWay = path;
+//                best = id;
+//                break;
+//            }
+//        }
+//        if (best != null) {
+//            //解挂
+//            ATBS.getByID(best).setOccupied(false);
+//            util.debugSpecific("最优抢占成功，确定目标为:" + best);
+//            return ATBS.getByID(best);
+//        } else {
+//            util.debugSpecific("最优抢占失败。");
+//            return null;
+//        }
+//    }
+
+//    private boolean isStationary(){
+//        util.debugSpecific("判断是否静止");
+//        if(lastPosition != null){
+//            util.debugSpecific("走了 "+
+//                    Util.getdistance(worldInfo.getLocation(lastPosition),worldInfo.getLocation(nowPosition)));
+//            if(Util.getdistance(worldInfo.getLocation(lastPosition),worldInfo.getLocation(nowPosition)) < 2000){
+////                if(target != null){
+////                    ATBS.setVisited(target);
+////                }
+//                util.debugSpecific(agentInfo.getID()+":静止不动");
+//                return true;
+//            }
+//        }
+//        util.debugSpecific("动了");
+//        return false;
+//    }
     private boolean isCurrentTargetReachable(){
         return util.isBuildingReachable(pathPlanning, target);
+    }
+
+    //innocent
+    private boolean isWayAvailable(){
+        if(myWay == null || myWay.size() <= 0) return true;
+        Collections.reverse(myWay);
+        for (EntityID wayAreaID : myWay){
+            StandardEntity entity = worldInfo.getEntity(wayAreaID);
+            if(entity instanceof Building){
+                ATBuilding atb = ATBS.getByID(wayAreaID);
+                if(atb.isBurning()){
+                    ATBuilding targetATB = ATBS.getByID(target);
+                    if(wayAreaID == null){
+                        util.debugSpecific("当前道路上有null(impossible)");
+                    }
+                    targetATB.setWayBurning(true, wayAreaID);
+                    ATBS.addWayBurningBuilding(targetATB);
+                    return false;
+                }
+            }else{
+                continue;
+            }
+        }
+        return true;
     }
 
     private boolean lastTargetHasFinished(){
@@ -720,44 +607,39 @@ public class CSUSearchRecorder {
         return false;
     }
 
-//    //添加掉血速度计算（感觉不用，因为at越多救人越快）
-//    private boolean isATInBuildingEnough(){
-//        int buildingATNum = 0;
-//        Building building = (Building)worldInfo.getEntity(this.target);
-//        if(building == null){
-//            util.debugSpecific("目标building为null(impossible)");
-//            return false;
-//        }
-//        Collection<Human> buriedHumans = worldInfo.getBuriedHumans(building);
-//        int buriedHumanNum = buriedHumans.size();
-//        Set<Entity> entities = new HashSet<Entity>(worldInfo.getEntitiesOfType(AMBULANCE_TEAM));
-//        for(Entity e : entities){
-//            AmbulanceTeam at = (AmbulanceTeam)e;
-//            if(worldInfo.getEntity(at.getPosition()) == worldInfo.getEntity(this.target)) buildingATNum++;
-//        }
-//        if(buildingATNum != 0 && buildingATNum >= buriedHumanNum){
-//            ATBS.setVisited(target);
-//            return true;
-//        }else{
-//            return false;
-//        }
-//    }
-
-//    private boolean isStuck(){
-//        util.debugSpecific("判断是否卡住");
-//        if(isStationary() && worldInfo.getEntity(nowPosition).getStandardURN() == BLOCKADE){
-//            util.debugSpecific(agentInfo.getID()+":卡住了");
-//            return true;
-//        }
-//        util.debugSpecific(agentInfo.getID()+":没卡住");
-//        return false;
-//    }
-
     public boolean needToChangeTarget(){
-        return this.target == null || lastTargetHasFinished()
-                || !ATBS.getByID(target).isReachable() || ATBS.getByID(target).isBurning();
-//        return this.target == null || isATInBuildingEnough()
-//                || lastTargetHasFinished() || !ATBS.getByID(target).isReachable() || ATBS.getByID(target).isBurning();
+//        return this.target == null || lastTargetHasFinished()
+//                || !ATBS.getByID(target).isReachable() || ATBS.getByID(target).isBurning();
+        String msg = "";
+        boolean need = false;
+        if (this.target == null) {
+            need = true;
+            msg = "target为null";
+        } else if (lastTargetHasFinished()) {
+            need = true;
+            msg = "上一个目标已经搜完(" + target + ")";
+        } else if (!ATBS.getByID(target).isReachable()) {
+            need = true;
+            msg = "上一个目标无法到达";
+        } else if (ATBS.getByID(target).isBurning()) {
+            need = true;
+            msg = "上一个目标正在燃烧";
+        } else if (!ATBS.getByID(target).isNeedToSearch()) {
+            need = true;
+            msg = "上一个目标已经没必要搜";
+        } else if(!isWayAvailable()){
+            need = true;
+            msg = "上一个目标的路上有建筑着火";
+        }
+        if(need){
+            util.debugSpecific("因为:" + msg + "换目标");
+            if(this.target != null && ATBS.getByID(target).getPriority() == CSUSearchUtil.FIRST_CLASS){
+                util.debugOverall("FirstClass("+this.target+")里面有人,但是因为"+msg+"换目标");
+            }else{
+                util.debugSpecific("因为:" + msg + "换目标");
+            }
+        }
+        return need;
     }
 
     //如果上一个聚类还没有排查完毕，不移动到下一个聚类
@@ -783,6 +665,26 @@ public class CSUSearchRecorder {
 
     private Set<EntityID> getNearbyFB(){
         return null;
+    }
+
+    public int getNowPriority(){
+        return  nowPriority;
+    }
+
+    public EntityID getID(){
+        return agentInfo.getID();
+    }
+
+    public static void main(String[] args) {
+        long start = Calendar.getInstance().getTimeInMillis();
+//        long start = System.currentTimeMillis();
+        int a = 1;
+        for(int i=1;i<100000;i++){
+            a++;
+        }
+        long end = Calendar.getInstance().getTimeInMillis();
+//        long end = System.currentTimeMillis();
+        System.out.println(end-start);
     }
 
 }

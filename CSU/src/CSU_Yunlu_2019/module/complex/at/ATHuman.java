@@ -1,21 +1,28 @@
 package CSU_Yunlu_2019.module.complex.at;
 
+import CSU_Yunlu_2019.module.complex.at.CSUATTimer.ATTimer;
+import CSU_Yunlu_2019.module.complex.at.CSUATTimer.ATTimerContainer;
 import rescuecore2.standard.entities.Civilian;
+import rescuecore2.standard.entities.Human;
 import rescuecore2.worldmodel.EntityID;
 
-public class ATCivilian {
-    private EntityID id;
+public class ATHuman {
+    private final EntityID id;
     private EntityID position;
-    private boolean isSaved;
+
     private int HP = UNINITIALISED;
     private ATTimer isHeardButNotFoundTimer; //被救的时候解除，可以添加heardPosition
 
-    private Civilian civilian;
+    private Human human;
+//    private Civilian civilian;
     private static final int UNINITIALISED = -999;
     private CSUSearchUtil util;
     private ATTimerContainer container;
 
-    public ATCivilian(EntityID id, CSUSearchUtil util, ATTimerContainer container){
+    //还没用
+    private boolean isSaved;
+
+    public ATHuman(EntityID id, CSUSearchUtil util, ATTimerContainer container){
         this.id = id;
         isSaved = false;
         this.util = util;
@@ -24,9 +31,9 @@ public class ATCivilian {
     }
 
     private void initialise(){
-        Civilian civ = util.getCivilian(id);
-        if(civ != null && civ.isPositionDefined()){
-            position = civ.getPosition();
+        Human human = util.getHuman(id);
+        if(human != null && human.isPositionDefined()){
+            position = human.getPosition();
         }
     }
 
@@ -42,14 +49,18 @@ public class ATCivilian {
         return id;
     }
 
-    public Civilian getCivilian(){
-        if(civilian == null){
-            Civilian civ = util.getCivilian(id);
-            if(civ != null) civilian = civ;
-            return civilian;
+    public Human getHuman(){
+        if(this.human == null){
+            Human human = util.getHuman(id);
+            if(human != null) this.human = human;
+            return human;
         }else{
-            return civilian;
+            return human;
         }
+    }
+
+    public void setHuman(Human human){
+        this.human = human;
     }
 
     public void setHeard(){
