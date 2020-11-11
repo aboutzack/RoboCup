@@ -264,14 +264,38 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
-//		if(this.agentInfo.getID().getValue() == 1154074119) {
-//			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
-//			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
-//			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
-//			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
-//			System.out.println("targetRoadsize:" + this.targetAreas.size());
-////			System.out.println();
-//		}
+		if(this.agentInfo.getID().getValue() == 922678578) {
+			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
+			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
+			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
+			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
+			System.out.println("targetRoadsize:" + this.targetAreas.size());
+			if(this.result!=null){
+				System.out.println("result:"+this.result.getValue());
+				if(this.noNeedToClear.contains(this.result)){
+					System.out.println("noneedtoclearhas:"+this.result);
+				}
+				if(this.topLevelBlockedRoad.contains(this.result)){
+					System.out.println("TOPTOPTOP");
+				}
+				if(this.halfTopLevelBlockedRoad.contains(this.result)){
+					System.out.println("hththt");
+				}
+				if(this.midLevelBlockedRoad.contains(this.result)){
+					System.out.println("mmmmmmmmm");
+				}
+				if(this.halfLowLevelBlockedRoad.contains(this.result)){
+					System.out.println("hlhlhlhlhh");
+				}
+				if(this.lowLevelBlockedRoad.contains(this.result)){
+					System.out.println("llllllllllllll");
+				}
+				if(this.targetAreas.contains(this.result)){
+					System.out.println("tartartar");
+				}
+			}
+			System.out.println();
+		}
 
 //		for(StandardEntity se : this.worldInfo.getEntitiesOfType(ROAD)) {
 //			if (se.getID().getValue() == 199333) {
@@ -306,7 +330,8 @@ public class CSURoadDetector extends RoadDetector {
 		}
 
 		//topLevelBlockedRoad
-		if (this.result != null && this.topLevelBlockedRoad.contains(this.result)) {
+		if (this.result != null && this.topLevelBlockedRoad.contains(this.result)
+				&& !this.noNeedToClear.contains(this.result)) {
 			return this;
 		}
 
@@ -328,7 +353,8 @@ public class CSURoadDetector extends RoadDetector {
 
 
 		//halfTopLevelBlockedRoad
-		if (this.result != null && this.halfTopLevelBlockedRoad.contains(this.result)) {
+		if (this.result != null && this.halfTopLevelBlockedRoad.contains(this.result)
+				&& !this.noNeedToClear.contains(this.result)) {
 			return this;
 		}
 
@@ -349,7 +375,8 @@ public class CSURoadDetector extends RoadDetector {
 
 
 		//midLevelBlockedRoad
-		if (this.result != null && this.midLevelBlockedRoad.contains(this.result)) {
+		if (this.result != null && this.midLevelBlockedRoad.contains(this.result)
+				&& !this.noNeedToClear.contains(this.result)) {
 			return this;
 		}
 
@@ -370,7 +397,8 @@ public class CSURoadDetector extends RoadDetector {
 
 
 		//halfLowLevelBlockedRoad
-		if (this.result != null && this.halfLowLevelBlockedRoad.contains(this.result)) {
+		if (this.result != null && this.halfLowLevelBlockedRoad.contains(this.result)
+				&& !this.noNeedToClear.contains(this.result)) {
 			return this;
 		}
 
@@ -390,7 +418,8 @@ public class CSURoadDetector extends RoadDetector {
 		}
 
 		//lowLevelBlockedRoad
-		if (this.result != null && this.lowLevelBlockedRoad.contains(this.result)) {
+		if (this.result != null && this.lowLevelBlockedRoad.contains(this.result)
+				&& !this.noNeedToClear.contains(this.result)) {
 			return this;
 		}
 
@@ -425,7 +454,8 @@ public class CSURoadDetector extends RoadDetector {
 
 	private RoadDetector getResultWhenNull() {
 		if (this.agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
-			if (this.result != null && this.targetAreas.contains(this.result)) {
+			if (this.result != null && this.targetAreas.contains(this.result)
+					&& !this.noNeedToClear.contains(this.result)) {
 				return this;
 			}
 			//去PF自己cluster的各类道路
@@ -663,6 +693,7 @@ public class CSURoadDetector extends RoadDetector {
 					this.halfTopLevelBlockedRoad.add(road.getID());
 				}
 			}
+
 
 
 			//firebrigade和ambulanceteam
