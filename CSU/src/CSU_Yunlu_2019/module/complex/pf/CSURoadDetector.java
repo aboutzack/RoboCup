@@ -425,6 +425,9 @@ public class CSURoadDetector extends RoadDetector {
 
 	private RoadDetector getResultWhenNull() {
 		if (this.agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
+			if (this.result != null && this.targetAreas.contains(this.result)) {
+				return this;
+			}
 			//去PF自己cluster的各类道路
 			Collection<StandardEntity> clusterEntities = null;
 			if (this.clustering != null) {
