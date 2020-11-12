@@ -86,6 +86,9 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
     }
 
     private static int[] getChannels(StandardEntityURN agentType, int numChannels, AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
+        if (numChannels < 1) {
+            return new int[1];
+        }
         int scenarioAgents = CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
         double fbRequiredBandwidth = CSUConstants.MEAN_FB_MESSAGE_BYTE_SIZE * scenarioAgents;
         double pfRequiredBandwidth = CSUConstants.MEAN_PF_MESSAGE_BYTE_SIZE * scenarioAgents;
@@ -95,9 +98,9 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
         requiredBandWidthRemain[1] = pfRequiredBandwidth;
         requiredBandWidthRemain[2] = atRequiredBandwidth;
         int maxChannels;
-        if (CSUConstants.DEBUG_CHANNEL_SUBSCRIBE || isPlatoonAgent(agentInfo, worldInfo)){
+        if (CSUConstants.DEBUG_CHANNEL_SUBSCRIBE || isPlatoonAgent(agentInfo, worldInfo)) {
             maxChannels = scenarioInfo.getCommsChannelsMaxPlatoon();
-        }else {
+        } else {
             maxChannels = scenarioInfo.getCommsChannelsMaxOffice();
         }
 
@@ -122,11 +125,11 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
                     } else if (i == maxChannels - 1) {//带宽不够且安排的是最后一个channel
                         requiredBandWidthRemain[0] = 0;
                         radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                    }else {//带宽不够且安排的不是最后一个channel
+                    } else {//带宽不够且安排的不是最后一个channel
                         if (BandWidthRemainValue < 0) {//最大的剩余带宽都小于0了，直接分配完毕
                             requiredBandWidthRemain[0] = 0;
                             radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                        }else {//requiredBandWidthRemain扣除剩余带宽
+                        } else {//requiredBandWidthRemain扣除剩余带宽
                             requiredBandWidthRemain[0] = tmp - radioBandWidthRemain.getValue();
                             radioBandWidthRemain.setValue(0);
                         }
@@ -140,11 +143,11 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
                     } else if (i == maxChannels - 1) {//带宽不够且安排的是最后一个channel
                         requiredBandWidthRemain[1] = 0;
                         radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                    }else {//带宽不够且安排的不是最后一个channel
+                    } else {//带宽不够且安排的不是最后一个channel
                         if (BandWidthRemainValue < 0) {//最大的剩余带宽都小于0了，直接分配完毕
                             requiredBandWidthRemain[1] = 0;
                             radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                        }else {//requiredBandWidthRemain扣除剩余带宽
+                        } else {//requiredBandWidthRemain扣除剩余带宽
                             requiredBandWidthRemain[1] = tmp - radioBandWidthRemain.getValue();
                             radioBandWidthRemain.setValue(0);
                         }
@@ -158,11 +161,11 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
                     } else if (i == maxChannels - 1) {//带宽不够且安排的是最后一个channel
                         requiredBandWidthRemain[2] = 0;
                         radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                    }else {//带宽不够且安排的不是最后一个channel
+                    } else {//带宽不够且安排的不是最后一个channel
                         if (BandWidthRemainValue < 0) {//最大的剩余带宽都小于0了，直接分配完毕
                             requiredBandWidthRemain[2] = 0;
                             radioBandWidthRemain.setValue((int) (BandWidthRemainValue - tmp));
-                        }else {//requiredBandWidthRemain扣除剩余带宽
+                        } else {//requiredBandWidthRemain扣除剩余带宽
                             requiredBandWidthRemain[2] = tmp - radioBandWidthRemain.getValue();
                             radioBandWidthRemain.setValue(0);
                         }
