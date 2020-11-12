@@ -123,10 +123,23 @@ public class CSUSearchForFire extends Search {
 		if (path != null) {
 			this.result = path.get(path.size() - 1);
 		}
-		//可能在障碍物中间,但也有可能graphLayer存在误差
-		if (unsearchedRoadIDs != null && !unsearchedRoadIDs.isEmpty() && agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() &&
-				result == null) {
-			this.result = unsearchedRoadIDs.get(agentInfo.getTime() % unsearchedRoadIDs.size());
+		if (result == null) {
+			//没找到一条路去搜索
+			StandardEntity selfPosition = world.getSelfPosition();
+			boolean allMyEdgesImpassableInArea = world.getGraph().allMyEdgesImpassableInArea(selfPosition.getID());
+			if (allMyEdgesImpassableInArea) {
+				//自己所在的路被判定为不能走
+				this.result = unsearchedRoadIDs.get(agentInfo.getTime() % unsearchedRoadIDs.size());
+			}else {
+				//所有未搜索的地方均不能到达
+				reset();
+				this.pathPlanning.setFrom(this.agentInfo.getPosition());
+				this.pathPlanning.setDestination(this.unsearchedRoadIDs);
+				path = this.pathPlanning.calc().getResult();
+				if (path != null) {
+					this.result = path.get(path.size() - 1);
+				}
+			}
 		}
 		visualDebug();
 		return this;

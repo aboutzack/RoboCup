@@ -32,7 +32,6 @@ import java.util.*;
  *
  * @author CSU-zack
  */
-// TODO: 2020/11/6 考虑failure和dropout
 public class CSUChannelSubscriber extends ChannelSubscriber {
 
     private static final double FB_RATIO = 1.3;

@@ -26,24 +26,42 @@ public class GreedyTargetSelector extends TargetSelector {
     @Override
     public FireBrigadeTarget selectTarget(Cluster targetCluster) {
 
+        if (targetCluster == null) {
+            return null;
+        }
+
         FireBrigadeTarget fireBrigadeTarget = null;
 
-        if (targetCluster != null) {
-            target = calculateValueZJUBase((FireCluster) targetCluster);
-            if (target != null) {
+
+        //first consider buildings in extinguish range
+        Set<Building> buildingsInCluster = targetCluster.getBuildings();
+        Set<Building> fireBuildingsInRange = world.getBuildingsInRange(world.getSelfHuman().getID(), world.getScenarioInfo().getFireExtinguishMaxDistance());
+        fireBuildingsInRange.removeIf(e -> {
+            return !(e.isOnFire() && e.isFierynessDefined() && e.getFieryness() != 8 &&
+                    e.isTemperatureDefined() && e.getTemperature() > 45);
+        });
+        for (Building building : fireBuildingsInRange) {
+            if (buildingsInCluster.contains(building)) {
                 lastTarget = target;
+                target = world.getCsuBuilding(building);
                 fireBrigadeTarget = new FireBrigadeTarget(targetCluster, target);
+                return fireBrigadeTarget;
             }
         }
 
+        //use ZJUBased to find best
+        lastTarget = target;
+        target = calculateValueZJUBase((FireCluster) targetCluster);
+        if (target != null) {
+            fireBrigadeTarget = new FireBrigadeTarget(targetCluster, target);
+        }
         return fireBrigadeTarget;
-
     }
 
     private CSUBuilding calculateValueZJUBase(FireCluster fireCluster) {
         Set<Building> buildings = fireCluster.getBuildings();
         Set<CSUBuilding> csuBuildings = buildings.stream().map(world::getCsuBuilding).collect(Collectors.toSet());
-        Map<EntityID,Double> buildingCostMap=new HashMap<>();
+        Map<EntityID, Double> buildingCostMap = new HashMap<>();
         CSUBuilding targetBuilding = null;
         SortedSet<Pair<EntityID, Double>> sortedBuildings = new TreeSet<Pair<EntityID, Double>>(ConstantComparators.DISTANCE_VALUE_COMPARATOR_DOUBLE);
         buildingCostComputer.updateFor(fireCluster, lastTarget);

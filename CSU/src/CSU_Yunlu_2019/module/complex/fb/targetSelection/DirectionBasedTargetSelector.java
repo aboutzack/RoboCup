@@ -8,15 +8,14 @@ import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2019.world.object.CSUBuilding;
 import javolution.util.FastSet;
 import rescuecore2.misc.Pair;
+import rescuecore2.standard.entities.Building;
 import rescuecore2.standard.entities.FireBrigade;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
-import java.util.Collection;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.List;
+import java.util.*;
 
 /**
  * First we find the expand direction of the specified fire cluster. Then We get
@@ -51,10 +50,29 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         if (targetCluster != null) {
             SortedSet<Pair<EntityID, Double>> sortedBuildings;
             sortedBuildings = calculateValue((FireCluster) targetCluster);
-            if (!sortedBuildings.isEmpty()) {
+            //remove all no fire buildings
+            sortedBuildings.removeIf(e -> {
+                Building building = (Building) world.getEntity(e.first());
+                return !(building.isOnFire() && building.isFierynessDefined() && building.getFieryness() != 8 &&
+                        building.isTemperatureDefined() && building.getTemperature() > 45);
+            });
+            List<CSUBuilding> sortedInExtinguishRanges = new ArrayList<>();
+            //first consider buildings in extinguish range
+            for (Pair<EntityID, Double> sortedBuilding : sortedBuildings) {
+                CSUBuilding building = world.getCsuBuilding(sortedBuilding.first());
+                if (world.getDistance(world.getSelfHuman().getID(), building.getSelfBuilding().getID()) <
+                        world.getScenarioInfo().getFireExtinguishMaxDistance()) {
+                    sortedInExtinguishRanges.add(building);
+                }
+            }
+            if (!sortedInExtinguishRanges.isEmpty()) {
+                lastTarget = target;
+                target = sortedInExtinguishRanges.get(0);
+                fireBrigadeTarget = new FireBrigadeTarget(targetCluster, target);
+            } else if (!sortedBuildings.isEmpty()) {
                 lastTarget = target;
                 target = world.getCsuBuilding(sortedBuildings.first().first());
-                fireBrigadeTarget = new FireBrigadeTarget(targetCluster ,target);
+                fireBrigadeTarget = new FireBrigadeTarget(targetCluster, target);
             }
         }
 
@@ -107,6 +125,17 @@ public class DirectionBasedTargetSelector extends TargetSelector {
         Set<CSUBuilding> inDirectionBuildings;
         Point directionPoint = directionManager.findFarthestPointOfMap(fireCluster, (FireBrigade) selfHuman);
         inDirectionBuildings = fireCluster.findBuildingInDirection(directionPoint);
+        //添加indirectionBuildings相连的在borderBuildings里的buildings
+        HashSet<CSUBuilding> inDirectionConnectedBuildings = new HashSet<>();
+        for (CSUBuilding inDirectionBuilding : inDirectionBuildings) {
+            inDirectionConnectedBuildings.addAll(inDirectionBuilding.getConnectedBuildings());
+        }
+        getBorderBuildings(fireCluster).forEach(e -> {
+            CSUBuilding csuBuilding = world.getCsuBuilding(e);
+            if (inDirectionConnectedBuildings.contains(csuBuilding)) {
+                inDirectionBuildings.add(csuBuilding);
+            }
+        });
         return inDirectionBuildings;
     }
 

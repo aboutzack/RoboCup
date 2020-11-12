@@ -265,31 +265,31 @@ public class ActionFireFighting extends ExtAction {
             }
         }
 
-        //找出着火的和温度达到40以上的建筑
-        List<StandardEntity> dangerBuilding = new ArrayList<>();
-        List<StandardEntity> burningBuilding = new ArrayList<>();
-        for(EntityID entityID : this.worldInfo.getChanged().getChangedEntities()){
-            if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(entityID)) < this.maxExtinguishDistance){
-
-                if (this.worldInfo.getEntity(entityID) instanceof  Building){
-                    if(((Building)(this.worldInfo.getEntity(entityID))).isOnFire() &&
-                            ((Building)(this.worldInfo.getEntity(entityID))).isFierynessDefined() &&
-                            ((Building)(this.worldInfo.getEntity(entityID))).getFieryness() != 8){
-                        burningBuilding.add(this.worldInfo.getEntity(entityID));
-                    }
-                    if(((Building)(this.worldInfo.getEntity(entityID))).getTemperature() > 40){
-                        dangerBuilding.add(this.worldInfo.getEntity(entityID));
-                    }
-                }
-            }
-        }
-
-        //灭火范围内有正在燃烧的建筑物,水量够灭火，不够补水
-        if (burningBuilding.size() > 0) {
-            FierynessSorter fierynessSorter = new FierynessSorter();
-            Collections.sort(burningBuilding, fierynessSorter);   //未测试
-            return new ActionExtinguish(burningBuilding.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
-        }
+//        //找出着火的和温度达到40以上的建筑
+//        List<StandardEntity> dangerBuilding = new ArrayList<>();
+//        List<StandardEntity> burningBuilding = new ArrayList<>();
+//        for(EntityID entityID : this.worldInfo.getChanged().getChangedEntities()){
+//            if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(entityID)) < this.maxExtinguishDistance){
+//
+//                if (this.worldInfo.getEntity(entityID) instanceof  Building){
+//                    if(((Building)(this.worldInfo.getEntity(entityID))).isOnFire() &&
+//                            ((Building)(this.worldInfo.getEntity(entityID))).isFierynessDefined() &&
+//                            ((Building)(this.worldInfo.getEntity(entityID))).getFieryness() != 8){
+//                        burningBuilding.add(this.worldInfo.getEntity(entityID));
+//                    }
+//                    if(((Building)(this.worldInfo.getEntity(entityID))).getTemperature() > 40){
+//                        dangerBuilding.add(this.worldInfo.getEntity(entityID));
+//                    }
+//                }
+//            }
+//        }
+//
+//        //灭火范围内有正在燃烧的建筑物,水量够灭火，不够补水
+//        if (burningBuilding.size() > 0) {
+//            FierynessSorter fierynessSorter = new FierynessSorter();
+//            Collections.sort(burningBuilding, fierynessSorter);   //未测试
+//            return new ActionExtinguish(burningBuilding.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
+//        }
 
 
         //寻找能灭到target的火的，并且中心没被堵住的
@@ -482,7 +482,7 @@ public class ActionFireFighting extends ExtAction {
             if (worldInfo.getEntity(entityID) instanceof Refuge) {
                 refillCost = (scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / refillRefugeRate + 1;
             } else {
-                refillCost = (scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / refillHydrantRate + 1;
+                refillCost = (scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / refillHydrantRate *  + 1;
             }
             refillTimeCost.put(entityID, roadCost + refillCost);
         });
