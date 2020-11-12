@@ -57,7 +57,7 @@ public class CSUHumanDetector extends HumanDetector {
     private List<EntityID> way;
 
     private Map<EntityID,Integer> hangUpMap;
-    private Set<EntityID> visited;
+    private Set<EntityID> visited; // 暂时没更新，也不知道会不会用上
     private int savedTime = 0;
 
 //    private Set<EntityID> availableTarget;
@@ -100,8 +100,8 @@ public class CSUHumanDetector extends HumanDetector {
         //11.10
         //如果有result，坚持。如果不能到或者着火，挂起result。10s释放
         if(this.result != null){
-            if(isReachable(this.result)){
-                if(needToChange(result)){
+            if(isReachable(this.result)){//目标可到达
+                if(needToChange(result)){//目标在避难所里或者目标位置燃烧
                     hangUp(this.result);
                 }else{
                     return this;
@@ -189,6 +189,7 @@ public class CSUHumanDetector extends HumanDetector {
         return  false;
     }
 
+    //去掉building（由search来确定），去掉在refuge的human
     private boolean noNeed(EntityID result){
         StandardEntity entity = worldInfo.getEntity(result);
         if(entity instanceof Area) return true;
@@ -268,7 +269,7 @@ public class CSUHumanDetector extends HumanDetector {
                 //只要有被埋，就去救
                 return false;
             }
-        });
+        });//去掉所在位置着火的目标
         targets.sort(new CSUDistanceSorter(this.worldInfo, this.agentInfo.getPositionArea()));
         return targets.isEmpty() ? null : targets.get(0).getID();
     }
@@ -437,13 +438,17 @@ public class CSUHumanDetector extends HumanDetector {
         CSU_HurtHumanClassifier = new CSUHurtHumanClassifier(worldInfo, agentInfo);
     }
 
-    private boolean isReachable(EntityID destination){
+    private boolean isReachable(EntityID targetID){
         EntityID from = agentInfo.getPosition();
-        if(from.equals(destination)){
-            return true;
+        StandardEntity entity = worldInfo.getPosition(targetID);
+        if(entity != null){
+            EntityID destination = entity.getID();
+            if(from.equals(destination)){
+                return true;
+            }
         }
-        List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).getResult();
-        return result != null && !result.isEmpty();
+        List<EntityID> result = pathPlanning.setFrom(from).setDestination(targetID).getResult();
+        return result != null;
     }
 
     private List<EntityID> calcWay(EntityID destination){
