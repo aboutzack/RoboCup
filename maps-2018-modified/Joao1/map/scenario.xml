@@ -8,9 +8,9 @@
   <scenario:refuge scenario:location="1575"/>
   <scenario:refuge scenario:location="2393"/>
   <scenario:refuge scenario:location="4527"/>
+  <scenario:refuge scenario:location="7243"/>
   <scenario:fire scenario:location="6000"/>
   <scenario:fire scenario:location="3443"/>
-  <scenario:fire scenario:location="1300"/>
   <scenario:fire scenario:location="7541"/>
   <scenario:fire scenario:location="3241"/>
   <scenario:fire scenario:location="378"/>
@@ -353,6 +353,7 @@
   <scenario:firebrigade scenario:location="22497"/>
   <scenario:firebrigade scenario:location="22497"/>
   <scenario:firebrigade scenario:location="22497"/>
+  <scenario:firebrigade scenario:location="23849"/>
   <scenario:policeforce scenario:location="29067"/>
   <scenario:policeforce scenario:location="29067"/>
   <scenario:policeforce scenario:location="29067"/>
@@ -388,6 +389,7 @@
   <scenario:policeforce scenario:location="27930"/>
   <scenario:policeforce scenario:location="27930"/>
   <scenario:policeforce scenario:location="27930"/>
+  <scenario:policeforce scenario:location="22479"/>
   <scenario:ambulanceteam scenario:location="7281"/>
   <scenario:ambulanceteam scenario:location="26510"/>
   <scenario:ambulanceteam scenario:location="29669"/>
