@@ -338,4 +338,14 @@ public class GraphHelper extends AbstractModule {
     public Collection<StandardEntity> getEntrances() {
         return entrances;
     }
+
+    public boolean allMyEdgesImpassableInArea(EntityID id) {
+        List<MyEdge> myEdges = getMyEdgesInArea(id);
+        for (MyEdge myEdge : myEdges) {
+            if (myEdge.isPassable()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

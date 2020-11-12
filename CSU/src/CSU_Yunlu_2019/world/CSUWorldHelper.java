@@ -31,7 +31,8 @@ import rescuecore2.worldmodel.Property;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.*;
 
@@ -476,6 +477,7 @@ public class CSUWorldHelper extends AbstractModule {
                 }
             } else if (message instanceof MessageRoad) {
                 MessageRoad mr = (MessageRoad) message;
+                MessageUtil.reflectMessage(this.worldInfo, mr);
                 if (mr.isPassable()) {
                     List<MyEdge> myEdgesInArea = graph.getMyEdgesInArea(mr.getRoadID());
                     for (MyEdge edge : myEdgesInArea) {
@@ -489,6 +491,7 @@ public class CSUWorldHelper extends AbstractModule {
                         myEdge.setPassable(false);
                     }
                 }
+                csuRoadMap.get(mr.getRoadID()).update();
             }
         }
         DebugHelper.setGraphEdges(selfId, graph);
@@ -1264,5 +1267,15 @@ public class CSUWorldHelper extends AbstractModule {
             return 0;
         }
         return integer;
+    }
+
+    public Set<Building> getBuildingsInRange(EntityID entityID, int distance) {
+        Set<Building> result = new HashSet<>();
+        for (StandardEntity e : getObjectsInRange(entityID, distance)) {
+            if (e instanceof Building) {
+                result.add((Building) e);
+            }
+        }
+        return result;
     }
 }

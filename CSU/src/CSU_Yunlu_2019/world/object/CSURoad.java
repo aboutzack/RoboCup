@@ -91,9 +91,9 @@ public class CSURoad {
 	 * Update the blockade inform.
 	 */
 	public void update() {
-		if (world.getRoadsSeen().contains(selfId)) {
-			//reset
-			lastUpdateTime = world.getTime();
+		//reset
+		lastUpdateTime = world.getTime();
+		if (selfRoad.isBlockadesDefined()) {
 			for (CSUEdge next : csuEdges) {
 				next.setOpenPart(next.getLine());
 				next.setBlocked(false);
@@ -101,7 +101,6 @@ public class CSURoad {
 			for (MyEdge myEdge : graph.getMyEdgesInArea(selfId)) {
 				myEdge.setPassable(true);
 			}
-
 			//update
 			this.csuBlockades = createCsuBlockade();
 			if (selfRoad.isBlockadesDefined()) {
@@ -157,7 +156,8 @@ public class CSURoad {
 
 	private boolean isTimeToResetPassably() {
 		int resetTime = CSUConstants.ROAD_PASSABLY_RESET_TIME_IN_MEDIUM_MAP;
-		return passablyLastResetTime <= lastUpdateTime + resetTime && agentInfo.getTime() - lastUpdateTime > resetTime;
+		return passablyLastResetTime <= lastUpdateTime && agentInfo.getTime() - passablyLastResetTime > resetTime &&
+				agentInfo.getTime() - lastUpdateTime > resetTime;
 	}
 	
 	public void resetPassably() {
@@ -166,6 +166,7 @@ public class CSURoad {
 //		if (!isSeen && world.isCommunicationLess()) {
 //			return;
 //		}
+		//最近的重置时间在最近更新时间之前,保证每次更新之后至多进行一次重置
 		if (agentInfo.me() instanceof PoliceForce || passablyLastResetTime > lastUpdateTime) {
 			return;
 		}
