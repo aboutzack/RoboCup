@@ -264,38 +264,38 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
-		if(this.agentInfo.getID().getValue() == 922678578) {
-			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
-			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
-			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
-			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
-			System.out.println("targetRoadsize:" + this.targetAreas.size());
-			if(this.result!=null){
-				System.out.println("result:"+this.result.getValue());
-				if(this.noNeedToClear.contains(this.result)){
-					System.out.println("noneedtoclearhas:"+this.result);
-				}
-				if(this.topLevelBlockedRoad.contains(this.result)){
-					System.out.println("TOPTOPTOP");
-				}
-				if(this.halfTopLevelBlockedRoad.contains(this.result)){
-					System.out.println("hththt");
-				}
-				if(this.midLevelBlockedRoad.contains(this.result)){
-					System.out.println("mmmmmmmmm");
-				}
-				if(this.halfLowLevelBlockedRoad.contains(this.result)){
-					System.out.println("hlhlhlhlhh");
-				}
-				if(this.lowLevelBlockedRoad.contains(this.result)){
-					System.out.println("llllllllllllll");
-				}
-				if(this.targetAreas.contains(this.result)){
-					System.out.println("tartartar");
-				}
-			}
-			System.out.println();
-		}
+//		if(this.agentInfo.getID().getValue() == 922678578) {
+//			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
+//			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
+//			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
+//			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
+//			System.out.println("targetRoadsize:" + this.targetAreas.size());
+//			if(this.result!=null){
+//				System.out.println("result:"+this.result.getValue());
+//				if(this.noNeedToClear.contains(this.result)){
+//					System.out.println("noneedtoclearhas:"+this.result);
+//				}
+//				if(this.topLevelBlockedRoad.contains(this.result)){
+//					System.out.println("TOPTOPTOP");
+//				}
+//				if(this.halfTopLevelBlockedRoad.contains(this.result)){
+//					System.out.println("hththt");
+//				}
+//				if(this.midLevelBlockedRoad.contains(this.result)){
+//					System.out.println("mmmmmmmmm");
+//				}
+//				if(this.halfLowLevelBlockedRoad.contains(this.result)){
+//					System.out.println("hlhlhlhlhh");
+//				}
+//				if(this.lowLevelBlockedRoad.contains(this.result)){
+//					System.out.println("llllllllllllll");
+//				}
+//				if(this.targetAreas.contains(this.result)){
+//					System.out.println("tartartar");
+//				}
+//			}
+//			System.out.println();
+//		}
 
 //		for(StandardEntity se : this.worldInfo.getEntitiesOfType(ROAD)) {
 //			if (se.getID().getValue() == 199333) {
@@ -1044,17 +1044,23 @@ public class CSURoadDetector extends RoadDetector {
 		return needToSave;
 	}
 
-	Boolean SOSinMyCluster(PoliceForce police, EntityID SOStarget) {
+	private Boolean SOSinMyCluster(PoliceForce police, EntityID SOStarget) {
 		Boolean needToSave = false;
 		StandardEntity entity = this.worldInfo.getEntity(SOStarget);
-		if (entity != null && (entity instanceof Road || entity instanceof Hydrant || entity instanceof Building)) {
+		if (entity != null) {
 			Collection<StandardEntity> clusterEntities = null;
+			List<EntityID> clusterEntityIDs = new ArrayList<>();
 			if (this.clustering != null) {
 				int clusterIndex = this.clustering.getClusterIndex(this.agentInfo.getID());
 				if (clusterIndex != -1) {
 					clusterEntities = this.clustering.getClusterEntities(clusterIndex);
 				}
-				if (clusterEntities.contains(entity.getID())) needToSave = true;
+				if(clusterEntities!= null && !clusterEntities.isEmpty()) {
+					for (StandardEntity se : clusterEntities) {
+						clusterEntityIDs.add(se.getID());
+					}
+				}
+				if (clusterEntityIDs.contains(entity.getID())) needToSave = true;
 			}
 		}
 		return needToSave;
@@ -1072,6 +1078,7 @@ public class CSURoadDetector extends RoadDetector {
 			if (commandPolice.getTargetID() == null) {
 				return;
 			}
+			System.out.println("called Police :"+this.agentInfo.getID().getValue());
 			StandardEntity target = this.worldInfo.getEntity(commandPolice.getTargetID());
 			if (target instanceof Road || target instanceof Hydrant) {
 				if (!this.noNeedToClear.contains(target.getID())) {

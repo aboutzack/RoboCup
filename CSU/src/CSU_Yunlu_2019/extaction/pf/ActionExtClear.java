@@ -917,10 +917,10 @@ public class ActionExtClear extends ExtAction {
 			}
 
 			if (guideline != null) {
-//				Action action = moveToGuideLine(guideline,road);
-//				if (action != null) {
-//					return action;
-//				}
+				Action action = moveToGuideLine(guideline,road);
+				if (action != null) {
+					return action;
+				}
 				double agentX = police.getX();
 				double agentY = police.getY();
 				clearBlockade = null;
@@ -1180,10 +1180,10 @@ public class ActionExtClear extends ExtAction {
 		}
 
 		if (guideline != null) {
-//			Action action = moveToGuideLine(guideline,road);
-//			if (action != null) {
-//				return action;
-//			}
+			Action action = moveToGuideLine(guideline,road);
+			if (action != null) {
+				return action;
+			}
 			double agentX = police.getX();
 			double agentY = police.getY();
 			clearBlockade = null;
@@ -1364,7 +1364,7 @@ public class ActionExtClear extends ExtAction {
 		Point2D agent = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
 		Point2D closest = GeometryTools2D.getClosestPointOnSegment(guideline, agent);
 		double distance = this.getDistance(closest.getX(),closest.getY(), this.agentInfo.getX(), this.agentInfo.getY());
-		if(distance < 1000) {
+		if(distance < 1000 || distance > 3000) {
 			return null;
 		}else {
 			Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)
