@@ -29,6 +29,7 @@ public class AStarPathPlanning extends PathPlanning {
     private EntityID from;
     private List<EntityID> targets;
     private List<EntityID> result;
+    private EntityID resultTarget;
 
     private List<EntityID> previousPath = new ArrayList<>();
     private Area previousTarget = null;
@@ -146,6 +147,9 @@ public class AStarPathPlanning extends PathPlanning {
             Area target = previousTarget;
             planPath = new ArrayList<>(getPath(sourceArea, target));
             result = planPath;
+            if (!result.isEmpty()) {
+                resultTarget = target.getID();
+            }
         }
         if (result == null || result.isEmpty()) {
             targets.sort(new DistanceComparator(worldInfo, agentInfo));
@@ -154,12 +158,14 @@ public class AStarPathPlanning extends PathPlanning {
                 planPath = new ArrayList<>(getPath(sourceArea, target));
                 if (!planPath.isEmpty()) {
                     result = planPath;
+                    resultTarget = target1;
                     break;
                 }
             }
         }
         if (result != null && result.isEmpty()) {
             result = null;
+            resultTarget = null;
         }
         return this;
     }
@@ -437,5 +443,12 @@ public class AStarPathPlanning extends PathPlanning {
             int d2 = worldInfo.getDistance(worldInfo.getEntity(o2), agentInfo.me());
             return Integer.compare(d1, d2);
         }
+    }
+
+    /**
+     * 返回要去的target
+     */
+    public EntityID getResultTarget() {
+        return resultTarget;
     }
 }
