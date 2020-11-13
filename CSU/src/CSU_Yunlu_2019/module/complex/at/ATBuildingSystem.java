@@ -83,7 +83,6 @@ public class ATBuildingSystem {
                 }
                 if (!getByID(id).isBurning()) {
                     atb.setWayBurning(false, null);
-                    wayBurningBuilding.remove(atb);
                     toRemove.add(atb);
                 } else {
                     continue;

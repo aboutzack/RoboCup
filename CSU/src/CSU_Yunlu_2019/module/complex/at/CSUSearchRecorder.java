@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.at;
 
+import CSU_Yunlu_2019.module.algorithm.AStarPathPlanning;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
 import adf.agent.info.AgentInfo;
@@ -10,15 +11,15 @@ import adf.component.module.algorithm.PathPlanning;
 import rescuecore2.messages.Command;
 import rescuecore2.misc.Handy;
 import rescuecore2.misc.Pair;
-import rescuecore2.standard.entities.*;
+import rescuecore2.standard.entities.Building;
+import rescuecore2.standard.entities.Human;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.messages.AKSpeak;
 import rescuecore2.worldmodel.EntityID;
 
-import javax.sound.midi.Soundbank;
-import java.security.CryptoPrimitive;
 import java.util.*;
 
-import static rescuecore2.standard.entities.StandardEntityURN.*;
+import static rescuecore2.standard.entities.StandardEntityURN.BUILDING;
 
 /**
  * @author kyrieg
@@ -209,7 +210,12 @@ public class CSUSearchRecorder {
             this.pathPlanning.setDestination(set);
             List<EntityID> path = this.pathPlanning.calc().getResult();
             if(path != null && path.size() > 0){
-                target = path.get(path.size() - 1);//获取终点
+                if(pathPlanning instanceof AStarPathPlanning){
+                    AStarPathPlanning aspp = (AStarPathPlanning) pathPlanning;
+                    target = aspp.getResultTarget();
+                }else{
+                    target = path.get(path.size() - 1);//获取终点
+                }
                 if(target == null){
                     util.debugOverall("到null的路径终点为null.(impossible)");
                     return false;
