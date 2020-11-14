@@ -231,8 +231,8 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
                 * (scenarioInfo.getPerceptionLosMaxDistance() / 1000.0)
                 * Math.PI
                 * getScenarioAgents(scenarioInfo);
-        //开方，防止太
-        sendMessageAgentsRatio = Math.sqrt(mapSize / agentCoverageSize);
+        //开方，防止太大
+        sendMessageAgentsRatio = Math.min(1, Math.sqrt(mapSize / agentCoverageSize));
         System.out.println("sendMessageAgentsRatio: " + sendMessageAgentsRatio);
     }
 
