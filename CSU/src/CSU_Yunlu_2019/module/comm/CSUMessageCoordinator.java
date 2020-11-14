@@ -2,6 +2,7 @@ package CSU_Yunlu_2019.module.comm;
 
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.debugger.CountMessage;
+import CSU_Yunlu_2019.debugger.DebugHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.StandardMessage;
 import adf.agent.communication.standard.bundle.StandardMessagePriority;
@@ -12,9 +13,14 @@ import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.component.communication.CommunicationMessage;
 import adf.component.communication.MessageCoordinator;
+import rescuecore2.standard.entities.Civilian;
+import rescuecore2.standard.entities.Human;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
+import rescuecore2.worldmodel.EntityID;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
@@ -27,11 +33,20 @@ import java.util.List;
  */
 public class CSUMessageCoordinator extends MessageCoordinator {
 
+    private CSUChannelSubscriber csuChannelSubscriber;
+    private static int ALLOWED_TO_SEND_DISTANCE_THRESHOLD = 10000;
+
+    public CSUMessageCoordinator() {
+        this.csuChannelSubscriber = new CSUChannelSubscriber();
+    }
 
     @Override
     public void coordinate(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, MessageManager messageManager,
                            ArrayList<CommunicationMessage> sendMessageList, List<List<CommunicationMessage>> channelSendMessageList) {
 
+        if (csuChannelSubscriber.getSendMessageAgentsRatio() == 0) {
+            csuChannelSubscriber.initSendMessageAgentsRatio(worldInfo, scenarioInfo);
+        }
         // have different lists for every agent
         ArrayList<CommunicationMessage> policeMessages = new ArrayList<>();
         ArrayList<CommunicationMessage> ambulanceMessages = new ArrayList<>();
@@ -111,7 +126,14 @@ public class CSUMessageCoordinator extends MessageCoordinator {
             int[] channelSize = new int[scenarioInfo.getCommsChannelsCount() - 1];
 
             List<StandardEntityURN> priority = CSUChannelSubscriber.getPriority(scenarioInfo);
-
+            if (allowedToSendRadioMessage(worldInfo, agentInfo, scenarioInfo)) {
+                //do nothing
+            }else {
+                //only send commands
+                fireBrigadeMessages.removeIf(e -> !(e instanceof CommandPolice || e instanceof CommandFire || e instanceof CommandAmbulance));
+                policeMessages.removeIf(e -> !(e instanceof CommandPolice || e instanceof CommandFire || e instanceof CommandAmbulance));
+                ambulanceMessages.removeIf(e -> !(e instanceof CommandPolice || e instanceof CommandFire || e instanceof CommandAmbulance));
+            }
             //可能有重合的channel,因此按照优先级发送消息
             for (StandardEntityURN urn : priority) {
                 if (urn == StandardEntityURN.FIRE_BRIGADE || urn == StandardEntityURN.FIRE_STATION) {
@@ -167,7 +189,7 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         int[] channels = new int[maxChannelCount];
 
         for (int i = 0; i < maxChannelCount; i++) {
-            channels[i] = CSUChannelSubscriber.getChannelNumber(agentType, i, numChannels, agentInfo, worldInfo, scenarioInfo);
+            channels[i] = csuChannelSubscriber.getChannelNumber(agentType, i, numChannels, agentInfo, worldInfo, scenarioInfo);
         }
         return channels;
     }
@@ -195,7 +217,8 @@ public class CSUMessageCoordinator extends MessageCoordinator {
         int[] channels = getChannelsByAgentType(agentType, agentInfo, worldInfo, scenarioInfo, channelIndex);
         int channel = channels[channelIndex];
         int channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
-        int allocatedCapacity = channelCapacity / CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
+        int allocatedCapacity = (int) (channelCapacity /
+                (CSUChannelSubscriber.getScenarioAgents(scenarioInfo) * csuChannelSubscriber.getSendMessageAgentsRatio()));
         switch (agentType) {
             case FIRE_BRIGADE:
             case FIRE_STATION:
@@ -226,7 +249,8 @@ public class CSUMessageCoordinator extends MessageCoordinator {
                             if (channelIndex < channels.length) {
                                 channel = channels[channelIndex];
                                 channelCapacity = scenarioInfo.getCommsChannelBandwidth(channel);
-                                allocatedCapacity = channelCapacity / CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
+                                allocatedCapacity = (int) (channelCapacity /
+                                        (CSUChannelSubscriber.getScenarioAgents(scenarioInfo) * csuChannelSubscriber.getSendMessageAgentsRatio()));
                             }
                         } else if (!channelSendMessageList.get(channel).contains(smsg)) {
                             channelSendMessageList.get(channel).add(smsg);
@@ -238,6 +262,41 @@ public class CSUMessageCoordinator extends MessageCoordinator {
             }
         }
 //        System.out.println(agentType+": "+channelSendMessageList);
+    }
+
+    /**
+     * 在同一个position上,距离在视线范围之内,id最小的没有被埋的智能体才发送radio
+     *
+     */
+    private boolean allowedToSendRadioMessage(WorldInfo worldInfo, AgentInfo agentInfo, ScenarioInfo scenarioInfo) {
+        if (CSUChannelSubscriber.isBandWidthSufficient(scenarioInfo)) {
+            return true;
+        }
+        EntityID allowedToSendID = new EntityID(Integer.MAX_VALUE);
+        Collection<StandardEntity> objectIDsInRange = worldInfo.getObjectsInRange(agentInfo.getID(), scenarioInfo.getPerceptionLosMaxDistance());
+        for (StandardEntity entity : objectIDsInRange) {
+            if (entity instanceof Human && !(entity instanceof Civilian)) {
+                boolean notBuried = ((Human) entity).isBuriednessDefined() && ((Human) entity).getBuriedness() <= 0;
+                boolean inDistanceThreshold = worldInfo.getDistance(agentInfo.getID(), entity.getID()) < ALLOWED_TO_SEND_DISTANCE_THRESHOLD;
+                boolean inSameAreaAndSeenRange = worldInfo.getPosition(agentInfo.getID()).equals(worldInfo.getPosition(entity.getID())) &&
+                        worldInfo.getDistance(agentInfo.getID(), entity.getID()) < scenarioInfo.getPerceptionLosMaxDistance() * 0.5;
+
+
+                if (notBuried && (inDistanceThreshold || inSameAreaAndSeenRange)) {
+                    if (entity.getID().getValue() < allowedToSendID.getValue()) {
+                        allowedToSendID = entity.getID();
+                    }
+                }
+            }
+        }
+        if (DebugHelper.DEBUG_MODE) {
+            ArrayList<Integer> elements = new ArrayList<>();
+            if (!(allowedToSendID.getValue() == Integer.MAX_VALUE)) {
+                elements.add(allowedToSendID.getValue());
+            }
+            DebugHelper.VD_CLIENT.draw(agentInfo.getID().getValue(), "AllowedToSendRadio", elements);
+        }
+        return allowedToSendID.equals(agentInfo.getID());
     }
 
     /**

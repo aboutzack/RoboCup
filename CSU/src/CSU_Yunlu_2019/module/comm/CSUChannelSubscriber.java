@@ -11,7 +11,9 @@ import adf.agent.platoon.PlatoonFire;
 import adf.component.communication.ChannelSubscriber;
 import adf.sample.tactics.SampleTacticsFireBrigade;
 import rescuecore2.config.Config;
+import rescuecore2.misc.Pair;
 import rescuecore2.standard.entities.FireBrigade;
+import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.standard.entities.StandardWorldModel;
 import rescuecore2.worldmodel.EntityID;
@@ -34,14 +36,18 @@ import java.util.*;
  */
 public class CSUChannelSubscriber extends ChannelSubscriber {
 
-    private static final double FB_RATIO = 1.3;
-    private static final double PF_RATIO = 1.0;
+    private static final double FB_RATIO = 2.0;
+    private static final double PF_RATIO = 1.5;
     private static final double AT_RATIO = 1.0;
-
+    //需要发送消息的agent的比例
+    private double sendMessageAgentsRatio = 0;
 
     @Override
     public void subscribe(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
                           MessageManager messageManager) {
+        if (sendMessageAgentsRatio == 0) {
+            initSendMessageAgentsRatio(worldInfo, scenarioInfo);
+        }
         // subscribe only once at the beginning of kernel agents ignore util
         if (agentInfo.getTime() == scenarioInfo.getKernelAgentsIgnoreuntil()) {
             int numChannels = scenarioInfo.getCommsChannelsCount() - 1; // 0th channel is the voice channel
@@ -79,19 +85,19 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
         return worldInfo.getEntity(agentInfo.getID()).getStandardURN();
     }
 
-    public static int getChannelNumber(StandardEntityURN agentType, int channelIndex, int numChannels, AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
+    public int getChannelNumber(StandardEntityURN agentType, int channelIndex, int numChannels, AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
         int[] channels = getChannels(agentType, numChannels, agentInfo, worldInfo, scenarioInfo);
         return channels[channelIndex];
     }
 
-    private static int[] getChannels(StandardEntityURN agentType, int numChannels, AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
+    private int[] getChannels(StandardEntityURN agentType, int numChannels, AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
         if (numChannels < 1) {
             return new int[1];
         }
         int scenarioAgents = CSUChannelSubscriber.getScenarioAgents(scenarioInfo);
-        double fbRequiredBandwidth = CSUConstants.MEAN_FB_MESSAGE_BYTE_SIZE * scenarioAgents;
-        double pfRequiredBandwidth = CSUConstants.MEAN_PF_MESSAGE_BYTE_SIZE * scenarioAgents;
-        double atRequiredBandwidth = CSUConstants.MEAN_AT_MESSAGE_BYTE_SIZE * scenarioAgents;
+        double fbRequiredBandwidth = CSUConstants.MEAN_FB_MESSAGE_BYTE_SIZE * scenarioAgents * getSendMessageAgentsRatio();
+        double pfRequiredBandwidth = CSUConstants.MEAN_PF_MESSAGE_BYTE_SIZE * scenarioAgents * getSendMessageAgentsRatio();
+        double atRequiredBandwidth = CSUConstants.MEAN_AT_MESSAGE_BYTE_SIZE * scenarioAgents * getSendMessageAgentsRatio();
         double[] requiredBandWidthRemain = new double[3];
         requiredBandWidthRemain[0] = fbRequiredBandwidth;
         requiredBandWidthRemain[1] = pfRequiredBandwidth;
@@ -198,6 +204,64 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
         return radioBandWidthMap;
     }
 
+    public void initSendMessageAgentsRatio(WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
+        if (isBandWidthSufficient(scenarioInfo)) {
+            sendMessageAgentsRatio = 1.0;
+            System.out.println("sendMessageAgentsRatio Sufficient: " + sendMessageAgentsRatio);
+            return;
+        }
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        Pair<Integer, Integer> pos;
+        for (StandardEntity standardEntity : worldInfo.getAllEntities()) {
+            pos = worldInfo.getLocation(standardEntity);
+            if (pos.first() < minX)
+                minX = pos.first();
+            if (pos.second() < minY)
+                minY = pos.second();
+            if (pos.first() > maxX)
+                maxX = pos.first();
+            if (pos.second() > maxY)
+                maxY = pos.second();
+        }
+        double mapSize = ((maxX - minX) / 1000.0) * ((maxY - minY) / 1000.0);
+        double agentCoverageSize = (scenarioInfo.getPerceptionLosMaxDistance() / 1000.0)
+                * (scenarioInfo.getPerceptionLosMaxDistance() / 1000.0)
+                * Math.PI
+                * getScenarioAgents(scenarioInfo);
+        //开方，防止太
+        sendMessageAgentsRatio = Math.sqrt(mapSize / agentCoverageSize);
+        System.out.println("sendMessageAgentsRatio: " + sendMessageAgentsRatio);
+    }
+
+    public static boolean isBandWidthSufficient(ScenarioInfo scenarioInfo) {
+        double fbRequiredBandwidth = CSUConstants.MEAN_FB_MESSAGE_BYTE_SIZE * getScenarioAgents(scenarioInfo);
+        double pfRequiredBandwidth = CSUConstants.MEAN_PF_MESSAGE_BYTE_SIZE * getScenarioAgents(scenarioInfo);
+        double atRequiredBandwidth = CSUConstants.MEAN_AT_MESSAGE_BYTE_SIZE * getScenarioAgents(scenarioInfo);
+        int totalDistributableRadioBandWith = getTotalDistributableRadioBandWith(scenarioInfo);
+        return totalDistributableRadioBandWith > fbRequiredBandwidth + pfRequiredBandwidth + atRequiredBandwidth;
+    }
+
+    /**
+     * eg.每种platoon可以分配2个频道，则返回前2*3个最大的频道带宽之和。即分配给智能体最多带宽之和
+     */
+    private static int getTotalDistributableRadioBandWith(ScenarioInfo scenarioInfo) {
+        Map<Integer, Integer> radioBandWidthRemainMap = getRadioBandWidthMap(scenarioInfo.getCommsChannelsCount() - 1, scenarioInfo);
+        ArrayList<Map.Entry<Integer, Integer>> sortedRadioBandWidthRemain = new ArrayList<>(radioBandWidthRemainMap.entrySet());
+        int commsChannelsMaxPlatoon = scenarioInfo.getCommsChannelsMaxPlatoon();
+        int result = 0;
+        for (int i = 0; i < sortedRadioBandWidthRemain.size() && i < commsChannelsMaxPlatoon * 3; i++) {
+            result += sortedRadioBandWidthRemain.get(i).getValue();
+        }
+        return result;
+    }
+
+    public double getSendMessageAgentsRatio() {
+        return this.sendMessageAgentsRatio;
+    }
+
     /**
      * 分配频道的优先级
      *
@@ -248,14 +312,15 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
 
         int numChannels = scenarioInfo.getCommsChannelsCount() - 1;
         int maxChannels = scenarioInfo.getCommsChannelsMaxPlatoon();
+        CSUChannelSubscriber subscriber = new CSUChannelSubscriber();
         for (int i = 0; i < maxChannels; i++) {
-            System.out.println("FIREBRIGADE-" + i + ":" + getChannelNumber(StandardEntityURN.FIRE_BRIGADE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
+            System.out.println("FIREBRIGADE-" + i + ":" + subscriber.getChannelNumber(StandardEntityURN.FIRE_BRIGADE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
         }
         for (int i = 0; i < maxChannels; i++) {
-            System.out.println("POLICE-" + i + ":" + getChannelNumber(StandardEntityURN.POLICE_OFFICE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
+            System.out.println("POLICE-" + i + ":" + subscriber.getChannelNumber(StandardEntityURN.POLICE_OFFICE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
         }
         for (int i = 0; i < maxChannels; i++) {
-            System.out.println("AMB-" + i + ":" + getChannelNumber(StandardEntityURN.AMBULANCE_CENTRE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
+            System.out.println("AMB-" + i + ":" + subscriber.getChannelNumber(StandardEntityURN.AMBULANCE_CENTRE, i, numChannels, agentInfo, worldInfo, scenarioInfo));
         }
     }
 }
