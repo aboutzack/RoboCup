@@ -99,6 +99,7 @@ public class CSUWorldHelper extends AbstractModule {
 
     //for search
     private EntityID searchTarget;
+    private Map<EntityID, Integer> lastSendTime;
 
     public CSUWorldHelper(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
         super(ai, wi, si, moduleManager, developData);
@@ -131,6 +132,7 @@ public class CSUWorldHelper extends AbstractModule {
         buildingXYMap = new HashMap<>();
 
         propertyTimeMap = new HashMap<>();
+        lastSendTime = new HashMap<>();
 
         config = new ConfigConstants(scenarioInfo.getRawConfig(), this);
         graph = moduleManager.getModule("GraphHelper.Default", CSUConstants.GRAPH_HELPER_DEFAULT);
@@ -230,6 +232,7 @@ public class CSUWorldHelper extends AbstractModule {
                     csuBuilding.setIgnitionTime(agentInfo.getTime());
                 }
                 csuBuilding.setLastSeenTime(agentInfo.getTime());
+                csuBuilding.setLastUpdateTime(agentInfo.getTime());
 
                 //Update seen building properties
                 for (Property p : worldInfo.getChanged().getChangedProperties(building.getID())) {
@@ -473,6 +476,8 @@ public class CSUWorldHelper extends AbstractModule {
                             propertyTimeMap.put(building.getFierynessProperty(), receivedTime);
                             propertyTimeMap.put(building.getTemperatureProperty(), receivedTime);
                         }
+                        CSUBuilding csuBuilding = getCsuBuilding(mb.getBuildingID());
+                        csuBuilding.setLastUpdateTime(receivedTime);
                     }
                 }
             } else if (message instanceof MessageRoad) {
@@ -498,10 +503,10 @@ public class CSUWorldHelper extends AbstractModule {
     }
 
     /**
-    * @Description: 发送所有MyEdges都不可通的road
-    * @Author: Guanyu-Cai
-    * @Date: 3/22/20
-    */
+     * @Description: 发送所有MyEdges都不可通的road
+     * @Author: Guanyu-Cai
+     * @Date: 3/22/20
+     */
     private void sendMessageRoad(MessageManager messageManager) {
         //发送roadSeen中每条road
         for (EntityID id : roadsSeen) {
@@ -515,7 +520,10 @@ public class CSUWorldHelper extends AbstractModule {
                 }
             }
             if (!passable) {
-                messageManager.addMessage(new MessageRoad(true, road, null, false, false));
+                if (!lastSendTime.containsKey(id) || agentInfo.getTime() - lastSendTime.get(id) > 5) {
+                    messageManager.addMessage(new MessageRoad(true, road, null, false, false));
+                    lastSendTime.put(id, agentInfo.getTime());
+                }
             }
         }
     }
@@ -914,11 +922,11 @@ public class CSUWorldHelper extends AbstractModule {
         return selfBuilding;
     }
 
-    public Pair<Integer, Integer> getLocation (StandardEntity entity) {
+    public Pair<Integer, Integer> getLocation(StandardEntity entity) {
         return worldInfo.getLocation(entity);
     }
 
-    public Pair<Integer, Integer> getLocation (EntityID entityID) {
+    public Pair<Integer, Integer> getLocation(EntityID entityID) {
         return worldInfo.getLocation(entityID);
     }
 

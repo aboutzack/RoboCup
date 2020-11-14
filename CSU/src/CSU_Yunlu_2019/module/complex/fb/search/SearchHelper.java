@@ -76,9 +76,11 @@ public class SearchHelper extends AbstractModule {
     public boolean isTimeToSearch(EntityID target) {
 //        int distance = world.getDistance(agentInfo.getID(), target);
         int lastSeenTime = world.getCsuBuilding(target).getLastSeenTime();
+        int lastUpdateTime = world.getCsuBuilding(target).getLastUpdateTime();
 //        return (world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN) &&
 //                (distance < scenarioInfo.getFireExtinguishMaxDistance());
-        return world.getTime() - lastSeenTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
+        return world.getTime() - lastSeenTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN &&
+                world.getTime() - lastUpdateTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
     }
 
     public void setTarget(FireBrigadeTarget fireBrigadeTarget) {

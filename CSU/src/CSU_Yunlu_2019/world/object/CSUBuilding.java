@@ -93,7 +93,7 @@ public class CSUBuilding {
 	private double hitRate = 0;
 	protected int totalHits; // totalHits * 1.0 / totalRays
 	private int lastSeenTime; //上次看到的时间
-
+	private int lastUpdateTime; //上次看到或者收到的时间
 
 
 	public static final EnumSet<StandardEntityConstants.Fieryness> ESTIMATED_BURNING = EnumSet
@@ -1085,5 +1085,13 @@ public class CSUBuilding {
 
 	public void setLastSeenTime(int lastSeenTime) {
 		this.lastSeenTime = lastSeenTime;
+	}
+
+	public int getLastUpdateTime() {
+		return lastUpdateTime;
+	}
+
+	public void setLastUpdateTime(int lastUpdateTime) {
+		this.lastUpdateTime = lastUpdateTime;
 	}
 }
