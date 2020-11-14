@@ -210,7 +210,7 @@ public class ZJUBaseBuildingCostComputer {
         if (gasStation != null
                 && gasBuilding.isFierynessDefined()
                 && (gasBuilding.getFieryness() == 0 || gasBuilding.getFieryness() == 4)
-                && gasBuilding.getTemperature() < 40) {
+                && gasBuilding.isTemperatureDefined() && gasBuilding.getTemperature() < 40) {
             int distanceToGasStation = world.getWorldInfo().getDistance(gasStation, fireBuilding.getSelfBuilding());
             int maxDistance = Math.max(world.getScenarioInfo().getPerceptionLosMaxDistance(), world.getScenarioInfo().getFireExtinguishMaxDistance());
 //            int diff = maxDistance - distanceToGasStation;
