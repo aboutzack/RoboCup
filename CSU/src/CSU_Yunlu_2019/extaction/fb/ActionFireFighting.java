@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class ActionFireFighting extends ExtAction {
+    private final double hydrantRefillRateRatio;
     private PathPlanning pathPlanning;
     private MessageManager messageManager;
 
@@ -102,6 +103,7 @@ public class ActionFireFighting extends ExtAction {
             world = moduleManager.getModule("WorldHelper.Default", CSUConstants.WORLD_HELPER_DEFAULT);
         }
         searchHelper = moduleManager.getModule("SearchHelper.Default", "CSU_Yunlu_2019.module.complex.fb.search.SearchHelper");
+        this.hydrantRefillRateRatio = Math.max(1, 1.0 * this.worldInfo.getEntityIDsOfType(HYDRANT).size() / scenarioInfo.getScenarioAgentsFb());
     }
 
     @Override
@@ -482,7 +484,7 @@ public class ActionFireFighting extends ExtAction {
             if (worldInfo.getEntity(entityID) instanceof Refuge) {
                 refillCost = (scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / refillRefugeRate + 1;
             } else {
-                refillCost = (scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / refillHydrantRate *  + 1;
+                refillCost = (int) ((scenarioInfo.getFireTankMaximum() - agentInfo.getWater()) / (refillHydrantRate * hydrantRefillRateRatio)) + 1;
             }
             refillTimeCost.put(entityID, roadCost + refillCost);
         });
