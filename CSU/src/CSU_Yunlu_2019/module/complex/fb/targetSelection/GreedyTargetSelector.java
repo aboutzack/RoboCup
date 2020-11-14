@@ -2,6 +2,7 @@ package CSU_Yunlu_2019.module.complex.fb.targetSelection;
 
 import CSU_Yunlu_2019.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2019.module.algorithm.fb.FireCluster;
+import CSU_Yunlu_2019.module.complex.fb.search.SearchHelper;
 import CSU_Yunlu_2019.module.complex.fb.tools.ZJUBaseBuildingCostComputer;
 import CSU_Yunlu_2019.util.ConstantComparators;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
@@ -41,7 +42,7 @@ public class GreedyTargetSelector extends TargetSelector {
                     e.isTemperatureDefined() && e.getTemperature() > 45);
         });
         for (Building building : fireBuildingsInRange) {
-            if (buildingsInCluster.contains(building)) {
+            if (buildingsInCluster.contains(building) && !SearchHelper.isTimeToSearch(world, building.getID())) {
                 lastTarget = target;
                 target = world.getCsuBuilding(building);
                 fireBrigadeTarget = new FireBrigadeTarget(targetCluster, target);

@@ -3,6 +3,7 @@ package CSU_Yunlu_2019.module.complex.fb.search;
 import CSU_Yunlu_2019.CSUConstants;
 import CSU_Yunlu_2019.module.complex.fb.targetSelection.FireBrigadeTarget;
 import CSU_Yunlu_2019.world.CSUFireBrigadeWorld;
+import CSU_Yunlu_2019.world.CSUWorldHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -66,19 +67,15 @@ public class SearchHelper extends AbstractModule {
 
     public boolean isTimeToSearch(FireBrigadeTarget fireBrigadeTarget) {
         return isTimeToSearch(fireBrigadeTarget.getCsuBuilding().getId());
-//        int distance = world.getDistance(agentInfo.getID(), fireBrigadeTarget.getCsuBuilding().getId());
-//        int lastSeenTime = fireBrigadeTarget.getCsuBuilding().getLastSeenTime();
-//        return (world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN) &&
-//                (distance < scenarioInfo.getFireExtinguishMaxDistance());
-//        return world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
     }
 
     public boolean isTimeToSearch(EntityID target) {
-//        int distance = world.getDistance(agentInfo.getID(), target);
+        return SearchHelper.isTimeToSearch(world, target);
+    }
+
+    public static boolean isTimeToSearch(CSUWorldHelper world, EntityID target) {
         int lastSeenTime = world.getCsuBuilding(target).getLastSeenTime();
         int lastUpdateTime = world.getCsuBuilding(target).getLastUpdateTime();
-//        return (world.getTime() - lastSeenTime > MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN) &&
-//                (distance < scenarioInfo.getFireExtinguishMaxDistance());
         return world.getTime() - lastSeenTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN &&
                 world.getTime() - lastUpdateTime > CSUConstants.MAX_SEARCH_INTERVAL_BETWEEN_LAST_SEEN;
     }
