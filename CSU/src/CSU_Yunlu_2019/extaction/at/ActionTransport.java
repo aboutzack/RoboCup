@@ -21,7 +21,6 @@ import rescuecore2.config.NoSuchConfigOptionException;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
-import javax.sound.midi.Soundbank;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +44,7 @@ public class ActionTransport extends ExtAction {
 	//----------------------------------------------------------------------------------------
 	//private DebugLog logger;
 
+    private static final boolean debug = false;
 
 	public ActionTransport(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
 						   ModuleManager moduleManager, DevelopData developData) {
@@ -157,7 +157,7 @@ public class ActionTransport extends ExtAction {
 			//在新target里找refuge
 			this.result = this.calcRefugeAction(me, this.pathPlanning, targets, false);
 			if(result == null) {
-			    if(CSUConstants.DEBUG_AT_SEARCH){
+			    if(CSUConstants.DEBUG_AT_SEARCH && debug){
                     System.out.println("要回避难所但是找不到避难所");
                 }
             }
@@ -232,33 +232,35 @@ public class ActionTransport extends ExtAction {
 			Human human = (Human) targetEntity;
 			//如果位置未知，不救
 			if (!human.isPositionDefined()) {
-                if(CSUConstants.DEBUG_AT_SEARCH){
+                if(CSUConstants.DEBUG_AT_SEARCH && debug){
                     System.out.println(agent.getID()+"不知道"+human.getID()+"的位置，不救");
                 }
 				return null;
 			}
 			// 如果人已经死了，没法救了
 			if (human.isHPDefined() && human.getHP() == 0 ) {
-                if(CSUConstants.DEBUG_AT_SEARCH){
+                if(CSUConstants.DEBUG_AT_SEARCH && debug){
                     System.out.println(agent.getID()+"觉得"+human.getID()+"已经死了，不救");
                 }
 				return null;
 			}
 			//获取人的位置
 			EntityID targetPosition = human.getPosition();
-            System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"位置为:"
-                    +agent.getPosition()+",目标("+human.getID()+")位置为:"+human.getPosition());
+            if(CSUConstants.DEBUG_AT_SEARCH && debug){
+                System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"位置为:"
+                        +agent.getPosition()+",目标("+human.getID()+")位置为:"+human.getPosition());
+            }
 			//如果agent走到了目标位置
 			if (agentPosition.getValue() == targetPosition.getValue()) {
 				//如果human还被埋着，先把它挖出来
 				if (human.isBuriednessDefined() && human.getBuriedness() > 0) {
-				    if(CSUConstants.DEBUG_AT_SEARCH){
+				    if(CSUConstants.DEBUG_AT_SEARCH && debug){
                         System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"觉得"+human.getID()+"被埋了，挖出来");
                     }
 					return new ActionRescue(human);
 					//已经挖出来了，如果是civilian，背他去refuge
 				} else if (human.getStandardURN() == CIVILIAN) {
-                    if (CSUConstants.DEBUG_AT_SEARCH) {
+                    if (CSUConstants.DEBUG_AT_SEARCH && debug) {
                         System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"觉得"+human.getID()+"已经挖出来了，背起来");
                     }
 					return new ActionLoad(human.getID());
@@ -267,19 +269,19 @@ public class ActionTransport extends ExtAction {
 			} else {
 //				List<EntityID> path = pathPlanning.getResult(agentPosition, targetPosition);// 旧版本，有问题
                 List<EntityID> path = pathPlanning.setFrom(agentPosition).setDestination(targetPosition).getResult();
-                if(CSUConstants.DEBUG_AT_SEARCH){
+                if(CSUConstants.DEBUG_AT_SEARCH && debug){
                     System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"觉得还没走到"+human.getID()+"的位置，继续走");
                 }
 				if (path != null && path.size() > 0) {
                     Action action = getMoveAction(path);
-                    if(CSUConstants.DEBUG_AT_SEARCH){
+                    if(CSUConstants.DEBUG_AT_SEARCH && debug){
                         if(path!= null && action == null){
                             System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+":way为:"+path+",action却为null");
                         }
                     }
 					return action;
 				}
-                if(CSUConstants.DEBUG_AT_SEARCH){
+                if(CSUConstants.DEBUG_AT_SEARCH && debug){
                     System.out.println("[第"+agentInfo.getTime()+"回合]   "+agent.getID()+"觉得还没走到"+human.getID()+"的位置，但是没路到");
                 }
 			}
