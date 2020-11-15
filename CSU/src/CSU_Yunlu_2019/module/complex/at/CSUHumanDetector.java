@@ -269,6 +269,16 @@ public class CSUHumanDetector extends HumanDetector {
         //尝试版11.15
         Set<EntityID> set = worldInfo.getChanged().getChangedEntities();
         logHelper.writeAndFlush("changedEntity:"+set);
+
+//        //特判：如果在建筑里，里面有人就救
+//        EntityID entityID = agentInfo.getPosition();
+//        StandardEntity standardEntity = worldInfo.getEntity(entityID);
+//        if(standardEntity instanceof Building){
+//            Collection<Human> buriedHuman = worldInfo.getBuriedHumans(entityID);
+//            logHelper.writeAndFlush("buriedHuman:"+buriedHuman);
+//        }
+//        //特判：如果在建筑里，里面有人就救
+
         for (EntityID id : set) {
             StandardEntity entity = worldInfo.getEntity(id);
             if(entity == null){
