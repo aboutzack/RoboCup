@@ -808,21 +808,21 @@ public class CSURoadDetector extends RoadDetector {
 					this.noNeedToClear.add(road.getID());
 					continue;
 				}
-//				else{
-//					if(this.needClearCommonRoad) {
-//						Boolean buildingFlag = false;
-//						for (EntityID neighbourid : road.getNeighbours()) {
-//							StandardEntity neighbour = this.worldInfo.getEntity(neighbourid);
-//							if (neighbour instanceof Building) {
-//								buildingFlag = true;
-//								break;
-//							}
-//						}
-//						if (!buildingFlag) {
-//							this.halfLowLevelBlockedRoad.add(road.getID());
-//						}
-//					}
-//				}
+				else{
+					if(this.needClearCommonRoad) {
+						Boolean buildingFlag = false;
+						for (EntityID neighbourid : road.getNeighbours()) {
+							StandardEntity neighbour = this.worldInfo.getEntity(neighbourid);
+							if (neighbour instanceof Building) {
+								buildingFlag = true;
+								break;
+							}
+						}
+						if (!buildingFlag) {
+							this.halfLowLevelBlockedRoad.add(road.getID());
+						}
+					}
+				}
 			}
 		}
 	}
