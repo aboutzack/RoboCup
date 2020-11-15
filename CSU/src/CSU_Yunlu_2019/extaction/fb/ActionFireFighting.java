@@ -315,7 +315,7 @@ public class ActionFireFighting extends ExtAction {
             }
         }
 
-        System.err.println("can't find position to extinguish: " + target.getValue());
+        System.err.println(agentInfo.getID() + " can't find position to extinguish: " + target.getValue());
         return null;
 
 
