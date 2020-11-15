@@ -252,7 +252,7 @@ public class CSUSearchForFire extends Search {
 						}
 					}
 				}
-				if (this.clusterCount > this.clustering.getClusterNumber() / 5) {
+				if (this.clusterCount > this.clustering.getClusterNumber() / 2) {
 					System.out.println("back to my cluster");
 					return this.clustering.getClusterIndex(this.agentInfo.getID());
 				}

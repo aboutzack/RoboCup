@@ -58,7 +58,8 @@ public class CSURoadDetector extends RoadDetector {
 
 	private int roadsize;
 
-	private Set<EntityID> targetAreas = new HashSet<>();
+	private Set<EntityID> firstTargetAreas = new HashSet<>();
+	private Set<EntityID> secondTargetAreas = new HashSet<>();
 	private PathPlanning pathPlanning;
 	private Clustering clustering;
 	private EntityID result = null;
@@ -264,12 +265,12 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
-//		if(this.agentInfo.getID().getValue() == 922678578) {
-//			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
-//			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
-//			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
-//			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
-//			System.out.println("targetRoadsize:" + this.targetAreas.size());
+//		if(this.agentInfo.getID().getValue() == 2017974409) {
+////			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
+////			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
+////			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
+////			System.out.println("lowsize:" + this.lowLevelBlockedRoad.size());
+////			System.out.println("targetRoadsize:" + this.targetAreas.size());
 //			if(this.result!=null){
 //				System.out.println("result:"+this.result.getValue());
 //				if(this.noNeedToClear.contains(this.result)){
@@ -297,12 +298,6 @@ public class CSURoadDetector extends RoadDetector {
 //			System.out.println();
 //		}
 
-//		for(StandardEntity se : this.worldInfo.getEntitiesOfType(ROAD)) {
-//			if (se.getID().getValue() == 199333) {
-//				System.out.println("has 199333 road");
-//				return this.getPathTo(this.agentInfo.getPosition(), se.getID());
-//			}
-//		}
 
 		if (agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil() + 5 && !this.arrive_flag)
 			this.Get_To_Refuge(positionID);
@@ -326,7 +321,7 @@ public class CSURoadDetector extends RoadDetector {
 		if (!this.SOSroad.isEmpty()) {
 			List<EntityID> sortList = new ArrayList<>(this.SOSroad);
 			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
-			return this.getPathTo(positionID, sortList.get(sortList.size() - 1));
+			return this.getPathTo(positionID, sortList.get(0));
 		}
 
 		//topLevelBlockedRoad
@@ -352,6 +347,7 @@ public class CSURoadDetector extends RoadDetector {
 
 
 
+
 		//halfTopLevelBlockedRoad
 		if (this.result != null && this.halfTopLevelBlockedRoad.contains(this.result)
 				&& !this.noNeedToClear.contains(this.result)) {
@@ -372,6 +368,7 @@ public class CSURoadDetector extends RoadDetector {
 				}
 			}
 		}
+
 
 
 		//midLevelBlockedRoad
@@ -396,6 +393,8 @@ public class CSURoadDetector extends RoadDetector {
 		}
 
 
+
+
 		//halfLowLevelBlockedRoad
 		if (this.result != null && this.halfLowLevelBlockedRoad.contains(this.result)
 				&& !this.noNeedToClear.contains(this.result)) {
@@ -416,6 +415,7 @@ public class CSURoadDetector extends RoadDetector {
 				}
 			}
 		}
+
 
 		//lowLevelBlockedRoad
 		if (this.result != null && this.lowLevelBlockedRoad.contains(this.result)
@@ -438,11 +438,14 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
+
+
 		StandardEntity position = this.worldInfo.getEntity(this.agentInfo.getPosition());
 		if (position instanceof Road || position instanceof Hydrant) {
 			Road road = (Road) position;
 			if (this.isRoadPassable(road)) {
 				this.noNeedToClear.add(road.getID());
+
 			}
 		}
 
@@ -454,7 +457,11 @@ public class CSURoadDetector extends RoadDetector {
 
 	private RoadDetector getResultWhenNull() {
 		if (this.agentInfo.getTime() > scenarioInfo.getKernelAgentsIgnoreuntil()) {
-			if (this.result != null && this.targetAreas.contains(this.result)
+			if (this.result != null && this.firstTargetAreas.contains(this.result)
+					&& !this.noNeedToClear.contains(this.result)) {
+				return this;
+			}
+			if (this.result != null && this.secondTargetAreas.contains(this.result)
 					&& !this.noNeedToClear.contains(this.result)) {
 				return this;
 			}
@@ -473,13 +480,13 @@ public class CSURoadDetector extends RoadDetector {
 					}
 					StandardEntity positionEntity = worldInfo.getPosition(civilian);
 					if (clusterEntities.contains(positionEntity)) {
-						if (!(positionEntity instanceof Refuge) && (positionEntity instanceof Building)) {
+						if (positionEntity instanceof Building) {
 							Building building = (Building) positionEntity;
 							for (EntityID neighbourId : building.getNeighbours()) {
 								StandardEntity neighbour = this.worldInfo.getEntity(neighbourId);
 								if (neighbour instanceof Road) {
 									if (!this.noNeedToClear.contains(neighbour.getID())) {
-										this.targetAreas.add(neighbourId);
+										this.firstTargetAreas.add(neighbourId);
 									}
 								}
 							}
@@ -501,33 +508,42 @@ public class CSURoadDetector extends RoadDetector {
 								StandardEntity neighbour = this.worldInfo.getEntity(neighbourId);
 								if (neighbour instanceof Road || neighbour instanceof Hydrant) {
 									if (!this.noNeedToClear.contains(neighbour.getID())) {
-										this.targetAreas.add(neighbourId);
+										this.firstTargetAreas.add(neighbourId);
 									}
 								}
 							}
 						} else if (positionEntity instanceof Road || positionEntity instanceof Hydrant) {
 							Road road = (Road) positionEntity;
 							if (!this.noNeedToClear.contains(road.getID())) {
-								this.targetAreas.add(road.getID());
+								this.firstTargetAreas.add(road.getID());
 							}
 						}
 					}
 				}
 
-				//建筑入口与普通道路
+
+
+
+				//建筑入口
 				for (StandardEntity se : clusterEntities) {
 					if (se instanceof Building) {
 						for (EntityID id : ((Building) se).getNeighbours()) {
 							StandardEntity neighbour = this.worldInfo.getEntity(id);
-							if (neighbour instanceof Road) {
+							if (neighbour instanceof Road || neighbour instanceof Hydrant) {
 								if (!this.noNeedToClear.contains(id)) {
-									this.targetAreas.add(id);
+									this.secondTargetAreas.add(id);
 								}
 							}
 						}
-					} else if (se instanceof Road) {
-						if (!this.noNeedToClear.contains(se.getID())) {
-							this.targetAreas.add(se.getID());
+					}
+				}
+
+				//common roads
+				for (StandardEntity se : clusterEntities) {
+					if (se instanceof Road || se instanceof Hydrant) {
+						if (!this.noNeedToClear.contains(se.getID())
+								&& !this.secondTargetAreas.contains(se.getID())) {
+							this.firstTargetAreas.add(se.getID());
 						}
 					}
 				}
@@ -537,7 +553,8 @@ public class CSURoadDetector extends RoadDetector {
 					if (entity instanceof Road || entity instanceof Hydrant) {
 						Road road = (Road) entity;
 						if (this.isRoadPassable(road)) {
-							this.targetAreas.remove(road.getID());
+							this.firstTargetAreas.remove(road.getID());
+							this.secondTargetAreas.remove(road.getID());
 							this.noNeedToClear.add(road.getID());
 						}
 					}
@@ -549,13 +566,18 @@ public class CSURoadDetector extends RoadDetector {
 					for (EntityID id : ((Building) e).getNeighbours()) {
 						StandardEntity neighbour = this.worldInfo.getEntity(id);
 						if (neighbour instanceof Road) {
-							this.targetAreas.add(id);
+							this.firstTargetAreas.add(id);
 						}
 					}
 				}
 			}
-			if (this.targetAreas != null && !this.targetAreas.isEmpty()) {
-				List<EntityID> sortList = new ArrayList<>(this.targetAreas);
+			if (this.firstTargetAreas != null && !this.firstTargetAreas.isEmpty()) {
+				List<EntityID> sortList = new ArrayList<>(this.firstTargetAreas);
+				sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+				return this.getPathTo(this.agentInfo.getPosition(),sortList.get(0));
+			}
+			if (this.secondTargetAreas != null && !this.secondTargetAreas.isEmpty()) {
+				List<EntityID> sortList = new ArrayList<>(this.secondTargetAreas);
 				sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
 				return this.getPathTo(this.agentInfo.getPosition(),sortList.get(0));
 			}
@@ -632,6 +654,30 @@ public class CSURoadDetector extends RoadDetector {
 			return this;
 		}
 		this.guidelineCreator.preparate();
+		this.judgeRoad = guidelineCreator.getJudgeRoad();
+
+		int policeCount = 1;
+		double agentX = this.agentInfo.getX();
+		double agentY = this.agentInfo.getY();
+		for(StandardEntity se : this.worldInfo.getEntitiesOfType(POLICE_FORCE)){
+			PoliceForce police = (PoliceForce) se;
+			if(!police.getID().equals(this.agentInfo.getID())){
+				if(agentX > police.getX() - 30000 && agentX < police.getX() + 30000
+						&& agentY > police.getY() - 30000 && agentY < police.getY() + 30000){
+					++policeCount;
+				}
+			}
+		}
+		if(policeCount > 5){
+			this.needClearCommonRoad = false;
+		}
+		if(this.needClearCommonRoad){
+			System.out.println("need clear common");
+		}else{
+			System.out.println("NO NEED TO CLEAR");
+		}
+
+
 		return this;
 	}
 
@@ -664,9 +710,9 @@ public class CSURoadDetector extends RoadDetector {
 		//Road road = (Road) this.worldInfo.getEntity(id);
 		for (EntityID neighbor : area.getNeighbours()) {
 			Entity entity = this.worldInfo.getEntity(neighbor);
-			if (entity instanceof Road) {
+			if (entity instanceof Road || entity instanceof Hydrant) {
 				Road road = (Road) entity;
-				if (!this.isRoadPassable(road))
+				if (!this.isRoadPassable(road) && !this.noNeedToClear.contains(road.getID()))
 					all_Bloacked_Entrance.add(neighbor);
 			}
 		}
@@ -694,6 +740,26 @@ public class CSURoadDetector extends RoadDetector {
 				}
 			}
 
+			if(entity != null && entity instanceof GasStation) {
+				Collection<StandardEntity> clusterEntities = null;
+				if (this.clustering != null) {
+					int clusterIndex = this.clustering.getClusterIndex(entity.getID());
+					if (clusterIndex != -1) {
+						clusterEntities = this.clustering.getClusterEntities(clusterIndex);
+					}
+					if(!clusterEntities.isEmpty()) {
+						for (StandardEntity se : clusterEntities) {
+							if (se instanceof Road || se instanceof Hydrant) {
+								Road road = (Road) se;
+								double dis = this.worldInfo.getDistance(road.getID(),entity.getID());
+								if(dis < 50000 && ! this.isRoadPassable(road) && !this.noNeedToClear.contains(road)){
+									this.topLevelBlockedRoad.add(road.getID());
+								}
+							}
+						}
+					}
+				}
+			}
 
 
 			//firebrigade和ambulanceteam
@@ -725,9 +791,9 @@ public class CSURoadDetector extends RoadDetector {
 					if (this.is_agent_stucked(human, (Road) positionEntity) || this.is_agent_Buried(human, (Road) positionEntity)) {
 						this.midLevelBlockedRoad.add(position);
 					}
-				} else if (!(positionEntity instanceof Refuge) && positionEntity instanceof Building) {
+				} else if (positionEntity instanceof Building) {
 					Set<EntityID> entrances = this.get_all_Bloacked_Entrance_of_Building((Building) positionEntity);
-					this.lowLevelBlockedRoad.addAll(entrances);
+					this.midLevelBlockedRoad.addAll(entrances);
 				}
 			}
 //			road
@@ -742,21 +808,21 @@ public class CSURoadDetector extends RoadDetector {
 					this.noNeedToClear.add(road.getID());
 					continue;
 				}
-				else{
-					if(this.needClearCommonRoad) {
-						Boolean buildingFlag = false;
-						for (EntityID neighbourid : road.getNeighbours()) {
-							StandardEntity neighbour = this.worldInfo.getEntity(neighbourid);
-							if (neighbour instanceof Building) {
-								buildingFlag = true;
-								break;
-							}
-						}
-						if (!buildingFlag) {
-							this.halfLowLevelBlockedRoad.add(road.getID());
-						}
-					}
-				}
+//				else{
+//					if(this.needClearCommonRoad) {
+//						Boolean buildingFlag = false;
+//						for (EntityID neighbourid : road.getNeighbours()) {
+//							StandardEntity neighbour = this.worldInfo.getEntity(neighbourid);
+//							if (neighbour instanceof Building) {
+//								buildingFlag = true;
+//								break;
+//							}
+//						}
+//						if (!buildingFlag) {
+//							this.halfLowLevelBlockedRoad.add(road.getID());
+//						}
+//					}
+//				}
 			}
 		}
 	}
