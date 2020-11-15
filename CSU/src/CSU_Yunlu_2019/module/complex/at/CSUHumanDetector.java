@@ -1,6 +1,7 @@
 package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.CSUConstants;
+import CSU_Yunlu_2019.LogHelper;
 import CSU_Yunlu_2019.debugger.DebugHelper;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUBuilding;
 import CSU_Yunlu_2019.util.ambulancehelper.CSUDistanceSorter;
@@ -59,6 +60,8 @@ public class CSUHumanDetector extends HumanDetector {
     private Map<EntityID,Integer> hangUpMap;
     private Set<EntityID> visited; // 暂时没更新，也不知道会不会用上
     private int savedTime = 0;
+    private LogHelper logHelper;
+    private Map<EntityID,StandardEntity> invalidHumanPosition;
 
 //    private Set<EntityID> availableTarget;
 
@@ -89,24 +92,37 @@ public class CSUHumanDetector extends HumanDetector {
         this.scenarioInfo = si;
         this.hangUpMap = new HashMap<>();
         this.visited = new HashSet<>();
+        this.invalidHumanPosition = new HashMap<>();
 //        this.availableTarget = new HashSet<>();
 //        targetSelector = this.moduleManager.getModule(SampleModuleKey.AMBULANCE_MODULE_TARGET_SELECTOR, "CSU_SelectorTargetByDis");
         targetSelector = new CSUSelectorTargetByDis(ai, wi, si, moduleManager, developData);
+        logHelper = new LogHelper("at_log/detector",agentInfo,"CSUHumanDetector");
         initClassifier();//init CSU_HurtHumanClassifier
     }
 
     @Override
     public HumanDetector calc() {
+        logHelper.writeAndFlush("==============================calc start=============================");
         //11.10
         //如果有result，坚持。如果不能到或者着火，挂起result。10s释放
         if(this.result != null){
             if(isReachable(this.result)){//目标可到达
                 if(needToChange(result)){//目标在避难所里或者目标位置燃烧
+                    logHelper.writeAndFlush("当前目标("+result+")可到达但是需要更换,挂起");
                     hangUp(this.result);
                 }else{
-                    return this;
+                    if(isTargetPositionValid()){
+                        logHelper.writeAndFlush("保持当前目标:"+result);
+                        logHelper.writeAndFlush("==============================calc   end=============================");
+                        return this;
+                    }else{
+                        logHelper.writeAndFlush("当前目标:"+result+"位置信息失效");
+                        logHelper.writeAndFlush("==============================calc   end=============================");
+                        invalidHumanPosition.put(result,worldInfo.getPosition(result));
+                    }
                 }
             }else{
+                logHelper.writeAndFlush("当前目标("+result+")不可到达,挂起");
                 hangUp(this.result);
             }
         }
@@ -117,9 +133,11 @@ public class CSUHumanDetector extends HumanDetector {
 //            hangUp(this.result);
 //        }
         //11.9
-        passHangUp();
+
         this.result = findHumanToRescue();
         visualDebug();
+        logHelper.writeAndFlush("确定新目标:"+result);
+        logHelper.writeAndFlush("==============================calc   end=============================");
         return this;
 
 //        if (clustering == null) {
@@ -205,55 +223,90 @@ public class CSUHumanDetector extends HumanDetector {
 
     private boolean needToChange(EntityID result){
         StandardEntity area = worldInfo.getPosition(result);
-        if(area instanceof Refuge) {
-            if (CSUConstants.DEBUG_AT_SEARCH) {
-                System.out.println("[第"+agentInfo.getTime()+"回合]   "+agentInfo.getID()+":当前目标在refugee里，换目标");
-            }
+        StandardEntity entity = worldInfo.getEntity(result);
+        Human human = (Human)entity;
+        if(human.isHPDefined() && human.getHP() <= 1){
             return true;
         }
-
-        if(area instanceof Building){
-            Building building = (Building) area;
-            if(building.isFierynessDefined() && building.getFieryness()>0 && building.getFieryness()<4){
-                if(CSUConstants.DEBUG_AT_SEARCH){
-                    System.out.println("[第"+agentInfo.getTime()+"回合]   "+agentInfo.getID()+":当前目标在着火建筑里，换目标");
+        if(entity instanceof Civilian){
+            Civilian civ = (Civilian) entity;
+            logHelper.writeAndFlush("当前目标("+civ.getID()+")位置定义:"+civ.isPositionDefined()+",位置:"+civ.getPosition());
+            //如果被别人背走
+            if(area instanceof AmbulanceTeam){
+                logHelper.writeAndFlush("当前目标("+civ.getID()+")已经被别的at("+area+")背走");
+                return true;
+            }
+            if(area instanceof Refuge) {
+                logHelper.writeAndFlush("当前目标("+civ.getID()+")已经在refuge里了");
+                if (CSUConstants.DEBUG_AT_SEARCH) {
+                    System.out.println("[第"+agentInfo.getTime()+"回合]   "+agentInfo.getID()+":当前目标在refugee里，换目标");
                 }
                 return true;
             }
+            if(area instanceof Building){
+                Building building = (Building) area;
+                if(building.isFierynessDefined() && building.getFieryness()>0 && building.getFieryness()<4){
+                    logHelper.writeAndFlush("当前目标("+civ.getID()+")所在位置"+area+"着火了");
+                    if(CSUConstants.DEBUG_AT_SEARCH){
+                        System.out.println("[第"+agentInfo.getTime()+"回合]   "+agentInfo.getID()+":当前目标在着火建筑里，换目标");
+                    }
+                    return true;
+                }
+            }
+        }else{
+            if(human.isBuriednessDefined()){
+                return human.getBuriedness() <= 0;
+            }
         }
+
         return false;
     }
 
     //
     private EntityID findHumanToRescue(){
+        logHelper.writeAndFlush("找人救");
         List<Human> targets = new ArrayList<>();
-        for (StandardEntity next : worldInfo.getEntitiesOfType(
-                StandardEntityURN.CIVILIAN,
-                StandardEntityURN.FIRE_BRIGADE,
-                StandardEntityURN.POLICE_FORCE,
-                StandardEntityURN.AMBULANCE_TEAM)
-        ) {
-
-            Human h = (Human) next;
-            if (agentInfo.getID() == h.getID()) {
+        //尝试版11.15
+        Set<EntityID> set = worldInfo.getChanged().getChangedEntities();
+        logHelper.writeAndFlush("changedEntity:"+set);
+        for (EntityID id : set) {
+            StandardEntity entity = worldInfo.getEntity(id);
+            if(entity == null){
+                System.out.println("眼见不一定为实（abcd1234）!");
                 continue;
             }
-//            if (h.isHPDefined()
-//                    && h.isBuriednessDefined()
-//                    && h.isDamageDefined()
-//                    && h.isPositionDefined()
-//                    && h.getHP() > 0
-//                    && (h.getBuriedness() > 0 || h.getDamage() > 0)) {
-//                targets.add(h);
-//            }
+            if(!(entity instanceof Human)){
+                continue;
+            }
+            Human h = (Human) entity;
+            if(!(h instanceof Civilian) && !(h instanceof FireBrigade)
+                    &&!(h instanceof PoliceForce) &&!(h instanceof AmbulanceTeam)){
+                continue;
+            }
+            if (agentInfo.getID().equals(h.getID())) {
+                continue;
+            }
+
+            logHelper.writeAndFlush(h+"isHP:"+h.isHPDefined()+",isBur:"+
+                    h.isBuriednessDefined()+",isPos:"+h.isPositionDefined()+",HP:"
+                    +h.getHP()+",Buriedness:"+h.getBuriedness()+",isDam:"+h.isDamageDefined()
+                    +",damage:"+h.getDamage()+"isCiv:"+(h instanceof Civilian));
+            //被埋的所有都要救
             if (h.isHPDefined()
                     && h.isBuriednessDefined()
                     && h.isPositionDefined()
                     && h.getHP() > 0
                     && h.getBuriedness() > 0) {
+//                logHelper.writeAndFlush("targets添加"+h+"，因为被埋了且位置已知且HP大于0");
+                targets.add(h);
+                //掉血的平民要救
+            }else if(h.isHPDefined() && h.getHP() > 0 && h.isDamageDefined()
+                    && h.isPositionDefined() && h.getDamage() > 0 && h instanceof Civilian){
+//                logHelper.writeAndFlush("targets添加"+h+"，因为damage大于0且位置已知且HP大于0");
                 targets.add(h);
             }
         }
+        targets.removeIf(human -> invalidHumanPosition.keySet().contains(human.getID()));
         targets.removeIf(human -> hangUpMap.keySet().contains(human.getID()));
         targets.removeIf(human -> noNeed(human.getID()));
         targets.removeIf(human -> visited.contains(human.getID()));
@@ -270,8 +323,66 @@ public class CSUHumanDetector extends HumanDetector {
                 return false;
             }
         });//去掉所在位置着火的目标
+        targets.removeIf(human -> {//给背走了的也去掉
+            StandardEntity area = worldInfo.getPosition(human.getID());
+            return area instanceof AmbulanceTeam;
+        });
         targets.sort(new CSUDistanceSorter(this.worldInfo, this.agentInfo.getPositionArea()));
+        logHelper.writeAndFlush("可以选择的target有"+targets);
         return targets.isEmpty() ? null : targets.get(0).getID();
+        //旧版
+
+//        for (StandardEntity next : worldInfo.getEntitiesOfType(
+//                StandardEntityURN.CIVILIAN,
+//                StandardEntityURN.FIRE_BRIGADE,
+//                StandardEntityURN.POLICE_FORCE,
+//                StandardEntityURN.AMBULANCE_TEAM)
+//        ) {
+//
+//            Human h = (Human) next;
+//            if (agentInfo.getID().equals(h.getID())) {
+//                continue;
+//            }
+//
+//            //被埋的所有都要救
+//            if (h.isHPDefined()
+//                    && h.isBuriednessDefined()
+//                    && h.isPositionDefined()
+//                    && h.getHP() > 0
+//                    && h.getBuriedness() > 0) {
+////                logHelper.writeAndFlush("targets添加"+h+"，因为被埋了且位置已知且HP大于0");
+//                targets.add(h);
+//                //掉血的平民要救
+//            }else if(h.isHPDefined() && h.getHP() > 0 && h.isDamageDefined()
+//                    && h.isPositionDefined() && h.getDamage() > 0 && h instanceof Civilian){
+////                logHelper.writeAndFlush("targets添加"+h+"，因为damage大于0且位置已知且HP大于0");
+//                targets.add(h);
+//            }
+//        }
+//        targets.removeIf(human -> invalidHumanPosition.keySet().contains(human.getID()));
+//        targets.removeIf(human -> hangUpMap.keySet().contains(human.getID()));
+//        targets.removeIf(human -> noNeed(human.getID()));
+//        targets.removeIf(human -> visited.contains(human.getID()));
+//        targets.removeIf(human -> {
+//            StandardEntity area = worldInfo.getPosition(human);
+//            if(area.getStandardURN() == BUILDING){
+//                Building building = (Building) area;
+//
+//                return building.isFierynessDefined()
+//                        && ((building.getFieryness() > 0 && building.getFieryness() < 4)
+//                        || building.getFieryness() == 8);
+//            }else{
+//                //只要有被埋，就去救
+//                return false;
+//            }
+//        });//去掉所在位置着火的目标
+//        targets.removeIf(human -> {//给背走了的也去掉
+//            StandardEntity area = worldInfo.getPosition(human.getID());
+//            return area instanceof AmbulanceTeam;
+//        });
+//        targets.sort(new CSUDistanceSorter(this.worldInfo, this.agentInfo.getPositionArea()));
+//        logHelper.writeAndFlush("可以选择的target有"+targets);
+//        return targets.isEmpty() ? null : targets.get(0).getID();
     }
 
     private void visualDebug() {
@@ -372,6 +483,8 @@ public class CSUHumanDetector extends HumanDetector {
         this.clustering.updateInfo(messageManager);
         this.reflectMessage(messageManager);
         preProcessChangedEntities(messageManager);
+        passHangUp();
+        updateInvalidPositionMap();
         return this;
     }
 
@@ -441,14 +554,19 @@ public class CSUHumanDetector extends HumanDetector {
     private boolean isReachable(EntityID targetID){
         EntityID from = agentInfo.getPosition();
         StandardEntity entity = worldInfo.getPosition(targetID);
+        logHelper.writeAndFlush("当前位置:"+agentInfo.getPosition()+",当前目标位置:"+entity);
         if(entity != null){
             EntityID destination = entity.getID();
             if(from.equals(destination)){
                 return true;
             }
+            List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).calc().getResult();
+            return result != null;
+        }else{
+            return false;
         }
-        List<EntityID> result = pathPlanning.setFrom(from).setDestination(targetID).getResult();
-        return result != null;
+//        List<EntityID> result = pathPlanning.setFrom(from).setDestination(targetID).calc().getResult();
+//        return result != null;
     }
 
     private List<EntityID> calcWay(EntityID destination){
@@ -477,8 +595,51 @@ public class CSUHumanDetector extends HumanDetector {
         hangUpMap.put(id, postponeTime);
     }
 
+    //走进目标所在建筑时，判断changed包不包括result，不包括说明已经被救走，加入位置改变列表。
+    private boolean isTargetPositionValid(){
+        StandardEntity entity = worldInfo.getPosition(result);
+        if (agentInfo.getPosition().equals(entity.getID())){
+//            Collection<StandardEntity> inSightIDs = worldInfo.getObjectsInRange(agentInfo.getID(),scenarioInfo.getPerceptionLosMaxDistance());
+//            logHelper.writeAndFlush("在视线内的ID:"+inSightIDs);
+            Set<EntityID> set = worldInfo.getChanged().getChangedEntities();
+            logHelper.writeAndFlush("changedEntityIDs:"+set);
+            return set.contains(result);
+        }else{
+            return true;
+        }
+    }
+
+    private void updateInvalidPositionMap(){
+        Set<EntityID> toRemove = new HashSet<>();
+        for (EntityID target : invalidHumanPosition.keySet()){
+            StandardEntity entity = worldInfo.getPosition(target);
+            if(!entity.equals(invalidHumanPosition.get(target))){
+                toRemove.add(target);
+            }
+        }
+        invalidHumanPosition.keySet().removeAll(toRemove);
+    }
+
     protected void printDebugMessage(String msg) {
         ConsoleOutput.error("Agent:" + agentInfo.getID() + " Time:" + agentInfo.getTime() + " " + msg);
+    }
+
+
+    public static void main(String[] args) {
+        List<Integer> list = new ArrayList<>();
+        list.add(1);
+        list.add(10);
+        list.add(9);
+        list.sort(new Com());
+        System.out.println(list);
+    }
+
+    static class Com implements Comparator<Integer>{
+
+        @Override
+        public int compare(Integer i1, Integer i2) {
+            return i1-i2;
+        }
     }
 
 }

@@ -267,6 +267,41 @@ public class ATBuilding {
         return this.id.getValue()+"";
     }
 
+    public String getStatusString(){
+        String status = id+":{";
+        if(isBurning){
+            status += "isBurning : true,";
+        }else{
+            status += "isBurning : false,";
+        }
+        if(isReachable){
+            status += "isReachable : true,";
+        }else{
+            status += "isReachable : false,";
+        }
+        if(isWayBurning){
+            status += "isWayBurning : true,";
+        }else{
+            status += "isWayBurning : false,";
+        }
+        if(isBurnt){
+            status += "isBurnt : true,";
+        }else{
+            status += "isBurnt : false,";
+        }
+        if(isBroken){
+            status += "isBroken : true,";
+        }else{
+            status += "isBroken : false,";
+        }
+        if(isVisited){
+            status += "isVisited : true";
+        }else{
+            status += "isVisited : false";
+        }
+        return "";
+    }
+
     //11.7
     public boolean isBurnt(){
         return isBurnt;

@@ -8,7 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class LogHelper {
-    public static final boolean on = true;
+    public static final boolean on = false;
     private boolean logCreated = false;
     private String url;
     private BufferedWriter output;
@@ -26,14 +26,13 @@ public class LogHelper {
         }
     }
 
-    public void createLog() throws IOException {
+    private void createLog() throws IOException {
         String fileName = url;
         File file = new File(fileName);
         if(!file.exists()){
             file.mkdirs();
         }
         fileName = url+"/"+agentInfo.getID()+".txt";
-        System.out.println(fileName);
         file = new File(fileName);
         if(file.exists()){
             file.delete();

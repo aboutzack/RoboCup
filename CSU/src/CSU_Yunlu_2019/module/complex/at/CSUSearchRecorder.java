@@ -1,5 +1,6 @@
 package CSU_Yunlu_2019.module.complex.at;
 
+import CSU_Yunlu_2019.LogHelper;
 import CSU_Yunlu_2019.module.algorithm.AStarPathPlanning;
 import CSU_Yunlu_2019.util.Util;
 import adf.agent.communication.MessageManager;
@@ -52,6 +53,8 @@ public class CSUSearchRecorder {
     private CSUSearchUtil util;
 
     private List<EntityID> myWay;
+
+    private LogHelper logHelper;
 
     public CSUSearchRecorder(AgentInfo ai, WorldInfo wi, ScenarioInfo si, Clustering clustering, PathPlanning pathPlanning, CSUSearchUtil util){
         this.agentInfo = ai;
@@ -122,10 +125,27 @@ public class CSUSearchRecorder {
                 ATCS.updateSingleHuman(entity);
                 continue;
             }
-//            if(entity instanceof Blockade){
-//                visionBlockade.add((Blockade)entity);
-//            }
         }
+
+        //11.15
+        //追加判断视线内的智能体逻辑（尝试）
+        Set<EntityID> inSightEntityIDs = new HashSet<>(worldInfo.getObjectIDsInRange(agentInfo.getID(), scenarioInfo.getPerceptionLosMaxDistance()));
+        for (EntityID changedId: inSightEntityIDs) {
+            StandardEntity entity = worldInfo.getEntity(changedId);
+            if(entity == null){
+                util.debugOverall("changedEntity:"+changedId+"is null(impossible)");
+                continue;
+            }
+            if(entity instanceof Building){
+                ATBS.updateSingleBuilding(entity);
+                continue;
+            }
+            if(entity instanceof Human){
+                ATCS.updateSingleHuman(entity);
+                continue;
+            }
+        }
+        //11.15
 
         updateHeardCivilian();
 
@@ -222,12 +242,15 @@ public class CSUSearchRecorder {
                 }
                 ATBuilding atb = ATBS.getByID(target);
                 if(atb.isBurning()){
+                    set.remove(target);
                     continue;
                 }
                 if(!atb.isReachable()){
+                    set.remove(target);
                     continue;
                 }
                 if(atb.isOccupied()){
+                    set.remove(target);
                    continue;
                 }
                 //-----------多这一句话就会不动-----------
@@ -236,10 +259,12 @@ public class CSUSearchRecorder {
 //                }
                 //-----------多这一句话就会不动-----------
                 if(atb.isVisited() || atb.isBurnt()){
+                    set.remove(target);
                     continue;
                 }
                 //---------------修改尝试----------------(成功)
                 if(atb.isWayBurning()){
+                    set.remove(target);
                     continue;
                 }
 //                if(atb.isBurning() || !atb.isReachable()){
@@ -610,6 +635,12 @@ public class CSUSearchRecorder {
 //                return true;
 //            }
 //        }
+        return false;
+    }
+
+    //添加
+    private boolean remainToBeSaved(){
+//        worldInfo.getBuriedHumans()
         return false;
     }
 

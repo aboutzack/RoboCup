@@ -1,7 +1,6 @@
 package CSU_Yunlu_2019.module.complex.at;
 
 import CSU_Yunlu_2019.CSUConstants;
-import CSU_Yunlu_2019.world.object.CSUBuilding;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
@@ -13,7 +12,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Yiji Gao
@@ -43,7 +43,7 @@ public class CSUSearchUtil {
 
     //debug
     public final static boolean debug = true;
-    public final static boolean logMode = false;
+    public final static boolean logMode = true;
     public boolean logCreated = false;
 
     public final int monitorID = 0;
@@ -125,7 +125,7 @@ public class CSUSearchUtil {
         if(from.equals(destination)){
             return true;
         }
-        List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).getResult();
+        List<EntityID> result = pathPlanning.setFrom(from).setDestination(destination).calc().getResult();
         return result != null && !result.isEmpty();
     }
 
@@ -170,8 +170,13 @@ public class CSUSearchUtil {
 
     //fileWrite
     public void createLog() throws IOException {
-        String fileName = "/Users/kyrieg/git_repository/RoboCup/AT_log/"+agentInfo.getID().toString()+".txt";
+        String fileName = "at_log/search";
         File file = new File(fileName);
+        if(!file.exists()){
+            file.mkdirs();
+        }
+        fileName = "at_log/search/"+agentInfo.getID().toString()+".txt";
+        file = new File(fileName);
         if(file.exists()){
             file.delete();
         }
@@ -201,6 +206,15 @@ public class CSUSearchUtil {
         }
     }
 
+    public void writeAndFlush(String msg){
+        try {
+            output.write(msg+"\n");
+            output.flush();
+        }catch (IOException ioe){
+            ioe.printStackTrace();
+        }
+    }
+
     //11.7
     public Human getHuman(EntityID id){
             return (Human) worldInfo.getEntity(id);
@@ -215,7 +229,7 @@ public class CSUSearchUtil {
 
     public void debugSpecific(String message){
         if(CSUConstants.DEBUG_AT_SEARCH && logMode){
-            write("[第"+agentInfo.getTime()+"回合]Search "+agentInfo.getID()+":"+message);
+            writeAndFlush("[第"+agentInfo.getTime()+"回合]Search "+agentInfo.getID()+":"+message);
         }
         if(CSUConstants.DEBUG_AT_SEARCH && debug){
             if(agentInfo.getID().getValue() == monitorID){

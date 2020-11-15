@@ -92,7 +92,8 @@ public class CSUSearchRebuild extends Search{
 
     @Override
     public Search updateInfo(MessageManager messageManager) {
-//        CSUSearchUtil.debugOverall("当前目标为:" + this.result);
+//        CSUSearchUtil.debugOverall("当前目标为:" + this.result);\
+        super.updateInfo(messageManager);
         util.debugSpecific("======================updateInfo Start======================");
         util.debugSpecific("当前位置为:"+agentInfo.getPosition());
         if (this.getCountUpdateInfo() >= 2) {
@@ -108,7 +109,6 @@ public class CSUSearchRebuild extends Search{
 
         util.debugSpecific(this.agentInfo.getTime()+"回合，allCivilian的大小:"+util.getCivilianIDs().size());
         util.debugSpecific("======================updateInfo End========================");
-        util.flush();
         return this;
     }
 
@@ -119,11 +119,14 @@ public class CSUSearchRebuild extends Search{
         util.debugSpecific("上一目标为:"+recorder.getTarget()
                 +",优先级为:"+CSUSearchUtil.getNameByPriority(recorder.getNowPriority()));
         if (util.creatingScene()) {
+            util.debugSpecific("正在创建地图，跳过calc()");
             completeCalc = true;
         }
         if(!completeCalc && recorder.needToChangeTarget()){
             util.debugSpecific("有必要换目标");
             this.result = recorder.decideBest()? recorder.getTarget() : recorder.quickDecide();
+            util.debugSpecific("换目标成功："
+                    +CSUSearchUtil.getNameByPriority(recorder.getNowPriority())+"("+result+")");
             completeCalc = true;
         }
         //如果一切正常，尝试抢占。
@@ -146,8 +149,11 @@ public class CSUSearchRebuild extends Search{
             util.debugOverall("当前目标为空(impossible).");
         }
         util.debugSpecific("当前目标为"+this.result+",优先级为:"+CSUSearchUtil.getNameByPriority(recorder.getNowPriority()));
+        if(this.result != null){
+            util.debugSpecific(recorder.getATBS().getByID(result).getStatusString());
+        }
         util.debugSpecific("=========================calc  End =========================\n");
-        util.flush();
+//        util.flush();
         return this;
     }
 
