@@ -11,3 +11,6 @@
 ### RoboCup ###
 *.log
 ._.DS_Store
+*.rays
+precomp_data/
+logs/
