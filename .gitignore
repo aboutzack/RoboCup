@@ -14,3 +14,5 @@
 *.rays
 precomp_data/
 logs/
+at_log/
+at_think/
