@@ -20,7 +20,7 @@ import java.util.List;
  * @Date: 03/21/2020
  */
 public class DebugHelper {
-    public static final boolean DEBUG_MODE = false;
+    public static final boolean DEBUG_MODE = true;
     public static final VDClient VD_CLIENT = DEBUG_MODE ? VDClient.getInstance() : null;
 
     static {

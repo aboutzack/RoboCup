@@ -9,10 +9,10 @@
   <scenario:refuge scenario:location="3597"/>
   <scenario:fire scenario:location="6240"/>
   <scenario:fire scenario:location="6516"/>
-  <scenario:fire scenario:location="6294"/>
+  <scenario:fire scenario:location="3837"/>
   <scenario:fire scenario:location="2120"/>
-  <scenario:fire scenario:location="4254"/>
-  <scenario:fire scenario:location="5487"/>
+<!--  <scenario:fire scenario:location="4254"/>-->
+<!--  <scenario:fire scenario:location="5487"/>-->
   <scenario:hydrant scenario:location="28673"/>
   <scenario:hydrant scenario:location="28929"/>
   <scenario:hydrant scenario:location="24450"/>
