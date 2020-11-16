@@ -1,6 +1,6 @@
 package adf.sample.tactics;
 
-import CSU_Yunlu_2019.LogHelper;
+import CSU_Yunlu_2020.LogHelper;
 import adf.agent.action.Action;
 import adf.agent.action.ambulance.ActionLoad;
 import adf.agent.action.ambulance.ActionRescue;
@@ -190,11 +190,15 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
                 return action;
             }
         }
+        int id = agentID.getValue();
         // autonomous
         EntityID target = this.humanDetector.calc().getTarget();
         Action action = this.actionTransport.setTarget(target).calc().getAction();
         if (action != null)
         {
+//            if (agentInfo.getThinkTimeMillis() > 100) {
+//                System.out.println("at: "+agentID +" detector: " + agentInfo.getThinkTimeMillis());
+//            }
             this.sendActionMessage(messageManager, agent, action);
             logHelper.writeAndFlush("==============================think end by detector==================");
             return action;
@@ -203,6 +207,9 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
         action = this.actionExtMove.setTarget(target).calc().getAction();
         if (action != null)
         {
+//            if (agentInfo.getThinkTimeMillis() > 100) {
+//                System.out.println("at: "+agentID +" search: " + agentInfo.getThinkTimeMillis());
+//            }
             this.sendActionMessage(messageManager, agent, action);
             logHelper.writeAndFlush("==============================think end by search==================");
             return action;

@@ -3,32 +3,32 @@ package adf.sample.tactics;
 import adf.agent.action.Action;
 import adf.agent.action.common.ActionMove;
 import adf.agent.action.common.ActionRest;
+import adf.agent.action.fire.ActionExtinguish;
+import adf.agent.action.fire.ActionRefill;
 import adf.agent.communication.MessageManager;
+import adf.agent.communication.standard.bundle.centralized.CommandFire;
 import adf.agent.communication.standard.bundle.centralized.CommandScout;
+import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
-import adf.debug.WorldViewLauncher;
 import adf.component.centralized.CommandExecutor;
 import adf.component.communication.CommunicationMessage;
 import adf.component.extaction.ExtAction;
+import adf.component.module.complex.BuildingDetector;
 import adf.component.module.complex.Search;
+import adf.component.tactics.TacticsFireBrigade;
+import adf.debug.WorldViewLauncher;
 import adf.sample.tactics.utils.MessageTool;
-import rescuecore2.standard.entities.*;
+import rescuecore2.standard.entities.FireBrigade;
+import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.List;
 import java.util.Objects;
-
-import adf.agent.action.fire.ActionExtinguish;
-import adf.agent.action.fire.ActionRefill;
-import adf.agent.communication.standard.bundle.centralized.CommandFire;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.component.module.complex.BuildingDetector;
-import adf.component.tactics.TacticsFireBrigade;
 
 public class SampleTacticsFireBrigade extends TacticsFireBrigade
 {
@@ -184,11 +184,18 @@ public class SampleTacticsFireBrigade extends TacticsFireBrigade
                 return action;
             }
         }
+        int id = agentID.getValue();
         // autonomous
         EntityID target = this.buildingDetector.calc().getTarget();
         Action action = this.actionFireFighting.setTarget(target).calc().getAction();
         if (action != null)
         {
+//            if (agentInfo.getThinkTimeMillis() > 100) {
+//                System.out.println("fb: "+agentID +" detector: " + agentInfo.getThinkTimeMillis());
+//            }
+            if (action.getClass() == ActionRefill.class) {
+//                System.out.println("time: "  + ", agent: "+agentInfo.getID()+" refill, " + "target: "+ agent.getPosition());
+            }
             this.sendActionMessage(messageManager, agent, action);
             return action;
         }
@@ -196,6 +203,9 @@ public class SampleTacticsFireBrigade extends TacticsFireBrigade
         action = this.actionExtMove.setTarget(target).calc().getAction();
         if (action != null)
         {
+//            if (agentInfo.getThinkTimeMillis() > 100) {
+//                System.out.println("fb: "+agentID +" search: " + agentInfo.getThinkTimeMillis());
+//            }
             this.sendActionMessage(messageManager, agent, action);
             return action;
         }
