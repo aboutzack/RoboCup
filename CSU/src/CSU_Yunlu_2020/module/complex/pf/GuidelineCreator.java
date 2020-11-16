@@ -1,6 +1,5 @@
 package CSU_Yunlu_2020.module.complex.pf;
 
-
 import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.extaction.pf.guidelineHelper;
 import CSU_Yunlu_2020.debugger.DebugHelper;
@@ -22,6 +21,8 @@ import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.*;
+
+import static rescuecore2.standard.entities.StandardEntityURN.*;
 
 public class GuidelineCreator extends AbstractModule {
 
@@ -48,19 +49,19 @@ public class GuidelineCreator extends AbstractModule {
         switch (si.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        CSUConstants.A_STAR_PATH_PLANNING);
+                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case PRECOMPUTED:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        CSUConstants.A_STAR_PATH_PLANNING);
+                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case NON_PRECOMPUTE:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        CSUConstants.A_STAR_PATH_PLANNING);
+                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;
@@ -391,7 +392,7 @@ public class GuidelineCreator extends AbstractModule {
                         Road road = (Road) entity;
                         Area before = (Area) this.worldInfo.getEntity(path.get(i - 1));
                         Area next = (Area) this.worldInfo.getEntity(path.get(i + 1));
-                        if(i > 2 && i<path.size()-3){
+                        if(i > 2 && i<path.size()-2){
                             if(this.countedEntrance.contains(path.get(i-1))){
                                 StandardEntity theRoadBefore = this.worldInfo.getEntity(path.get(i-2));
                                 if(theRoadBefore instanceof Road && road.getEdgeTo(theRoadBefore.getID())!=null){
@@ -411,7 +412,6 @@ public class GuidelineCreator extends AbstractModule {
                         Point2D end = this.getMidPoint(edge2);
                         guidelineHelper line = new guidelineHelper(road, start, end,false);
                         if (!this.judgeRoad.contains(line)) {
-
                             this.judgeRoad.add(line);
                             this.countedRoad.add(entity.getID());
                         }
@@ -438,7 +438,7 @@ public class GuidelineCreator extends AbstractModule {
                         Road road = (Road) entity;
                         Area before = (Area) this.worldInfo.getEntity(path.get(i - 1));
                         Area next = (Area) this.worldInfo.getEntity(path.get(i + 1));
-                        if(i > 2 && i<path.size()-3){
+                        if(i > 2 && i<path.size()-2){
                             if(this.countedEntrance.contains(path.get(i-1))){
                                 StandardEntity theRoadBefore = this.worldInfo.getEntity(path.get(i-2));
                                 if(theRoadBefore instanceof Road && road.getEdgeTo(theRoadBefore.getID())!=null){
@@ -478,7 +478,9 @@ public class GuidelineCreator extends AbstractModule {
             Line2D createLine = this.getProperLine(road);
             if(createLine != null) {
                 guidelineHelper line = new guidelineHelper(createLine, road, false);
-                if (!this.judgeRoad.contains(line)) this.judgeRoad.add(line);
+                if (!this.judgeRoad.contains(line)){
+                    this.judgeRoad.add(line);
+                }
             }
         }
     }

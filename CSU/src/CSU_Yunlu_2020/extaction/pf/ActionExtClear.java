@@ -30,6 +30,9 @@ import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
+import rescuecore2.standard.messages.StandardMessageURN;
+import rescuecore2.worldmodel.ChangeSet;
+import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
@@ -113,7 +116,7 @@ public class ActionExtClear extends ExtAction {
 		}
 		this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
 				"adf.sample.module.algorithm.SampleKMeans");
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", CSUConstants.GUIDE_LINE_CREATOR);
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
 
 	}
 
@@ -505,100 +508,6 @@ public class ActionExtClear extends ExtAction {
 			if (tmp instanceof ActionMove)
 				lastCyclePath = ((ActionMove) tmp).getPath();
 			result = tmp;
-//			if (needCheckForRepeat) {
-//
-//				if (result instanceof ActionMove && mayRepeat instanceof ActionMove && lastCyclePath.size() > 1)
-//					if (commonMove((ActionMove) result, (ActionMove) mayRepeat)) {
-//						//result = this.randomWalk();
-//						if (result != null) {
-//							this.check_same_action();
-//							return this;
-//
-//						}
-//						if (lastClearTarget != null) {
-//							if (!worldInfo.getBlockades(lastClearTarget.getID()).isEmpty()) {
-//								result = doClear(lastClearTarget);
-//							} else {
-//								result = directClear();
-//								if (result == null) {
-//									result = this.clear();
-//								}
-//							}
-//							lastClearTarget = null;
-//						} else {
-//							result = directClear();
-//							if (result == null) {
-//								result = this.clear();
-//							}
-//						}
-//						actionHistory.add(result);
-//						actionStack.push(result);
-//						if (result == null) {
-//							result = this.clear();
-//						}
-//						this.check_same_action();
-//						return this;
-//					}
-//			}
-
-//			if (!actionStack.isEmpty()) {
-//				if (goBack()) {
-//					if (!needCheckForRepeat) {
-//						//result = this.randomWalk();
-//						if (result != null) {
-//							if (result instanceof ActionClear) {
-//								this.check_same_action();
-//								return this;
-//
-//							}
-//						}
-//						needCheckForRepeat = true;
-//						actionStack.pop();
-//					} else {
-//						if (lastClearTarget != null) {
-//							if (!worldInfo.getBlockades(lastClearTarget.getID()).isEmpty()) {
-//								result = doClear(lastClearTarget);
-//							} else {
-//								result = directClear();
-//								if (result == null) {
-//									result = this.clear();
-//								}
-//							}
-//							lastClearTarget = null;
-//						} else {
-//							result = directClear();
-//							if (result == null) {
-//								result = this.clear();
-//							}
-//						}
-//					}
-//				} else {
-//					needCheckForRepeat = false;
-//				}
-//
-//			}
-//			if (result instanceof ActionClear) {
-//				for (StandardEntity entity : worldInfo.getEntitiesOfType(StandardEntityURN.POLICE_FORCE)) {
-//					PoliceForce police = (PoliceForce) entity;
-//					StandardEntity locate1 = worldInfo.getPosition(police);
-//					StandardEntity locate2 = worldInfo.getPosition(agentInfo.getID());
-//					if (locate1 != null && locate1.equals(locate2)) {
-//						if (agentInfo.getID().getValue() > police.getID().getValue() && isStucked(police)) {
-//							result = randomWalk();
-//							break;
-//						}
-//
-//					}
-//					Pair<Integer, Integer> location1 = worldInfo.getLocation(police);
-//					Pair<Integer, Integer> location2 = worldInfo.getLocation(agentInfo.getID());
-//					if (agentInfo.getID().getValue() > police.getID().getValue()
-//							&& Math.abs(location1.first() - location2.first()) < 2
-//							&& Math.abs(location1.second() - location2.second()) < 2 && !isStucked(police)) {
-//						result = randomWalk();
-//						break;
-//					}
-//				}
-//			}
 		}
 		if (result == null) {
 			result = this.clear();
@@ -645,6 +554,9 @@ public class ActionExtClear extends ExtAction {
 	 * @Date: 3/7/20
 	 */
 	private boolean isRoadPassable(Road road) {
+		if(this.agentInfo.getTime() <= this.scenarioInfo.getKernelAgentsIgnoreuntil()){
+			return false;
+		}
 		if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
 			return true;
 		}
@@ -1099,9 +1011,6 @@ public class ActionExtClear extends ExtAction {
 	}
 
 	public Action clear() {
-		if(this.agentInfo.getID().getValue() == 2017974409) {
-			System.out.println("method clear");
-		}
 		Action result = null;
 		PoliceForce policeForce = (PoliceForce) this.agentInfo.me();
 
@@ -1433,7 +1342,7 @@ public class ActionExtClear extends ExtAction {
 		Point2D agent = new Point2D(this.agentInfo.getX(), this.agentInfo.getY());
 		Point2D closest = GeometryTools2D.getClosestPointOnSegment(guideline, agent);
 		double distance = this.getDistance(closest.getX(),closest.getY(), this.agentInfo.getX(), this.agentInfo.getY());
-		if(distance < 500 || distance > 5000) {
+		if(distance < 500 || distance > 3000) {
 			return null;
 		}else {
 			Collection<Blockade> blockades = this.worldInfo.getBlockades(road).stream().filter(Blockade::isApexesDefined)

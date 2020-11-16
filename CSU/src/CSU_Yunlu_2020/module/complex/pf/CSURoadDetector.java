@@ -4,6 +4,7 @@ import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.extaction.pf.guidelineHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
+import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
 import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
 import adf.agent.communication.standard.bundle.information.MessageBuilding;
@@ -21,9 +22,11 @@ import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.RoadDetector;
+import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
+import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
@@ -78,26 +81,26 @@ public class CSURoadDetector extends RoadDetector {
 		switch (scenarioInfo.getMode()) {
 			case PRECOMPUTATION_PHASE:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						CSUConstants.A_STAR_PATH_PLANNING);
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 			case PRECOMPUTED:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						CSUConstants.A_STAR_PATH_PLANNING);
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 			case NON_PRECOMPUTE:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						CSUConstants.A_STAR_PATH_PLANNING);
+						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 		}
 		registerModule(this.pathPlanning);
 		registerModule(this.clustering);
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", CSUConstants.GUIDE_LINE_CREATOR);
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
 		this.result = null;
 	}
 
@@ -258,7 +261,7 @@ public class CSURoadDetector extends RoadDetector {
 		EntityID positionID = this.agentInfo.getPosition();
 		this.update_roads();
 
-//		if(this.agentInfo.getID().getValue() == 2017974409) {
+//		if(this.agentInfo.getID().getValue() == 1962675462) {
 ////			System.out.println("topsize:" + this.topLevelBlockedRoad.size());
 ////			System.out.println("halftopsize:" + this.halfTopLevelBlockedRoad.size());
 ////			System.out.println("midsize:" + this.midLevelBlockedRoad.size());
@@ -266,29 +269,29 @@ public class CSURoadDetector extends RoadDetector {
 ////			System.out.println("targetRoadsize:" + this.targetAreas.size());
 //			if(this.result!=null){
 //				System.out.println("result:"+this.result.getValue());
-//				if(this.noNeedToClear.contains(this.result)){
-//					System.out.println("noneedtoclearhas:"+this.result);
-//				}
-//				if(this.topLevelBlockedRoad.contains(this.result)){
-//					System.out.println("TOPTOPTOP");
-//				}
-//				if(this.halfTopLevelBlockedRoad.contains(this.result)){
-//					System.out.println("hththt");
-//				}
-//				if(this.midLevelBlockedRoad.contains(this.result)){
-//					System.out.println("mmmmmmmmm");
-//				}
-//				if(this.halfLowLevelBlockedRoad.contains(this.result)){
-//					System.out.println("hlhlhlhlhh");
-//				}
-//				if(this.lowLevelBlockedRoad.contains(this.result)){
-//					System.out.println("llllllllllllll");
-//				}
-//				if(this.targetAreas.contains(this.result)){
-//					System.out.println("tartartar");
-//				}
+////				if(this.noNeedToClear.contains(this.result)){
+////					System.out.println("noneedtoclearhas:"+this.result);
+////				}
+////				if(this.topLevelBlockedRoad.contains(this.result)){
+////					System.out.println("TOPTOPTOP");
+////				}
+////				if(this.halfTopLevelBlockedRoad.contains(this.result)){
+////					System.out.println("hththt");
+////				}
+////				if(this.midLevelBlockedRoad.contains(this.result)){
+////					System.out.println("mmmmmmmmm");
+////				}
+////				if(this.halfLowLevelBlockedRoad.contains(this.result)){
+////					System.out.println("hlhlhlhlhh");
+////				}
+////				if(this.lowLevelBlockedRoad.contains(this.result)){
+////					System.out.println("llllllllllllll");
+////				}
+////				if(this.targetAreas.contains(this.result)){
+////					System.out.println("tartartar");
+////				}
 //			}
-//			System.out.println();
+////			System.out.println();
 //		}
 
 
@@ -301,8 +304,7 @@ public class CSURoadDetector extends RoadDetector {
 			}
 		}
 
-
-		//SOSroad
+			//SOSroad
 		if (this.result != null && this.SOSroad.contains(this.result)) {
 			if (this.SOSroad.contains(this.agentInfo.getPosition())) {
 				this.SOSroad.remove(this.agentInfo.getPosition());
@@ -314,8 +316,10 @@ public class CSURoadDetector extends RoadDetector {
 		if (!this.SOSroad.isEmpty()) {
 			List<EntityID> sortList = new ArrayList<>(this.SOSroad);
 			sortList.sort(new DistanceIDSorter(this.worldInfo, this.agentInfo.getID()));
+//			System.out.println("SOSOSOSOSO:" + sortList.get(0).getValue());
 			return this.getPathTo(positionID, sortList.get(0));
 		}
+
 
 		//topLevelBlockedRoad
 		if (this.result != null && this.topLevelBlockedRoad.contains(this.result)
@@ -438,7 +442,6 @@ public class CSURoadDetector extends RoadDetector {
 			Road road = (Road) position;
 			if (this.isRoadPassable(road)) {
 				this.noNeedToClear.add(road.getID());
-
 			}
 		}
 
@@ -471,7 +474,7 @@ public class CSURoadDetector extends RoadDetector {
 					if (!civilian.isPositionDefined() || !civilian.isHPDefined() || civilian.getHP() < 1000) {
 						continue;
 					}
-					StandardEntity positionEntity = worldInfo.getPosition(civilian);
+					StandardEntity positionEntity = this.worldInfo.getEntity(civilian.getPosition());
 					if (clusterEntities.contains(positionEntity)) {
 						if (positionEntity instanceof Building) {
 							Building building = (Building) positionEntity;
@@ -493,7 +496,7 @@ public class CSURoadDetector extends RoadDetector {
 					if (!human.isPositionDefined() || !human.isHPDefined() || human.getHP() < 1000) {
 						continue;
 					}
-					StandardEntity positionEntity = worldInfo.getPosition(human);
+					StandardEntity positionEntity = worldInfo.getEntity(human.getPosition());
 					if (clusterEntities.contains(positionEntity)) {
 						if (positionEntity instanceof Building) {
 							Building building = (Building) positionEntity;
@@ -826,6 +829,9 @@ public class CSURoadDetector extends RoadDetector {
 	 * @Date: 3/7/20
 	 */
 	private boolean isRoadPassable(Road road) {
+		if(this.agentInfo.getTime() <= this.scenarioInfo.getKernelAgentsIgnoreuntil()){
+			return false;
+		}
 		if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
 			return true;
 		}
@@ -972,6 +978,7 @@ public class CSURoadDetector extends RoadDetector {
 			this.lowLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.halfTopLevelBlockedRoad.remove(messageRoad.getRoadID());
 			this.noNeedToClear.add(messageRoad.getRoadID());
+			Road road = (Road) this.worldInfo.getEntity(messageRoad.getRoadID());
 		}
 	}
 
@@ -1137,7 +1144,8 @@ public class CSURoadDetector extends RoadDetector {
 			if (commandPolice.getTargetID() == null) {
 				return;
 			}
-			System.out.println("called Police :"+this.agentInfo.getID().getValue());
+//			System.out.println("called Police :"+this.agentInfo.getID().getValue());
+//			System.out.println("targetSOSroad:"+SOStarget.getValue());
 			StandardEntity target = this.worldInfo.getEntity(commandPolice.getTargetID());
 			if (target instanceof Road || target instanceof Hydrant) {
 				if (!this.noNeedToClear.contains(target.getID())) {
