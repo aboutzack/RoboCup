@@ -235,6 +235,7 @@
   <scenario:policeforce scenario:location="50275"/>
   <scenario:policeforce scenario:location="55042"/>
   <scenario:policeforce scenario:location="17837"/>
+  <scenario:policeforce scenario:location="19268"/>
   <scenario:policeoffice scenario:location="49175"/>
   <scenario:ambulanceteam scenario:location="55788"/>
   <scenario:ambulanceteam scenario:location="19898"/>
