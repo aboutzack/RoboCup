@@ -1324,9 +1324,7 @@ public class ActionExtClear extends ExtAction {
 						double dist = this.getDistance(agentX, agentY, clearX, clearY);
 						return new ActionClear(clearX, clearY, clearBlockade);
 					}
-					int dX = (int)((intersection.getX() - agentX) / 10);
-					int dY = (int)((intersection.getY() - agentY) / 10);
-					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX() - dX,(int) intersection.getY() - dY);
+					return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX(),(int) intersection.getY());
 				}
 			}
 
@@ -1414,8 +1412,6 @@ public class ActionExtClear extends ExtAction {
 				double dist = this.getDistance(agentX, agentY, clearX, clearY);
 				return new ActionClear(clearX, clearY);
 			}
-			int dX = (int)((intersection.getX() - agentX) / 10);
-			int dY = (int)((intersection.getY() - agentY) / 10);
 			return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX(), (int)intersection.getY());
 		}
 		else {
@@ -1484,8 +1480,6 @@ public class ActionExtClear extends ExtAction {
 				double dist = this.getDistance(agentX, agentY, clearX, clearY);
 				return new ActionClear(clearX, clearY);
 			}
-			int dX = (int)((intersection.getX() - agentX) / 10);
-			int dY = (int)((intersection.getY() - agentY) / 10);
 			return new ActionMove(Lists.newArrayList(police.getPosition()), (int)intersection.getX(), (int)intersection.getY());
 		}
 		else {
