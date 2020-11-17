@@ -267,31 +267,6 @@ public class ActionFireFighting extends ExtAction {
             }
         }
 
-//        //找出着火的和温度达到40以上的建筑
-//        List<StandardEntity> dangerBuilding = new ArrayList<>();
-//        List<StandardEntity> burningBuilding = new ArrayList<>();
-//        for(EntityID entityID : this.worldInfo.getChanged().getChangedEntities()){
-//            if(this.worldInfo.getDistance(agentInfo.me(), this.worldInfo.getEntity(entityID)) < this.maxExtinguishDistance){
-//
-//                if (this.worldInfo.getEntity(entityID) instanceof  Building){
-//                    if(((Building)(this.worldInfo.getEntity(entityID))).isOnFire() &&
-//                            ((Building)(this.worldInfo.getEntity(entityID))).isFierynessDefined() &&
-//                            ((Building)(this.worldInfo.getEntity(entityID))).getFieryness() != 8){
-//                        burningBuilding.add(this.worldInfo.getEntity(entityID));
-//                    }
-//                    if(((Building)(this.worldInfo.getEntity(entityID))).getTemperature() > 40){
-//                        dangerBuilding.add(this.worldInfo.getEntity(entityID));
-//                    }
-//                }
-//            }
-//        }
-//
-//        //灭火范围内有正在燃烧的建筑物,水量够灭火，不够补水
-//        if (burningBuilding.size() > 0) {
-//            FierynessSorter fierynessSorter = new FierynessSorter();
-//            Collections.sort(burningBuilding, fierynessSorter);   //未测试
-//            return new ActionExtinguish(burningBuilding.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
-//        }
 
 
         //寻找能灭到target的火的，并且中心没被堵住的
@@ -315,7 +290,28 @@ public class ActionFireFighting extends ExtAction {
             }
         }
 
-        System.err.println(agentInfo.getID() + " can't find position to extinguish: " + target.getValue());
+        System.err.println(agentInfo.getID() + " can't find position to extinguish: " + target.getValue() + ", try to " +
+                "extinguish any burning buildings in range");
+
+        //着火的，不用search的
+        List<Building> burningBuildings = new ArrayList<>();
+        for (StandardEntity standardEntity : worldInfo.getObjectsInRange(agentInfo.me(), scenarioInfo.getFireExtinguishMaxDistance())) {
+            if (standardEntity instanceof Building) {
+                Building building = (Building) standardEntity;
+                if (building.isFierynessDefined() && building.isOnFire() && building.getFieryness() != 8 &&
+                        building.isTemperatureDefined() && building.getTemperature() > 45 && !searchHelper.isTimeToSearch(building.getID())) {
+                    burningBuildings.add(building);
+                }
+            }
+        }
+
+        if (burningBuildings.size() > 0) {
+            FierynessSorter fierynessSorter = new FierynessSorter();
+            burningBuildings.sort(fierynessSorter);   //升序
+            return new ActionExtinguish(burningBuildings.get(0).getID(), Math.min(this.maxExtinguishPower, agent.getWater()));
+        }
+
+
         return null;
 
 

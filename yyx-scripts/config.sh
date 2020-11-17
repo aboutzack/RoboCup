@@ -1,0 +1,14 @@
+#! /bin/bash
+
+LOCAL_USER=yyx
+REMOTE_USER=rcrs
+
+CLUSTERS="1 2 3"
+#c11 c12 c13 c14 
+HOSTS="c21 c22 c23 c24 c31 c32 c33 c34"
+#c11 
+SERVER_HOSTS="c21 c31"
+#c12  c13  c14
+CLIENT_HOSTS=" c22 c23 c24 c32 c33 c34"
+
+RSYNC_OPTS=-CES
