@@ -7,6 +7,7 @@
   <scenario:refuge scenario:location="49530"/>
   <scenario:refuge scenario:location="54460"/>
   <scenario:refuge scenario:location="65134"/>
+  <scenario:fire scenario:location="59563"/>
   <scenario:hydrant scenario:location="60675"/>
   <scenario:hydrant scenario:location="4612"/>
   <scenario:hydrant scenario:location="2567"/>

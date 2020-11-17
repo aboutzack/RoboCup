@@ -3,12 +3,19 @@
 <scenario:scenario xmlns:scenario="urn:roborescue:map:scenario">
   <scenario:refuge scenario:location="31073"/>
   <scenario:refuge scenario:location="18351"/>
-  <scenario:fire scenario:location="32674"/>
-  <scenario:fire scenario:location="12763"/>
-  <scenario:fire scenario:location="26899"/>
+  <scenario:fire scenario:location="34320"/>
+  <scenario:fire scenario:location="34295"/>
+  <scenario:fire scenario:location="14513"/>
   <scenario:fire scenario:location="10584"/>
-  <scenario:fire scenario:location="21587"/>
-  <scenario:fire scenario:location="21187"/>
+  <scenario:fire scenario:location="24666"/>
+  <scenario:fire scenario:location="16545"/>
+  <scenario:fire scenario:location="16955"/>
+  <scenario:fire scenario:location="20570"/>
+  <scenario:fire scenario:location="22559"/>
+  <scenario:fire scenario:location="22444"/>
+  <scenario:fire scenario:location="29979"/>
+  <scenario:fire scenario:location="23850"/>
+  <scenario:fire scenario:location="25550"/>
   <scenario:hydrant scenario:location="6090"/>
   <scenario:hydrant scenario:location="32765"/>
   <scenario:gasstation scenario:location="20947"/>
@@ -179,40 +186,40 @@
   <scenario:civilian scenario:location="31005"/>
   <scenario:civilian scenario:location="23165"/>
   <!-- <scenario:firebrigade scenario:location="16545"/> -->
-  <scenario:firebrigade scenario:location="34279"/>
+  <scenario:firebrigade scenario:location="6945"/>
 
   
-  <scenario:firebrigade scenario:location="15567"/>
+  <scenario:firebrigade scenario:location="6945"/>
   <!-- <scenario:firebrigade scenario:location="26325"/> -->
-  <scenario:firebrigade scenario:location="34808"/>
+  <scenario:firebrigade scenario:location="6945"/>
   <!-- <scenario:firebrigade scenario:location="15792"/> -->
-  <scenario:firebrigade scenario:location="7593"/>
+  <scenario:firebrigade scenario:location="6945"/>
 
 
   <!-- <scenario:firebrigade scenario:location="20509"/> -->
-  <scenario:firebrigade scenario:location="2517"/>
-  <scenario:firebrigade scenario:location="5082"/>
-  <scenario:firebrigade scenario:location="14083"/>
+  <scenario:firebrigade scenario:location="4731"/>
+  <scenario:firebrigade scenario:location="4731"/>
+  <scenario:firebrigade scenario:location="4731"/>
   <!-- <scenario:firebrigade scenario:location="16231"/> -->
-  <scenario:firebrigade scenario:location="8916"/>
-  <scenario:firebrigade scenario:location="17837"/>
-  <scenario:firebrigade scenario:location="871"/>
-  <scenario:firebrigade scenario:location="36467"/>
+  <scenario:firebrigade scenario:location="4731"/>
+  <scenario:firebrigade scenario:location="3003"/>
+  <scenario:firebrigade scenario:location="3003"/>
+  <scenario:firebrigade scenario:location="3003"/>
   <!-- <scenario:firebrigade scenario:location="29757"/> -->
-  <scenario:firebrigade scenario:location="35346"/>
+  <scenario:firebrigade scenario:location="3003"/>
 
 
-  <scenario:firebrigade scenario:location="6369"/>
-  <scenario:firebrigade scenario:location="142"/>
-  <scenario:firebrigade scenario:location="4938"/>
-  <scenario:firebrigade scenario:location="15045"/>
-  <scenario:firebrigade scenario:location="6099"/>
+  <scenario:firebrigade scenario:location="3606"/>
+  <scenario:firebrigade scenario:location="3606"/>
+  <scenario:firebrigade scenario:location="3606"/>
+  <scenario:firebrigade scenario:location="3606"/>
+  <scenario:firebrigade scenario:location="5658"/>
   <!-- <scenario:firebrigade scenario:location="26016"/> -->
   <scenario:civilian scenario:location="34022"/>
 
 
-  <scenario:firebrigade scenario:location="31006"/>
-  <scenario:firebrigade scenario:location="34123"/>
+  <scenario:firebrigade scenario:location="5658"/>
+  <scenario:firebrigade scenario:location="5658"/>
   <scenario:firestation scenario:location="25487"/>
   <scenario:firestation scenario:location="36066"/>
   <!-- <scenario:policeforce scenario:location="16573"/> -->
@@ -278,7 +285,7 @@
   <scenario:ambulanceteam scenario:location="9510"/>
   <scenario:ambulanceteam scenario:location="7197"/>
   <scenario:ambulanceteam scenario:location="33815"/>
-  <scenario:ambulanceteam scenario:location="36496"/>
+  <scenario:ambulanceteam scenario:location="2000"/>
   <scenario:ambulanceteam scenario:location="34520"/>
   <scenario:ambulanceteam scenario:location="35687"/>
   <scenario:ambulanceteam scenario:location="36151"/>
