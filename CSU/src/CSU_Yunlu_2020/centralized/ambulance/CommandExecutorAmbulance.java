@@ -148,7 +148,7 @@ public class CommandExecutorAmbulance extends CommandExecutor<CommandAmbulance>{
 	    @Override
 	    public CommandExecutor calc() {
 			this.result = null;
-			final boolean DEBUG = true;
+			final boolean DEBUG = false;
 	        switch (this.type) {
 	            case ACTION_REST:
 					if (DEBUG) System.out.println(this.agentInfo.getID() + ": ACTION_REST");

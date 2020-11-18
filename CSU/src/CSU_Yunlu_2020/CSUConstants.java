@@ -15,6 +15,11 @@ public interface CSUConstants {
     public static final boolean DEBUG_MESSAGE_COUNT = false;
     public static final boolean DEBUG_CHANNEL_SUBSCRIBE = false;
     public static final boolean DEBUG_DISTANCE_BASED_CLUSTER_SELECTOR = false;
+    public static final boolean DEBUG_NEED_CLEAR_COMMON = false;
+    public static final boolean DEBUG_CANNOT_FIND_POSITION_TO_EXTINGUISH = false;
+    public static final boolean DEBUG_CHANGE_STRATEGY = false;
+    public static final boolean DEBUG_BACK_TO_MY_CLUSTER = false;
+    public static final boolean DEBUG_INIT_CND = false;
 
     //防止target.cfg未正确配置
     public static final String WORLD_HELPER_DEFAULT = "CSU_Yunlu_2020.world.CSUWorldHelper";

@@ -226,11 +226,15 @@ public class CSUBuildingDetector extends BuildingDetector {
             if (!cluster.isControllable() && !targetSelectorType.equals(TargetSelectorType.DIRECTION_BASED)) {
                 targetSelectorType = TargetSelectorType.DIRECTION_BASED;
                 setTargetSelector();
-                System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+                if (CSUConstants.DEBUG_CHANGE_STRATEGY) {
+                    System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+                }
             } else if (cluster.isControllable() && !targetSelectorType.equals(TargetSelectorType.GREEDY)) {
                 targetSelectorType = TargetSelectorType.GREEDY;
                 setTargetSelector();
-                System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+                if (CSUConstants.DEBUG_CHANGE_STRATEGY) {
+                    System.out.println(agentInfo.getID() + " change strategy to " + targetSelectorType);
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 package CSU_Yunlu_2020.world;
 
+import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.module.algorithm.fb.CSUFireClustering;
 import CSU_Yunlu_2020.world.object.CSUBuilding;
 import adf.agent.communication.MessageManager;
@@ -289,7 +290,9 @@ public class CSUFireBrigadeWorld extends CSUWorldHelper{
     }
 
     private void processConnected() {
-        System.out.println("  Init CND .... ");
+        if (CSUConstants.DEBUG_INIT_CND) {
+            System.out.println("  Init CND .... ");
+        }
         getCsuBuildings().parallelStream().forEach(csuBuilding -> {
             csuBuilding.initWallValue(this);
         });

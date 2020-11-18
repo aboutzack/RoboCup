@@ -290,8 +290,10 @@ public class ActionFireFighting extends ExtAction {
             }
         }
 
-        System.err.println(agentInfo.getID() + " can't find position to extinguish: " + target.getValue() + ", try to " +
-                "extinguish any burning buildings in range");
+        if (CSUConstants.DEBUG_CANNOT_FIND_POSITION_TO_EXTINGUISH) {
+            System.err.println(agentInfo.getID() + " can't find position to extinguish: " + target.getValue() + ", try to " +
+                    "extinguish any burning buildings in range");
+        }
 
         //着火的，不用search的
         List<Building> burningBuildings = new ArrayList<>();

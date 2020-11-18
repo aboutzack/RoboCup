@@ -622,9 +622,9 @@ public class CSURoadDetector extends RoadDetector {
 		if(policeCount > 5){
 			this.needClearCommonRoad = false;
 		}
-		if(this.needClearCommonRoad){
+		if(this.needClearCommonRoad && CSUConstants.DEBUG_NEED_CLEAR_COMMON){
 			System.out.println("need clear common");
-		}else{
+		}else if (CSUConstants.DEBUG_NEED_CLEAR_COMMON){
 			System.out.println("NO NEED TO CLEAR");
 		}
 
@@ -658,9 +658,9 @@ public class CSURoadDetector extends RoadDetector {
 		if(policeCount > 5){
 			this.needClearCommonRoad = false;
 		}
-		if(this.needClearCommonRoad){
+		if(this.needClearCommonRoad && CSUConstants.DEBUG_NEED_CLEAR_COMMON){
 			System.out.println("need clear common");
-		}else{
+		}else if (CSUConstants.DEBUG_NEED_CLEAR_COMMON){
 			System.out.println("NO NEED TO CLEAR");
 		}
 

@@ -205,7 +205,7 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
     }
 
     public void initSendMessageAgentsRatio(WorldInfo worldInfo, ScenarioInfo scenarioInfo) {
-        if (isBandWidthSufficient(scenarioInfo)) {
+        if (isBandWidthSufficient(scenarioInfo) && CSUConstants.DEBUG_CHANNEL_SUBSCRIBE) {
             sendMessageAgentsRatio = 1.0;
             System.out.println("sendMessageAgentsRatio Sufficient: " + sendMessageAgentsRatio);
             return;
@@ -233,7 +233,9 @@ public class CSUChannelSubscriber extends ChannelSubscriber {
                 * getScenarioAgents(scenarioInfo);
         //开方，防止太大
         sendMessageAgentsRatio = Math.min(1, Math.sqrt(mapSize / agentCoverageSize));
-        System.out.println("sendMessageAgentsRatio: " + sendMessageAgentsRatio);
+        if (CSUConstants.DEBUG_CHANNEL_SUBSCRIBE) {
+            System.out.println("sendMessageAgentsRatio: " + sendMessageAgentsRatio);
+        }
     }
 
     public static boolean isBandWidthSufficient(ScenarioInfo scenarioInfo) {

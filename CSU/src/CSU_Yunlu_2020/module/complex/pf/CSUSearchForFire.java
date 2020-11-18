@@ -1,5 +1,6 @@
 package CSU_Yunlu_2020.module.complex.pf;
 
+import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.debugger.DebugHelper;
 import CSU_Yunlu_2020.util.Util;
 import adf.agent.communication.MessageManager;
@@ -252,7 +253,9 @@ public class CSUSearchForFire extends Search {
 					}
 				}
 				if (this.clusterCount > this.clustering.getClusterNumber() / 2) {
-					System.out.println("back to my cluster");
+					if (CSUConstants.DEBUG_BACK_TO_MY_CLUSTER) {
+						System.out.println("back to my cluster");
+					}
 					return this.clustering.getClusterIndex(this.agentInfo.getID());
 				}
 

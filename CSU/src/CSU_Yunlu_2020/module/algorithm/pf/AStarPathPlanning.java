@@ -22,7 +22,7 @@ import static rescuecore2.standard.entities.StandardEntityURN.POLICE_FORCE;
 
 public class AStarPathPlanning  extends PathPlanning {
 
-	private final boolean DEBUGLOG = true;
+	private final boolean DEBUGLOG = false;
 	private final boolean LESS = false;
 
 	private Map<EntityID, Set<EntityID>> graph;

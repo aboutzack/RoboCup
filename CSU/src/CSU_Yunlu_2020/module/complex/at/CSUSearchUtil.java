@@ -42,8 +42,8 @@ public class CSUSearchUtil {
     private ScenarioInfo scenarioInfo;
 
     //debug
-    public final static boolean debug = true;
-    public final static boolean logMode = true;
+    public final static boolean debug = false;
+    public final static boolean logMode = false;
     public boolean logCreated = false;
 
     public final int monitorID = 0;
