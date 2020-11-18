@@ -1,8 +1,8 @@
 package CSU_Yunlu_2020.module.complex.pf;
 
 import CSU_Yunlu_2020.CSUConstants;
-import CSU_Yunlu_2020.extaction.pf.guidelineHelper;
 import CSU_Yunlu_2020.debugger.DebugHelper;
+import CSU_Yunlu_2020.extaction.pf.guidelineHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
@@ -20,9 +20,10 @@ import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
-import java.util.*;
-
-import static rescuecore2.standard.entities.StandardEntityURN.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 public class GuidelineCreator extends AbstractModule {
 
@@ -49,19 +50,19 @@ public class GuidelineCreator extends AbstractModule {
         switch (si.getMode()) {
             case PRECOMPUTATION_PHASE:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+                        CSUConstants.A_STAR_PATH_PLANNING);
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case PRECOMPUTED:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+                        CSUConstants.A_STAR_PATH_PLANNING);
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;
             case NON_PRECOMPUTE:
                 this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-                        "CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+                        CSUConstants.A_STAR_PATH_PLANNING);
                 this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
                         "adf.sample.module.algorithm.SampleKMeans");
                 break;

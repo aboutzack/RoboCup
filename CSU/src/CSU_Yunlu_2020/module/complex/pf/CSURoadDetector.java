@@ -4,14 +4,8 @@ import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.extaction.pf.guidelineHelper;
 import adf.agent.communication.MessageManager;
 import adf.agent.communication.standard.bundle.MessageUtil;
-import adf.agent.communication.standard.bundle.centralized.CommandAmbulance;
 import adf.agent.communication.standard.bundle.centralized.CommandPolice;
-import adf.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import adf.agent.communication.standard.bundle.information.MessageBuilding;
-import adf.agent.communication.standard.bundle.information.MessageCivilian;
-import adf.agent.communication.standard.bundle.information.MessageFireBrigade;
-import adf.agent.communication.standard.bundle.information.MessagePoliceForce;
-import adf.agent.communication.standard.bundle.information.MessageRoad;
+import adf.agent.communication.standard.bundle.information.*;
 import adf.agent.develop.DevelopData;
 import adf.agent.info.AgentInfo;
 import adf.agent.info.ScenarioInfo;
@@ -22,11 +16,9 @@ import adf.component.communication.CommunicationMessage;
 import adf.component.module.algorithm.Clustering;
 import adf.component.module.algorithm.PathPlanning;
 import adf.component.module.complex.RoadDetector;
-import rescuecore2.misc.Pair;
 import rescuecore2.misc.geometry.GeometryTools2D;
 import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
-import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
@@ -81,26 +73,26 @@ public class CSURoadDetector extends RoadDetector {
 		switch (scenarioInfo.getMode()) {
 			case PRECOMPUTATION_PHASE:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+						CSUConstants.A_STAR_PATH_PLANNING);
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 			case PRECOMPUTED:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+						CSUConstants.A_STAR_PATH_PLANNING);
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 			case NON_PRECOMPUTE:
 				this.pathPlanning = moduleManager.getModule("RoadDetector.PathPlanning",
-						"CSU_Yunlu_2019.module.algorithm.AStarPathPlanning");
+						CSUConstants.A_STAR_PATH_PLANNING);
 				this.clustering = moduleManager.getModule("SampleRoadDetector.Clustering",
 						"adf.sample.module.algorithm.SampleKMeans");
 				break;
 		}
 		registerModule(this.pathPlanning);
 		registerModule(this.clustering);
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", CSUConstants.GUIDE_LINE_CREATOR);
 		this.result = null;
 	}
 
@@ -155,7 +147,6 @@ public class CSURoadDetector extends RoadDetector {
 		return closestID;
 	}
 
-	//摘于MRL
 	private RoadDetector getRoadDetector(EntityID positionID, Set<EntityID> entityIDSet) {
 		this.pathPlanning.setFrom(positionID);
 		this.pathPlanning.setDestination(entityIDSet);

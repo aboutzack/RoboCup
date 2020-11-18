@@ -2,7 +2,8 @@ package CSU_Yunlu_2020.extaction.pf;
 
 import CSU_Yunlu_2020.CSUConstants;
 import CSU_Yunlu_2020.module.complex.pf.GuidelineCreator;
-import CSU_Yunlu_2020.standard.*;
+import CSU_Yunlu_2020.standard.CSURoadHelper;
+import CSU_Yunlu_2020.standard.Ruler;
 import CSU_Yunlu_2020.util.CircleQueue;
 import CSU_Yunlu_2020.util.CircleStack;
 import adf.agent.action.Action;
@@ -30,9 +31,6 @@ import rescuecore2.misc.geometry.Line2D;
 import rescuecore2.misc.geometry.Point2D;
 import rescuecore2.misc.geometry.Vector2D;
 import rescuecore2.standard.entities.*;
-import rescuecore2.standard.messages.StandardMessageURN;
-import rescuecore2.worldmodel.ChangeSet;
-import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
 import java.awt.*;
@@ -116,7 +114,7 @@ public class ActionExtClear extends ExtAction {
 		}
 		this.clustering = moduleManager.getModule("ActionExtClear.Clustering",
 				"adf.sample.module.algorithm.SampleKMeans");
-		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", "CSU_Yunlu_2019.module.complex.pf.GuidelineCreator");
+		this.guidelineCreator = moduleManager.getModule("GuidelineCreator.Default", CSUConstants.A_STAR_PATH_PLANNING);
 
 	}
 
