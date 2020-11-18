@@ -165,7 +165,7 @@ public class Configuration {
 		System.exit(0);
 	}
 
-	private static Configuration.Prop propForCmd(String cmd){
+	private static Prop propForCmd(String cmd){
 		for(Iterator i=Props.iterator();i.hasNext();){
 			Prop p=(Prop)i.next();
 			if(p.command.compareTo(cmd)==0)return p;

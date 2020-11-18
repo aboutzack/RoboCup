@@ -1,14 +1,11 @@
 package handy.swing;
 
-import java.awt.BorderLayout;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import javax.swing.JPanel;
-import javax.swing.JSlider;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
-import javax.swing.event.ChangeListener;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
    A JComponent that has a JSlider and a JTextField. Dragging the slider will update the text field and vice versa.
@@ -32,7 +29,7 @@ public class SliderComponent extends JPanel {
        @param min The minimum value of the slider.
        @param max The maximum value of the slider.
        @param value The current value of the slider.
-       @param orientation The orientation of the slider. Must be either {@link javax.swing.SwingConstants#VERTICAL} or {@link javax.swing.SwingConstants#HORIZONTAL}
+       @param orientation The orientation of the slider. Must be either {@link SwingConstants#VERTICAL} or {@link SwingConstants#HORIZONTAL}
      */
     public SliderComponent(int min, int max, int value, int orientation) {
         this(new JSlider(orientation, min, max, value), new JTextField(String.valueOf(value)));

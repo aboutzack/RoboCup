@@ -60,7 +60,7 @@ public class RoadRenderer implements MapRenderer {
 			g.drawLine(centerX-3,centerY-3,centerX+3,centerY+3);
 			g.drawLine(centerX-3,centerY+3,centerX+3,centerY-3);
 		}
-		Shape shape = new java.awt.geom.Line2D.Double(headX,headY,tailX,tailY);
+		Shape shape = new Line2D.Double(headX,headY,tailX,tailY);
 		shape = new BasicStroke((road.getLinesToTail()+road.getLinesToHead())*3).createStrokedShape(shape);
 		return shape;
     }
@@ -85,7 +85,7 @@ public class RoadRenderer implements MapRenderer {
 			int blocked = 0; //road.getBlockedLines(); FIXME
 			int total = road.getLinesToHead()+road.getLinesToTail();
 			int free = total-blocked;
-			Shape shape = new java.awt.geom.Line2D.Double(headX,headY,tailX,tailY);
+			Shape shape = new Line2D.Double(headX,headY,tailX,tailY);
 			shape = new BasicStroke(road.getLinesToTail()+road.getLinesToHead()).createStrokedShape(shape);
 			RenderTools.setLineMode(g,mode,colour);
 			((Graphics2D)g).draw(shape);

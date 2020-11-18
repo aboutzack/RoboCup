@@ -22,7 +22,7 @@ public class LogReader implements Runnable {
     private boolean running;
     private boolean alive;
     private InputStream in;
-    private java.util.List out;
+    private List out;
     private final Object waitLock = new Object();
     private String waitingFor;
     private StringBuffer waitBuffer;

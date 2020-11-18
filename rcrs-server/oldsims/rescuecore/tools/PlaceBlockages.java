@@ -183,7 +183,7 @@ public class PlaceBlockages {
 			int headY = transform.toScreenY(roadHead.getY());
 			int tailX = transform.toScreenX(roadTail.getX());
 			int tailY = transform.toScreenY(roadTail.getY());
-			Shape shape = new java.awt.geom.Line2D.Double(headX,headY,tailX,tailY);
+			Shape shape = new Line2D.Double(headX,headY,tailX,tailY);
 			shape = new BasicStroke(10).createStrokedShape(shape);
 			Color c = Color.BLACK;
 			int lanes = road.getLinesToHead();

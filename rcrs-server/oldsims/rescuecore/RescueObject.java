@@ -23,7 +23,7 @@ import rescuecore.event.*;
 /**
    This is the base class for all objects in the simulation environment
 */
-public abstract class RescueObject implements java.io.Serializable {
+public abstract class RescueObject implements Serializable {
     private transient Collection listeners;
     /** The kernel-assigned id */
     protected int id;
