@@ -97,7 +97,6 @@ public class CSUSearchRecorder {
     }
 
     public void updateInfo(MessageManager messageManager, Clustering clustering){
-
         this.messageManager = messageManager;
         this.clustering = clustering;
         //更新视野内的实体
@@ -146,6 +145,14 @@ public class CSUSearchRecorder {
             }
         }
         //11.15
+
+        //11.16
+        //update In Case decision by search
+        StandardEntity standardEntity = worldInfo.getEntity(nowPosition);
+        if(standardEntity instanceof Building){
+            ATBS.getByID(standardEntity.getID()).setVisited();
+        }
+        //11.16
 
         updateHeardCivilian();
 
