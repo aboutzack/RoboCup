@@ -1316,7 +1316,7 @@ public class ActionExtClear extends ExtAction {
 					}
 				}
 				if (intersection != null) {
-					if (minPointDistance < this.clearDistance/ 5) {
+					if (minPointDistance < this.clearDistance/ 2) {
 						Vector2D vector = this.scaleClear(this.getVector(agentX, agentY, clearX, clearY));
 						clearX = (int) (agentX + vector.getX());
 						clearY = (int) (agentY + vector.getY());
