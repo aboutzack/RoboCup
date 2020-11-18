@@ -7,11 +7,11 @@ import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.debug.WorldViewLauncher;
 import adf.component.centralized.CommandPicker;
 import adf.component.communication.CommunicationMessage;
 import adf.component.module.complex.TargetAllocator;
 import adf.component.tactics.TacticsAmbulanceCentre;
-import adf.debug.WorldViewLauncher;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.Map;

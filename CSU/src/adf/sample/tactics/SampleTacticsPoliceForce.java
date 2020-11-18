@@ -14,17 +14,15 @@ import adf.agent.info.ScenarioInfo;
 import adf.agent.info.WorldInfo;
 import adf.agent.module.ModuleManager;
 import adf.agent.precompute.PrecomputeData;
+import adf.debug.WorldViewLauncher;
 import adf.component.centralized.CommandExecutor;
 import adf.component.communication.CommunicationMessage;
 import adf.component.extaction.ExtAction;
 import adf.component.module.complex.RoadDetector;
 import adf.component.module.complex.Search;
 import adf.component.tactics.TacticsPoliceForce;
-import adf.debug.WorldViewLauncher;
 import adf.sample.tactics.utils.MessageTool;
-import rescuecore2.standard.entities.PoliceForce;
-import rescuecore2.standard.entities.StandardEntity;
-import rescuecore2.standard.entities.StandardEntityURN;
+import rescuecore2.standard.entities.*;
 import rescuecore2.worldmodel.EntityID;
 
 import java.util.List;
@@ -188,21 +186,17 @@ public class SampleTacticsPoliceForce extends TacticsPoliceForce
         if (action != null)
         {
             this.sendActionMessage(worldInfo, messageManager, agent, action);
-//            if (agentInfo.getThinkTimeMillis() > 100) {
-//                System.out.println("pf: "+agentID +" detector: " + agentInfo.getThinkTimeMillis());
-//            }
             return action;
         }
+
         target = this.search.calc().getTarget();
         action = this.actionExtClear.setTarget(target).calc().getAction();
         if(action != null)
         {
             this.sendActionMessage(worldInfo, messageManager, agent, action);
-//            if (agentInfo.getThinkTimeMillis() > 100) {
-//                System.out.println("pf: "+agentID +" search: " + agentInfo.getThinkTimeMillis());
-//            }
             return action;
         }
+
         messageManager.addMessage(
                 new MessagePoliceForce(true, agent, MessagePoliceForce.ACTION_REST, agent.getPosition())
         );

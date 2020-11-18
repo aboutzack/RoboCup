@@ -1,6 +1,5 @@
 package adf.sample.tactics;
 
-import CSU_Yunlu_2020.LogHelper;
 import adf.agent.action.Action;
 import adf.agent.action.ambulance.ActionLoad;
 import adf.agent.action.ambulance.ActionRescue;
@@ -47,8 +46,6 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
 
     private CommunicationMessage recentCommand;
     private Boolean isVisualDebug;
-
-    private LogHelper logHelper;
 
     @Override
     public void initialize(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
@@ -137,10 +134,6 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
     @Override
     public Action think(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, MessageManager messageManager, DevelopData developData)
     {
-        if(logHelper == null){
-            logHelper = new LogHelper("at_think",agentInfo,"sampleTacticsAmbulanceTeam");
-        }
-        logHelper.writeAndFlush("==============================think start===========================");
         this.messageTool.reflectMessage(agentInfo, worldInfo, scenarioInfo, messageManager);
         this.messageTool.sendRequestMessages(agentInfo, worldInfo, scenarioInfo, messageManager);
         this.messageTool.sendInformationMessages(agentInfo, worldInfo, scenarioInfo, messageManager);
@@ -186,39 +179,28 @@ public class SampleTacticsAmbulanceTeam extends TacticsAmbulanceTeam
             if (action != null)
             {
                 this.sendActionMessage(messageManager, agent, action);
-                logHelper.writeAndFlush("==============================think end by Command==================");
                 return action;
             }
         }
-        int id = agentID.getValue();
         // autonomous
         EntityID target = this.humanDetector.calc().getTarget();
         Action action = this.actionTransport.setTarget(target).calc().getAction();
         if (action != null)
         {
-//            if (agentInfo.getThinkTimeMillis() > 100) {
-//                System.out.println("at: "+agentID +" detector: " + agentInfo.getThinkTimeMillis());
-//            }
             this.sendActionMessage(messageManager, agent, action);
-            logHelper.writeAndFlush("==============================think end by detector==================");
             return action;
         }
         target = this.search.calc().getTarget();
         action = this.actionExtMove.setTarget(target).calc().getAction();
         if (action != null)
         {
-//            if (agentInfo.getThinkTimeMillis() > 100) {
-//                System.out.println("at: "+agentID +" search: " + agentInfo.getThinkTimeMillis());
-//            }
             this.sendActionMessage(messageManager, agent, action);
-            logHelper.writeAndFlush("==============================think end by search==================");
             return action;
         }
 
         messageManager.addMessage(
                 new MessageAmbulanceTeam(true, agent, MessageAmbulanceTeam.ACTION_REST, agent.getPosition())
         );
-        logHelper.writeAndFlush("==============================think end by rest==================");
         return new ActionRest();
     }
 
