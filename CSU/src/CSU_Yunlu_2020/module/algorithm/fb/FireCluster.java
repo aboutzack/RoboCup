@@ -342,7 +342,6 @@ public class FireCluster extends Cluster {
         Point point2 = points[1];
 
         convexObject.CENTER_POINT = targetPoint;
-//        MrlPersonalData.VIEWER_DATA.setCenterPoint(world.getSelf().getID(), new Pair<Point, ConvexObject>(targetPoint, this.convexObject));
         convexObject.FIRST_POINT = point1;
         convexObject.SECOND_POINT = point2;
         convexObject.CONVEX_POINT = convexPoint;

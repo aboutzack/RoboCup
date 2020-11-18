@@ -210,7 +210,6 @@ public class CSUSearchOld extends Search {
 	private void updateHeardCivilians(){
 		Collection<Command> heard = this.getHeard();//获取听到的声音
 		//knownHeardCivilians.clear();
-		//mrl原采用heard.forEach(next -> {});遍历
 		if (heard != null) {
 			if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("ID:"+myID+",听到了呼救");
 			for (Command next : heard){

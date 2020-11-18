@@ -172,7 +172,6 @@ public class CSUSearchOldOld extends Search{
     private void updateHeardCivilians(){
         Collection<Command> heard = this.getHeard();//获取听到的声音
         //knownHeardCivilians.clear();
-        //mrl原采用heard.forEach(next -> {});遍历
         if (heard != null) {
             if(CSUConstants.DEBUG_AT_SEARCH && monitorAll && monitorAll) System.out.println("ID:"+myID+",听到了呼救");
             for (Command next : heard){
@@ -917,7 +916,6 @@ public class CSUSearchOldOld extends Search{
             }
         }
     }
-    //todo：思路是照搬mrl的,需要酌情修改
     //更新搜过的建筑（根据和建筑的距离）
     //删去搜过的建筑
     private void removeSearchedBuildings(Set<EntityID> set){

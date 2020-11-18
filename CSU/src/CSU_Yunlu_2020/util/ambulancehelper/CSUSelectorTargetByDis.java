@@ -132,7 +132,6 @@ public class CSUSelectorTargetByDis {
         } else { //if map is huge
             rescueRange = perceptionLosMaxDistance * 6;
         }
-//        MrlPersonalData.VIEWER_DATA.setRescueRange(rescueRange);
     }
 
 
