@@ -299,7 +299,7 @@ public class CSUFireBrigadeWorld extends CSUWorldHelper{
     }
 
     private void processConnected(String fileName) throws IOException {
-        System.out.println("  Creating CND Files .... ");
+//        System.out.println("  Creating CND Files .... ");
         processConnected();
         File f = new File(fileName);
 

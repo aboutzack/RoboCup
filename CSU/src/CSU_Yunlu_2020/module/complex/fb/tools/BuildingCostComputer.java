@@ -13,7 +13,7 @@ import rescuecore2.worldmodel.EntityID;
 import java.util.Set;
 
 
-public class ZJUBaseBuildingCostComputer {
+public class BuildingCostComputer {
     private static final double INITIAL_COST = 500;
     private static final double AGENT_SPEED = 32000;
     private static final double BASE_PER_MOVE_COST = 30;
@@ -74,7 +74,7 @@ public class ZJUBaseBuildingCostComputer {
     private double shouldMoveCost;
     private CSUBuilding lastTarget;
 
-    public ZJUBaseBuildingCostComputer(CSUWorldHelper world) {
+    public BuildingCostComputer(CSUWorldHelper world) {
         this.world = world;
         this.maxExtinguishDistance = world.getScenarioInfo().getFireExtinguishMaxDistance();
     }

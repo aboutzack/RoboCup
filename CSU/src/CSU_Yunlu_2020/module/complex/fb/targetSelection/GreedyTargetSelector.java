@@ -3,7 +3,7 @@ package CSU_Yunlu_2020.module.complex.fb.targetSelection;
 import CSU_Yunlu_2020.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2020.module.algorithm.fb.FireCluster;
 import CSU_Yunlu_2020.module.complex.fb.search.SearchHelper;
-import CSU_Yunlu_2020.module.complex.fb.tools.ZJUBaseBuildingCostComputer;
+import CSU_Yunlu_2020.module.complex.fb.tools.BuildingCostComputer;
 import CSU_Yunlu_2020.util.ConstantComparators;
 import CSU_Yunlu_2020.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2020.world.object.CSUBuilding;
@@ -19,10 +19,10 @@ public class GreedyTargetSelector extends TargetSelector {
 
     public GreedyTargetSelector(CSUFireBrigadeWorld world) {
         super(world);
-        this.buildingCostComputer = new ZJUBaseBuildingCostComputer(world);
+        this.buildingCostComputer = new BuildingCostComputer(world);
     }
 
-    private ZJUBaseBuildingCostComputer buildingCostComputer;
+    private BuildingCostComputer buildingCostComputer;
 
     @Override
     public FireBrigadeTarget selectTarget(Cluster targetCluster) {

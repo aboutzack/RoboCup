@@ -2,7 +2,7 @@ package CSU_Yunlu_2020.module.complex.fb.targetSelection;
 
 import CSU_Yunlu_2020.module.algorithm.fb.Cluster;
 import CSU_Yunlu_2020.module.algorithm.fb.FireCluster;
-import CSU_Yunlu_2020.module.complex.fb.tools.ZJUBaseBuildingCostComputer;
+import CSU_Yunlu_2020.module.complex.fb.tools.BuildingCostComputer;
 import CSU_Yunlu_2020.util.ConstantComparators;
 import CSU_Yunlu_2020.world.CSUFireBrigadeWorld;
 import CSU_Yunlu_2020.world.object.CSUBuilding;
@@ -37,11 +37,11 @@ public class DirectionBasedTargetSelector extends TargetSelector {
      * then calculate cost
      * then select a specific entity as target
      */
-    private ZJUBaseBuildingCostComputer calculateBuildingCost;
+    private BuildingCostComputer calculateBuildingCost;
 
     public DirectionBasedTargetSelector(CSUFireBrigadeWorld world) {
         super(world);
-        this.calculateBuildingCost = new ZJUBaseBuildingCostComputer(world);
+        this.calculateBuildingCost = new BuildingCostComputer(world);
     }
 
     @Override
