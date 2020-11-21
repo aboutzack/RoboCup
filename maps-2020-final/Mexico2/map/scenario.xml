@@ -4,6 +4,9 @@
   <scenario:refuge scenario:location="114740"/>
   <scenario:refuge scenario:location="66438"/>
   <scenario:refuge scenario:location="52664"/>
+  <scenario:refuge scenario:location="118107"/>
+<!--  <scenario:refuge scenario:location="52664"/>-->
+
   <scenario:fire scenario:location="62112"/>
   <scenario:fire scenario:location="83552"/>
   <scenario:fire scenario:location="109278"/>
@@ -43,7 +46,17 @@
   <scenario:hydrant scenario:location="22590"/>
   <scenario:hydrant scenario:location="42750"/>
   <scenario:hydrant scenario:location="24543"/>
-  <scenario:gasstation scenario:location="118107"/>
+
+  <scenario:hydrant scenario:location="47034"/>
+  <scenario:hydrant scenario:location="44928"/>
+  <scenario:hydrant scenario:location="21798"/>
+  <scenario:hydrant scenario:location="21852"/>
+  <scenario:hydrant scenario:location="49257"/>
+  <scenario:hydrant scenario:location="21825"/>
+  <scenario:hydrant scenario:location="29880"/>
+
+  <scenario:gasstation scenario:location="57080"/>
+
   <scenario:gasstation scenario:location="118492"/>
   <scenario:gasstation scenario:location="117588"/>
   <scenario:gasstation scenario:location="78583"/>
