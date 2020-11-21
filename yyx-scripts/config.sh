@@ -2,13 +2,35 @@
 
 LOCAL_USER=yyx
 REMOTE_USER=rcrs
+#REMOTE_USER=root
+
+SCRIPTSDIR=yyx-scripts
+
+CODEDIR=codes
+KERNELDIR=rcrs-server/scripts
+
+MAPDIR=maps-2020
+
+#MAPDIR=maps-2020-yunlu
 
 CLUSTERS="1 2 3"
-#c11 c12 c13 c14 
-HOSTS="c21 c22 c23 c24 c31 c32 c33 c34"
-#c11 
-SERVER_HOSTS="c21 c31"
-#c12  c13  c14
-CLIENT_HOSTS=" c22 c23 c24 c32 c33 c34"
+#
+HOSTS="c11 c12 c13 c14 c21 c22 c23 c24 c31 c32 c33 c34"
+#
+SERVER_HOSTS="c11 c21 c31"
+#
+CLIENT_HOSTS="c12  c13  c14 c22 c23 c24 c32 c33 c34"
+
+# CLUSTERS="1"
+
+# HOSTS="m11 m12 m13 m14 "
+
+# SERVER_HOSTS="m11"
+
+# CLIENT_HOSTS="m12  m13  m14 "
+
+
 
 RSYNC_OPTS=-CES
+
+LOCAL_HOMEDIR=/home/$LOCAL_USER

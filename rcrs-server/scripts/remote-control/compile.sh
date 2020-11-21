@@ -8,8 +8,8 @@ fi
 
 chmod -R 777 *
 for t in $TEAMS; do
-	echo $LOCAL_HOMEDIR/code/$t/
-        cd $LOCAL_HOMEDIR/code/$t/
+	echo /home/$LOCAL_USER/$CODEDIR/$t/
+        cd /home/$LOCAL_USER/$CODEDIR/$t/
 	pwd
 	./compile.sh
 	cd -

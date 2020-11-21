@@ -1,14 +1,8 @@
 #! /bin/bash
 
 . $(dirname $0)/config.sh
-#  2019 世界赛地图
-#Berlin1 Berlin2 Eindhoven1 SydneyS2
-#MAPS="Eindhoven2 Istanbul1 Joao1 Kobe1 Mexico1 Montreal1 Paris1 Paris2 Sakae1 SF1 SF2 Sydney1 SydneyS1 tBerlinCSU tKobeAIT tSFrio VC1 VC2"
 
-#  2018 世界赛地图
-MAPS="Eindhoven1 Eindhoven2 Eindhoven3 Istanbul3 Joao1 Kobe1 Montreal1 Montreal2 Montreal3 NY2 NY3 Paris1 Paris2 Sakae1 Sakae3 SF2 VC1 VC2 VC3"
-
-
+MAPS="Eindhoven1 Joao1 Sakae1 SF1 SydneyS1 VC1"
 
 function getFreeCluster() {
 COUNT="0 0 0"
@@ -18,7 +12,7 @@ for i in $CLUSTERS; do
     RUNNING_TEAM=""
     PRECOMPUTE=""
     TURN="-"
-    eval $(ssh $REMOTE_USER@$SERVER cat $LOCKFILE_NAME 2>/dev/null)
+eval $(ssh $REMOTE_USER@$SERVER cat $LOCKFILE_NAME 2>/dev/null)
     if [ ! -z $RUNNING_TEAM ]; then
 	COUNT[$i]=0
     else
@@ -32,30 +26,27 @@ for i in $CLUSTERS; do
 
 
 done
-	# origin
+	
 	sleep 10
-	#test
-	#sleep 1
 done
 }
 
 
 FREE=0
-
-
+./reloadCodes.sh
+./compile.sh
+./uploadCodes.sh
 ALL=()	
 count=0;
-#uploadMaps.sh
+
 
 TEAM_SHORTHANDS2=$(shuf -e $TEAM_SHORTHANDS)
 echo $TEAM_SHORTHANDS2
 echo "MAPS $MAPS"
 echo "=========================="
 for MAP in $MAPS; do
-#	echo $MAP	
 	
 	for TEAM in $TEAM_SHORTHANDS2; do
-#	echo $TEAM
 		ALL+="$MAP-$TEAM "
 		count=$(( $count + 1 ))
 	done

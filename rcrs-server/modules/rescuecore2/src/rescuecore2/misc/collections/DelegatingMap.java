@@ -33,10 +33,10 @@ public abstract class DelegatingMap<K, V> extends HashMap<K, V> {
     }
 
     @Override
-    public Set<Entry<K, V>> entrySet() {
-        Set<Entry<K, V>> result = new HashSet<Entry<K, V>>();
+    public Set<Map.Entry<K, V>> entrySet() {
+        Set<Map.Entry<K, V>> result = new HashSet<Map.Entry<K, V>>();
         result.addAll(super.entrySet());
-        for (Entry<K, V> next : downstream.entrySet()) {
+        for (Map.Entry<K, V> next : downstream.entrySet()) {
             if (!super.containsKey(next.getKey())) {
                 result.add(next);
             }

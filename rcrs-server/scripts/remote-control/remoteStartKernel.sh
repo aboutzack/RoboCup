@@ -6,7 +6,7 @@ MAP=$1
 TEAM=$2
 NAME=${TEAM_NAMES[$TEAM]}
 
-export DISPLAY=:3.0
+export DISPLAY=:3103
 echo `pwd`
 cd $HOME
 
@@ -52,9 +52,9 @@ echo "LOGFILE=$KERNEL_LOGDIR" >> $STATFILE_NAME
 
 echo "----------------------------------------------------------------------------------" >>$SCOREFILE_NAME
 
-
-echo "Deleting logfile...."
-rm   $KERNEL_LOGDIR/*
+sleep 10
+# echo "Deleting logfile...."
+# rm   $KERNEL_LOGDIR/*
 
 #echo "Zipping logfile..."
 #mkdir -p $HOME/$LOGDIR/$DAY/kernel/

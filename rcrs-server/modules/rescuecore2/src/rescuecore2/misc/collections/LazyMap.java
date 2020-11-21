@@ -50,7 +50,7 @@ public abstract class LazyMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public Set<Entry<K, V>> entrySet() {
+    public Set<Map.Entry<K, V>> entrySet() {
         return downstream.entrySet();
     }
 

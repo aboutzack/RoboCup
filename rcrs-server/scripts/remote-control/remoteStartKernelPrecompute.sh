@@ -6,7 +6,7 @@ MAP=$1
 TEAM=$2
 NAME=${TEAM_NAMES[$TEAM]}
 
-export DISPLAY=:3.0
+export DISPLAY=:3103
 
 cd $HOME
 
@@ -48,13 +48,13 @@ echo "RESCUE_LOGFILE=$KERNEL_LOGDIR" >> $STATFILE_NAME
 
  
 
-echo "Deleting logfile...."
-rm   $KERNEL_LOGDIR/*
+# echo "Deleting logfile...."
+# rm   $KERNEL_LOGDIR/*
 
-#echo "Zipping logfile..."
-#mkdir -p $HOME/$LOGDIR/$DAY/kernel/
-#cp $KERNEL_LOGDIR/rescue.log $HOME/$RESCUE_LOG
-#gzip $HOME/$RESCUE_LOG
+# echo "Zipping logfile..."
+# mkdir -p $HOME/$LOGDIR/$DAY/kernel/
+# cp $KERNEL_LOGDIR/rescue.log $HOME/$RESCUE_LOG
+# gzip $HOME/$RESCUE_LOG
 
 #rm $LOCKFILE_NAME
 echo "Precomputation done"

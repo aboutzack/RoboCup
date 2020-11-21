@@ -1,49 +1,47 @@
 #! /bin/bash
-#  当本地用户和远程用户都是root用户时
-LOCAL_USER=root
-REMOTE_USER=root
+LOCAL_USER=rcrs
+REMOTE_USER=rcrs
 
-# 当本地用户或者远程用户为普通用户时
-#LOCAL_USER=home/yyx
-#REMOTE_USER=home/yyx
-
-
-
-MAPDIR=maps
+MAPDIR=maps-2020
 KERNELDIR=rcrs-server
-CODEDIR=code
+CODEDIR=codes
 SCRIPTDIR=$KERNELDIR/scripts/remote-control
 LOGDIR=logs
 DISTDIR=logdist
-EVALDIR=evaluation
+EVALDIR=2020-evaluation
 
 RSYNC_OPTS=-CE
 
-CLUSTERS="1"
+CLUSTERS="2"
 
-HOSTS="c11 c12 c13 c14"
-SERVER_HOSTS="c11"
-CLIENT_HOSTS="c12  c13  c14"
+HOSTS="c21 c22 c23 c24"
+SERVER_HOSTS="c21"
+CLIENT_HOSTS="c22  c23  c24"
 
 
 
-# HOSTS=localhost
-# SERVER_HOSTS=localhost
-# CLIENT_HOSTS=localhost
+
 
 KERNEL_WAITING_TIME=5
 
 PRECOMPUTE_TIMEOUT=125
 
-DAY=csu-test
+DAY=rcrs-pre
 YEAR=2020
 
-TEAM_SHORTHANDS="CSU APO"
-#TEAM_SHORTHANDS="APO"
+TEAM_SHORTHANDS="b3"
 
 declare -A TEAM_NAMES
-TEAM_NAMES[APO]=Apollo-Rescue
-TEAM_NAMES[CSU]=CSU_YunLu
+TEAM_NAMES[a1]=a1-INV
+TEAM_NAMES[a2]=a2-ZTRS
+TEAM_NAMES[a3]=a3-APO
+TEAM_NAMES[b1]=b1-RAN
+TEAM_NAMES[b2]=b2-XG
+TEAM_NAMES[b3]=b3-CSU
+TEAM_NAMES[c1]=c1-DRE
+TEAM_NAMES[c2]=c2-ZZU
+TEAM_NAMES[c3]=c3-SEU
+
 
 
 
@@ -55,14 +53,11 @@ CONNECT_VIEWER[2]=yes
 CONNECT_VIEWER[3]=yes
 
 
-#return hostname of the kernel server of the given cluster
 function getServerHost() {
     echo c$11
-    # echo 10.10.10.$11
-    # echo localhost
 }
 
-#return hostnames of the client servers of the given cluster
+
 function getClientHost() {
 
 if (( $1  == -1)); then
@@ -70,7 +65,6 @@ if (( $1  == -1)); then
 	return
 fi
     echo "c$1$(($2 + 1))"
-    # echo localhost
 }
 
 function getAllServerHosts() {
@@ -86,25 +80,12 @@ function getAllClientHosts() {
 }
 
 
-LOCAL_HOMEDIR=/$LOCAL_USER
-LOCKFILE_NAME=/$REMOTE_USER/rsl_run.lock
-LOCKFILE_NAME_PRECOMP=/$REMOTE_USER/rsl_precomp.lock
-STATFILE_NAME=/$REMOTE_USER/rsl_last_run.stat
-SCOREFILE_NAME=/$REMOTE_USER/Score.txt
-
-#SERVER_HOSTS=$(getAllServerHosts);
-#CLIENT_HOSTS=$(getAllClientHosts);
-#HOSTS="$SERVER_HOSTS $CLIENT_HOSTS"
+LOCAL_HOMEDIR=/home/$LOCAL_USER
+LOCKFILE_NAME=/home/$REMOTE_USER/rsl_run.lock
+LOCKFILE_NAME_PRECOMP=/home/$REMOTE_USER/rsl_precomp.lock
+STATFILE_NAME=/home/$REMOTE_USER/rsl_last_run.stat
+SCOREFILE_NAME=/home/$REMOTE_USER/Score.txt
 
 
-#for HOST in $SERVER_HOSTS; do
-#	echo Kernel=$HOST
-#done
-#for HOST in $CLIENT_HOSTS; do
-#	echo Kernel=$HOST
-#done
-#for HOST in $HOSTS; do
-#	echo All=$HOST
-#done
 
 
