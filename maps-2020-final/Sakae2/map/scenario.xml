@@ -421,9 +421,6 @@
   <scenario:policeforce scenario:location="189037"/>
   <scenario:policeforce scenario:location="189020"/>
   <scenario:policeforce scenario:location="194849"/>
-<!--  <scenario:policeforce scenario:location="194800"/>-->
-<!--  <scenario:policeforce scenario:location="194810"/>-->
-<!--  <scenario:policeforce scenario:location="199337"/>-->
   <scenario:ambulanceteam scenario:location="194572"/>
   <scenario:ambulanceteam scenario:location="199072"/>
   <scenario:ambulanceteam scenario:location="194510"/>
@@ -456,12 +453,4 @@
   <scenario:ambulanceteam scenario:location="194851"/>
   <scenario:ambulanceteam scenario:location="199342"/>
   <scenario:ambulanceteam scenario:location="199335"/>
-<!--  <scenario:ambulanceteam scenario:location="199334"/>-->
-<!--  <scenario:ambulanceteam scenario:location="199374"/>-->
-<!--  <scenario:ambulanceteam scenario:location="194810"/>-->
-<!--  <scenario:ambulanceteam scenario:location="194808"/>-->
-<!--  <scenario:ambulanceteam scenario:location="189032"/>-->
-<!--  <scenario:ambulanceteam scenario:location="193500"/>-->
-<!--  <scenario:ambulanceteam scenario:location="189064"/>-->
-<!--  <scenario:ambulanceteam scenario:location="199268"/>-->
 </scenario:scenario>
